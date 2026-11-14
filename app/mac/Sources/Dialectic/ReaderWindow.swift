@@ -53,10 +53,10 @@ final class ReaderWindowController: NSObject, WKNavigationDelegate, WKUIDelegate
                           styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
         window.title = "Dialectic"
         window.isReleasedWhenClosed = false
-        window.delegate = self
         window.setFrameAutosaveName("DialecticReader")
         webView = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
         super.init()
+        window.delegate = self
         webView.navigationDelegate = self
         webView.uiDelegate = self
         webView.autoresizingMask = [.width, .height]
