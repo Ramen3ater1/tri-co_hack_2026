@@ -96,7 +96,7 @@ func renderCheck(into dir: String) {
     print(String(format: "fit: %d OCR lines; a=%.1f (want %.1f) b=%.1f (want 0) c=%.1f (want %.1f) d=%.1f (want 0)",
                  ocr.count, fit.a, pageSize.width, fit.b, fit.c, pageSize.height, fit.d))
 
-    // 1b. The ⌥⇧D/⌥⇧N box fallback reads a cropped box of that page back as the quote.
+    // 1b. The ⌃⌥D box fallback reads a cropped box of that page back as the quote.
     let page = renderer.cgImage!
     let box = page.cropping(to: CGRect(x: 0, y: Int(0.555 * Double(page.height)), width: page.width, height: Int(0.06 * Double(page.height))))!
     let boxText = try! recognizedText(box)
@@ -125,7 +125,7 @@ func renderCheck(into dir: String) {
     model.selectedId = 3
     savePNG(MarginView(model: model, refresh: {}, scrolls: false).frame(height: 760), "\(dir)/5-thread.png")
 
-    // 3. The one ⌥⇧D panel, both tabs (the answer scrolls, so it's drawn on its own too).
+    // 3. The one ⌃⌥D panel, both tabs (the answer scrolls, so it's drawn on its own too).
     let savedMode = UserDefaults.standard.string(forKey: PANEL_MODE_KEY)
     defer { UserDefaults.standard.set(savedMode, forKey: PANEL_MODE_KEY) }
     let composer = ComposerModel(quote: "this double-consciousness, this sense of always looking at one’s self through the eyes of others",

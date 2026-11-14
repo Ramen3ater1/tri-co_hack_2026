@@ -98,6 +98,8 @@ Annotations come from the existing `GET /readings/{id}/annotations`; no change.
 
 ## 4. The Mac app's screens
 
+> **Update (Sat 08:57, josue): one hotkey, one panel.** The three hotkeys below (`⌥⇧D` ask, `⌥⇧N` note, `⌥⇧H` highlights) are replaced by **one, `⌃⌥D`** (Control-Option-D). It opens one panel with **Ask | Note** tabs (the last one used is remembered) sharing the quote and a "section, p. N" line; the highlights overlay is a **switch** in that panel's header and in the menu-bar menu (the pill says "· Hide"). §4.1 and §4.2 now describe the two tabs of that panel; the rest stands. (`app/mac/README.md`; SPEC wording pending Owen.)
+
 ### 4.1 Ask panel (`⌥⇧D`, built)
 
 Floating panel near the selection: the quote as a chip, a question box, Enter to send. The answer fills in the three layers (§2), then **Open in reader**. Already built in `DialecticApp.swift`; changes:

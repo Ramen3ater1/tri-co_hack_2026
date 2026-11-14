@@ -1,4 +1,4 @@
-// The floating panels: ⌥⇧D Ask (board 2) and ⌥⇧N Note (board 3), plus short messages.
+// The floating panels: the one ⌃⌥D panel (Ask | Note tabs, boards 2 and 3), plus short messages.
 import AppKit
 import SwiftUI
 
@@ -316,7 +316,7 @@ final class ComposerModel: ObservableObject {
     var page: Int? { ask.response?.located?.page ?? note.saved?.page ?? ask.context?.page }
 }
 
-/// ⌥⇧D's panel: header with Ask | Note and the highlights switch, the quote, then the chosen tab.
+/// ⌃⌥D's panel: header with Ask | Note and the highlights switch, the quote, then the chosen tab.
 struct ComposerView: View {
     @ObservedObject var model: ComposerModel
     @ObservedObject var ask: AskModel      // observed too, so the header follows an answer arriving

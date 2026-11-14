@@ -2,13 +2,15 @@
 
 Menu-bar app (SPEC §3.9, `design.md`). You read wherever you already read (Preview, Notability, a browser); Dialectic sits on top of the page. It also has a **reader window**: the web app itself, so every reader feature is built once, on the web. Same server and database as the web app; the Mac keeps nothing of its own.
 
-| Key | Does |
-| --- | --- |
-| **⌥⇧D** | Ask about the selected text. Panel: From your class → Sources → "Still stuck? Show the AI explanation" (collapsed), then **Open in reader**. |
-| **⌥⇧N** | Write a note on the selected text (`POST /api/note`). Says so when the passage is near a locked cluster: "N notes near here. Your note opens them." |
-| **⌥⇧H** | Show / hide classmates' highlights over the reading window: boxes by role (professor green, classmates magenta, you blue), dashed outlines for locked clusters, numbered pins, a status pill, and a margin strip with the threads. Click a card for the thread and reply. |
+**One hotkey, ⌃⌥D (Control-Option-D).** Select text anywhere and press it: one panel opens with the quote and two tabs, **Ask | Note** (Ask the first time; after that, whichever you used last).
 
-If ⌥⇧D or ⌥⇧N copies nothing (Notability with scanned or annotated PDFs, images), a crosshair appears: drag a box round the passage. Vision reads it on the Mac, the image is deleted at once, and only the text is sent as the quote. Esc cancels. No text in the box: "Couldn't read any text in that box." Not in a course reading: the server's "This passage isn't in a course reading."
+- **Ask:** your question goes to `POST /api/ask`. The answer: From your class → Sources → "Still stuck? Show the AI explanation" (collapsed), then **Open in reader**.
+- **Note:** `POST /api/note`, with **Share with future classes**. Near locked notes it says "N notes near here. Your note opens them."
+- **Highlights switch** in the panel header (also **Show highlights** in the menu-bar menu; no hotkey of its own): classmates' highlights over the reading window, with boxes by role (professor green, classmates magenta, you blue), dashed outlines for locked notes, numbered pins, a status pill ("Classmates' highlights · section, p. N · **Hide**") and a margin strip with the threads. Click a card for the thread and reply.
+
+If ⌃⌥D copies nothing (Notability with scanned or annotated PDFs, images), a crosshair appears: drag a box round the passage. Vision reads it on the Mac, the image is deleted at once, and only the text is sent as the quote. Esc cancels. No text in the box: "Couldn't read any text in that box." Not in a course reading: the server's "This passage isn't in a course reading."
+
+Menu-bar menu: **Ask or note on selection (⌃⌥D)**, **Show highlights**, **Open Dialectic**, who you are, the server.
 
 ## Reader window
 
@@ -18,7 +20,7 @@ If ⌥⇧D or ⌥⇧N copies nothing (Notability with scanned or annotated PDFs,
 - **Open in reader** (Ask and Note panels, thread view) opens `reader_url` in this window and brings it to the front. Links to other sites (sources) open in the default browser.
 - **Server down:** the window says "Can't reach the Dialectic reader at <URL>. Is the server running?" with **Retry**.
 
-Code: `Sources/Dialectic/` — `DialecticApp.swift` (constants, menu, hotkeys, copy selection), `Panels.swift` (Ask, Note), `Overlay.swift` (capture, Vision, page fit, overlay windows, margin, thread), `ReaderWindow.swift` (the web reader window), `Style.swift` (canvas tokens and shared pieces), `API.swift` (shapes and HTTP), `RenderCheck.swift` (the check below). Tunables are constants at the top of each file; `SERVER_URL` is in `DialecticApp.swift`.
+Code: `Sources/Dialectic/` — `DialecticApp.swift` (constants, menu, the hotkey, copy selection), `Panels.swift` (the Ask | Note panel), `Overlay.swift` (capture, Vision, page fit, overlay windows, margin, thread), `ReaderWindow.swift` (the web reader window), `Style.swift` (canvas tokens and shared pieces), `API.swift` (shapes and HTTP), `RenderCheck.swift` (the check below). Tunables are constants at the top of each file; `SERVER_URL` is in `DialecticApp.swift`.
 
 ## Report a problem
 
@@ -31,24 +33,24 @@ Every push to `main` that touches `app/mac/` is built on GitHub's macOS runners 
 ## Build and run
 
 ```bash
-./app/mac/build.sh                     # swift build + app/mac/build/Dialectic.app, ad-hoc signed
+./app/mac/build.sh                     # swift build + app/mac/build/Dialectic.app, signed (see First run)
 open app/mac/build/Dialectic.app
 ```
 
-Needs Xcode or the Command Line Tools (Swift 5.9+), **macOS 14+** (ScreenCaptureKit screenshots). **Pick the server in the menu-bar menu → Server** (Dev, Demo, Sandbox or This Mac); the pick is remembered and the user list, reader window and highlights follow it. A fresh install starts on `DEFAULT_SERVER_URL` (top of `DialecticApp.swift`): `localhost:8000` in a local build, the dev copy in a CI build. Logs: run `app/mac/build/Dialectic.app/Contents/MacOS/Dialectic` from a terminal.
+Needs Xcode or the Command Line Tools (Swift 5.9+), **macOS 14+** (ScreenCaptureKit screenshots). **Pick the server in the menu-bar menu → Server** (Dev, Demo, Sandbox or This Mac); the pick is remembered and the user list, reader window and highlights follow it. A fresh install starts on `DEFAULT_SERVER_URL` (top of `DialecticApp.swift`): `localhost:8000` in a local build, the dev copy in a CI build. Logs: `~/Library/Logs/Dialectic.log` (the first lines say whether Accessibility and Screen Recording are granted), or run `app/mac/build/Dialectic.app/Contents/MacOS/Dialectic` from a terminal. `open "dialectic://hotkey?key=ask"` runs the same path as pressing ⌃⌥D, for testing.
 
 **Render check (no permissions, no server):** `app/mac/build/Dialectic.app/Contents/MacOS/Dialectic --render /tmp/dialectic-render` draws every screen with stub data to PNGs, and runs the real Vision + page-fit code on a rendered copy of page 2, printing the fit next to the right answer. (Text boxes, checkboxes and native buttons show as yellow placeholders there; that's ImageRenderer, not the app.)
 
 ## First run (on the demo Mac)
 
 1. **Pick who you are** in the menu-bar menu, or click **Use on Mac** on the web log-in page (`dialectic://login?user=<id>`).
-2. **Accessibility** (⌥⇧D and ⌥⇧N copy your selection): the first press shows macOS's prompt. Turn Dialectic on in System Settings → Privacy & Security → Accessibility.
-3. **Screen Recording** (⌥⇧H reads the page on screen; the drag-a-box fallback captures the box): the first ⌥⇧H shows the prompt. Turn Dialectic on in System Settings → Privacy & Security → Screen Recording, then **quit and reopen** Dialectic. The screenshot stays on the Mac; only recognised text is sent.
-4. After a rebuild the ad-hoc signature changes and macOS may quietly stop trusting the app: remove Dialectic from both lists and add it again.
+2. **Accessibility** (⌃⌥D copies your selection): the first press shows macOS's prompt. Turn Dialectic on in System Settings → Privacy & Security → Accessibility.
+3. **Screen Recording** (the highlights switch reads the page on screen; the drag-a-box fallback captures the box): the first use shows the prompt. Turn Dialectic on in System Settings → Privacy & Security → Screen Recording, then **quit and reopen** Dialectic. The screenshot stays on the Mac; only recognised text is sent.
+4. **Grants and rebuilds:** `build.sh` signs with your Apple Development certificate if the Mac has one (`DIALECTIC_SIGN_ID` picks another), and then the grants survive rebuilds. Without one it signs ad hoc, the signature changes on every build, and macOS quietly stops trusting the app: remove Dialectic from both lists with **−**, add `app/mac/build/Dialectic.app` back with **+**, then quit and reopen it. Grant once more after the first certificate-signed build.
 
 ## Stubbed: `POST /api/locate` (needs Owen's OK, then SPEC §6)
 
-⌥⇧H needs one server route that doesn't exist yet. Until it does, a 404/405 from the server makes the app load `stub-locate-response.json` (page 2 of the seed reading) and the pill shows **stub data**. Annotations still come from the real `GET /readings/{id}/annotations` when the server is up (the stub's own demo annotations are used only if the server can't be reached). Regenerate the stub with `swift make-stub.swift ../backend/seed/souls-of-black-folk-ch1.pdf > stub-locate-response.json`. Search for `STUB:` to remove it later.
+The highlights need one server route that doesn't exist yet. Until it does, a 404/405 from the server makes the app load `stub-locate-response.json` (page 2 of the seed reading) and the pill shows **stub data**. Annotations still come from the real `GET /readings/{id}/annotations` when the server is up (the stub's own demo annotations are used only if the server can't be reached). Regenerate the stub with `swift make-stub.swift ../backend/seed/souls-of-black-folk-ch1.pdf > stub-locate-response.json`. Search for `STUB:` to remove it later.
 
 Proposed shape (design.md §3.2), a thin wrapper round `locate.py`:
 
@@ -75,3 +77,13 @@ POST /api/locate        X-User-Id: <id>
 ## SPEC change: approved
 
 The reader-window wording below was approved by Owen (Sat 06:45) and is now in `SPEC.md` §3.9 and §4.
+
+## Proposed SPEC change (pending Owen): one hotkey, one panel
+
+Not in `SPEC.md` yet (josue's pick, Sat 08:57; needs Owen's OK). Proposed wording:
+
+- **§3.9 step 1:** *"Press the hotkey (`⌃⌥D`, Control-Option-D, a constant at the top of the app)."* (replaces `⌥⇧D`).
+- **§3.9 step 3:** *"**Ask or note.** One floating panel shows the captured text and two tabs, **Ask | Note** (the last one used is remembered). Ask sends `POST /api/ask` (§6) with `{quote, question}`; Note sends `POST /api/note` with `{quote, body, share_with_future}`. Both use the `X-User-Id` chosen in the app's menu."*
+- **§3.9, new line:** *"**Classmates' highlights** over the reading window are a switch in the panel header and in the menu-bar menu, not a hotkey."*
+- **§6, `/note` row:** "Hotkey note (⌥⇧N, §3.9)" becomes "Hotkey note (the Note tab of ⌃⌥D, §3.9)".
+

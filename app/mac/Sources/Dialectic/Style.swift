@@ -55,7 +55,7 @@ enum Role {
 
 // ---------- small pieces ----------
 
-/// A key combination drawn as a bordered pill, e.g. ⌥⇧H.
+/// A key combination drawn as a bordered pill, e.g. ⌃⌥D.
 struct KeyCap: View {
     let label: String
     var body: some View {

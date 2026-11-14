@@ -1,4 +1,4 @@
-// ⌥⇧H: classmates' highlights drawn over whatever PDF viewer is in front (design.md §3; boards 1, 4, 5).
+// Classmates' highlights (the panel's switch or the menu) drawn over whatever PDF viewer is in front (design.md §3; boards 1, 4, 5).
 //
 // Capture the front window (on this Mac) → Vision text lines with boxes → POST /api/locate with the
 // recognised text only → fit the page's line boxes (page fractions) to the lines on screen →

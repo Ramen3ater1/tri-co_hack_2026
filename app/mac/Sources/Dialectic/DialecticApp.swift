@@ -1,7 +1,6 @@
 // Dialectic Mac app (SPEC §3.9, design.md): read anywhere, and Dialectic sits on top of the page.
-//   ⌥⇧D  ask about the selected text      (Panels.swift)
-//   ⌥⇧N  write a note on the selected text (Panels.swift)
-//   ⌥⇧H  show / hide classmates' highlights over the reading window (Overlay.swift)
+//   ⌃⌥D  the one hotkey: copy the selection (or drag a box), then one panel with Ask | Note tabs (Panels.swift)
+//        and a switch for classmates' highlights over the reading window (Overlay.swift)
 // Menu-bar app; a normal app (menu bar, Dock icon) while the reader window is open. Talks to the same server as the web app; keeps no data of its own.
 import AppKit
 import Carbon.HIToolbox
@@ -24,10 +23,10 @@ let SERVER_DEFAULTS_KEY = "serverURL"
 var SERVER_URL: String { UserDefaults.standard.string(forKey: SERVER_DEFAULTS_KEY) ?? DEFAULT_SERVER_URL }
 /// "Report a problem…" opens this GitHub issue form, as the web app's button does (CLAUDE.md, Feedback issues).
 let NEW_ISSUE_URL = "https://github.com/Ramen3ater1/tri-co_hack_2026/issues/new"
-let HOTKEY_MODIFIERS = UInt32(optionKey | shiftKey)
-/// The one hotkey (josue, Sat 08:55): copy the selection (or drag a box), then Ask | Note in one panel.
+let HOTKEY_MODIFIERS = UInt32(controlKey | optionKey)
+/// The one hotkey, Control-Option-D (josue, Sat 08:57): copy the selection (or drag a box), then Ask | Note in one panel.
 let HOTKEY_KEY = UInt32(kVK_ANSI_D)
-let HOTKEY_LABEL = "⌥⇧D"
+let HOTKEY_LABEL = "⌃⌥D"
 let HOTKEY_ID: UInt32 = 1
 /// How long to wait for the front app to put the selection on the pasteboard after ⌘C.
 let COPY_WAIT_SECONDS = 0.6
@@ -331,7 +330,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         let before = pasteboard.changeCount
 
-        let source = CGEventSource(stateID: .privateState)  // private state: ignore the ⌥⇧ still held down
+        let source = CGEventSource(stateID: .privateState)  // private state: ignore the ⌃⌥ still held down
         let down = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_ANSI_C), keyDown: true)
         let up = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_ANSI_C), keyDown: false)
         down?.flags = .maskCommand
