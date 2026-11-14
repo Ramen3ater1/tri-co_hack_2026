@@ -7,12 +7,15 @@ A blocked layer adds an entry to `blocked`; it never raises.
 import json
 from urllib.parse import quote as url_quote
 
+import httpx
+
 import ai
 import db
 import search
 
 PEER_LIMIT = 5
 LIBRARY_LIMIT = 3
+MAX_WEB_SOURCES = 3
 SAME_PAGE_BOOST = 2.0  # bm25 scores are negative (lower = better), so we subtract this
 FRAGMENT_WORDS = 5     # long sentences link as textStart,textEnd with this many words each
 
@@ -98,12 +101,22 @@ def web_layer(conn, charter, question_id, quote, question, search_query):
     verdict = ai.filter_sources(charter["permissible_sources"], question, results)
     skipped = [{"url": results[s["index"]]["url"], "reason": s["reason"]} for s in verdict["skipped"]]
 
+    # The filter returns a few spare candidates, best first: some sites refuse to be fetched
+    # (Britannica and The Atlantic answer 403), and we stop once we have enough.
     fetched = []
     for index in verdict["keep"]:
+        if len(fetched) == MAX_WEB_SOURCES:
+            break
         result = results[index]
-        page = search.fetch_page(conn, result["url"])
+        try:
+            page = search.fetch_page(conn, result["url"])
+        except httpx.HTTPError as e:
+            # Not a bug, just a site that won't let us in: show it as skipped instead of failing /ask.
+            print(f"fetch failed, skipping {result['url']}: {e}")
+            skipped.append({"url": result["url"], "reason": "Couldn't open this page"})
+            continue
         if not page["text"]:
-            # TODO(edge): pages we can't extract text from (PDFs, paywalls) are just dropped.
+            skipped.append({"url": result["url"], "reason": "Couldn't read any text on this page"})
             continue
         fetched.append({"title": result["title"] or page["title"], "url": result["url"], "text": page["text"]})
     if not fetched:

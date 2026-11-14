@@ -2,6 +2,7 @@
 
     uv run seed.py --reset                 # starting state of demo step 1 (no reading yet)
     uv run seed.py --reset --with-reading  # also add the reading, as if Prof. Rivera uploaded it
+    uv run seed.py --reset --with-sources  # also preload the source library
 
 Seeded annotations (Sam's past-cohort notes, the professor's) belong to the demo reading.
 The demo uploads that reading live, so `POST /readings` calls add_demo_annotations()
@@ -63,6 +64,15 @@ DEMO_ANNOTATIONS = [
 ]
 
 
+# DEMO: preloaded by --with-sources, the fallback if web search fails on stage (SPEC §10).
+# Fetched through search.fetch_page, so after one online run they come from web_cache.
+# Britannica and The Atlantic refuse our fetcher (403), so they're not here.
+DEMO_SOURCES = [
+    "https://plato.stanford.edu/entries/dubois/",
+    "https://en.wikipedia.org/wiki/Double_consciousness",
+]
+
+
 def user_id(conn, name):
     return conn.execute("SELECT id FROM users WHERE name = ?", (name,)).fetchone()["id"]
 
@@ -118,7 +128,17 @@ def add_demo_reading(conn):
     add_demo_annotations(conn, reading_id, dest)
 
 
-def reset(with_reading):
+def add_demo_sources(conn):
+    import search
+    for url in DEMO_SOURCES:
+        page = search.fetch_page(conn, url)
+        conn.execute(
+            "INSERT INTO sources (title, url, excerpt, found_by, created_at) VALUES (?, ?, ?, 'professor', ?)",
+            (page["title"], url, page["text"], db.now()),
+        )
+
+
+def reset(with_reading, with_sources):
     # Keep web_cache across resets (SPEC §9), so the demo replays cached web results.
     cache = []
     if db.DB_PATH.exists():
@@ -140,6 +160,8 @@ def reset(with_reading):
     )
     if with_reading:
         add_demo_reading(conn)
+    if with_sources:
+        add_demo_sources(conn)
     conn.commit()
     conn.close()
     print(f"Seeded {db.DB_PATH} (kept {len(cache)} web_cache rows)")
@@ -149,6 +171,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--reset", action="store_true", required=True, help="delete the DB and uploads, then seed")
     parser.add_argument("--with-reading", action="store_true", help="also add the demo reading and its annotations")
-    # TODO: --with-sources (preload the library) once search.py can fetch pages.
+    parser.add_argument("--with-sources", action="store_true", help="also preload the source library (web search fallback)")
     args = parser.parse_args()
-    reset(args.with_reading)
+    reset(args.with_reading, args.with_sources)

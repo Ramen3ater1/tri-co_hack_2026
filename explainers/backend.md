@@ -92,6 +92,7 @@ The points worth knowing:
 - **Peers come first and need no AI.** The peer layer only searches `note`s (including replies), not other questions or AI answers, and boosts notes on the same page.
 - **Two kinds of "no".** A toggle that's off blocks a layer *in code*, before any model call (`ai.toggle_blocks`). The **gate** (`ai.gate`) is an LLM call that reads the charter's rules text and can deny a layer citing a rule number; `ai.rule_label` turns "2" into "Rule 2: AI may point us to sources…". Either way the layer is added to `blocked`, and the request still succeeds.
 - **The AI can't invent quotes.** When it picks "the sentence that answers the question" from a source, `ai.pick_sentences` checks that the sentence really appears in the page text and drops it otherwise. Kept sentences become text-fragment links (`url#:~:text=…`), which make the browser scroll to and highlight that sentence.
+- **Sites that refuse us don't break the answer.** Britannica and The Atlantic answer our fetcher with 403. The filter returns up to 5 candidates, and `ask.web_layer` fetches them in order until 3 open; any that won't load are listed in `skipped_sources` as "Couldn't open this page".
 - **The library grows by itself.** Every source the AI uses is saved to `sources`. Later questions, including ones where AI is off or denied, find it with plain full-text search.
 - **No ungrounded answers.** The explanation is only written if there are sources to cite, and it's cut to `max_explanation_words` in code even if the model runs long.
 - A full AI answer is **four LLM calls** (gate, filter, pick sentences, explain) plus a search and up to three page fetches. It's one slow request (expect 10–20 s), not a stream.
@@ -104,6 +105,7 @@ The functions in `ai.py` only take **strings**: charter text, the quote, the que
 
 - **Seed annotations appear on upload.** The demo starts with the professor uploading the reading live, so last year's annotations can't exist beforehand. `POST /readings` checks the file name, and if it's `souls-of-black-folk-ch1.pdf`, it calls `seed.add_demo_annotations()`. The highlight boxes are computed from the real PDF with pdfplumber.
 - **`seed.py --reset --with-reading`** sets up the same state without the live upload, in case it fails on stage.
+- **`seed.py --reset --with-sources`** preloads the library with the SEP entry on Du Bois and Wikipedia's "Double consciousness", in case web search fails on stage. Add both flags to get everything.
 - **Anyone can be anyone:** `X-User-Id` is trusted as is.
 
 ## Where to change things
@@ -142,4 +144,4 @@ curl -H 'X-User-Id: 3' -H 'Content-Type: application/json' \
 - **The AI path has only run against a faked LLM and Kagi**, because there are no API keys yet. The real model's JSON output and the real Kagi response format still need checking.
 - **The gate may over-deny the demo question.** "What did it *mean* in 1903?" contains the word the rule-text demo relies on ("what does Du Bois *mean*…"). Test it with the real model.
 - If an AI call fails, the question has already been saved, so it shows in the margin without an answer.
-- Not built yet: `annotate_before_peers` (stretch), `seed.py --with-sources`, and the step-by-step "Checking the charter…" status (one response for now).
+- Not built yet: `annotate_before_peers` (stretch) and the step-by-step "Checking the charter…" status (one response for now).

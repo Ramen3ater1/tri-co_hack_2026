@@ -12,7 +12,7 @@ import httpx
 
 TEMPERATURE = 0.2
 TIMEOUT_S = 30
-MAX_FILTER_KEEP = 3
+MAX_FILTER_KEEP = 5  # spares: ask.py stops after MAX_WEB_SOURCES pages that actually open
 
 # Shown to the student when a toggle blocks a layer (SPEC §2 step 4).
 TOGGLE_LABELS = {
