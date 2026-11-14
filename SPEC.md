@@ -24,7 +24,7 @@ Dialectic is a collaborative reading platform for college courses (e.g. Haverfor
 Seed users: **Prof. Rivera** (professor), **Ana** and **Ben** (students), plus **Sam (Spring 2026)**, a past student whose annotations are opted in.
 
 1. **Professor sets up the course.** Prof. Rivera logs in, uploads `souls-of-black-folk-ch1.pdf` (Ch. 1, "Of Our Spiritual Strivings") and fills in the charter: rules text, a plain-language **permissible sources** description, and toggles, with all AI toggles **on**.
-2. **Ana annotates; Ben sees it.** Ana highlights the "double-consciousness" passage and writes a note. Ben logs in, opens the reading and sees Ana's highlight and note in the margin. He also sees Sam's note from last year, marked "Spring 2026".
+2. **Ana annotates; Ben has to engage to see it (friction).** Ana highlights the "double-consciousness" passage and writes a note. Ben logs in and opens the reading. Next to that passage the margin shows only **"2 classmates annotated near here. Add a note or ask a question to see theirs."** (Prof. Rivera's note on "the Veil" is visible straight away.) Ben highlights the passage and writes his own note, and Ana's note and Sam's note from last year (marked "Spring 2026") appear. That's the engagement lock (§3.4).
 3. **Ben asks a question.** Ben highlights "double-consciousness" → **Ask** → "Where does this idea come from, and what did it mean in 1903?" The answer panel shows, in order:
    1. **From your class:** matching peer, past-student and professor annotations (Ana's, Sam's), each linking to its place in the text.
    2. **Sources:** sources the AI found on the web that fit the charter's permissible-sources description, each linking out to the exact sentence that answers the question. A small note shows what was filtered out ("2 results skipped: study-guide sites aren't permitted").
@@ -52,6 +52,7 @@ One course, seeded (`HIST 214: Black Intellectual Traditions`, or similar). Show
 
 - Left: the PDF, rendered with **`react-pdf`** (pdf.js) **with its text layer on**, so text is selectable.
 - Right: margin panel listing annotations on the current page, newest first, each with author, cohort badge ("Spring 2026", "Professor", "AI"), text and replies.
+- **Locked annotations** (§3.4) appear in the margin as one placeholder per cluster, at their position: "**N classmates annotated near here.** Add a note or ask a question to see theirs." No author or text. Their highlights aren't drawn.
 - Highlights from all visible annotations are drawn over the page as translucent boxes. Clicking one scrolls the margin to it.
 - Selecting text shows a small popover: **Annotate** | **Ask**.
 
@@ -73,6 +74,16 @@ One table covers notes, questions, AI answers and replies:
 
 **Visibility rule:** you see an annotation if it's from your cohort, or it's from a past cohort with `share_with_future = 1`, or its author is the professor or the AI.
 
+**Engagement lock** (charter toggle `annotate_before_peers`, on by default). A visible annotation is shown **in full** only if one of these is true:
+- its author is the professor (guidance is always visible);
+- it's your own;
+- you have engaged **near** it: you've written a note **or asked a question** whose highlight is near its highlight. A question counts as engagement: we trust students, and when someone has a question, their classmates' annotations are the best answers to it, so withholding them would be perverse;
+- it's a reply, or an AI answer, under an annotation you can see in full.
+
+Otherwise it's **locked**: the API returns it as `{"id", "page", "rects", "locked": true}` with no author, cohort or text, so nothing leaks through the browser. The UI shows locked ones only as a count (§3.3).
+
+**Near** means roughly "the same paragraph", measured by position rather than exact matching. Two highlights are near if they're on the same page and the vertical gap between their bounding boxes is at most `NEAR_DISTANCE` (a constant in `db.py`, start at `0.08` of the page height, about a paragraph; tune it on the demo PDF). With the S1 paragraph fallback, near means the same paragraph or the one either side. `TODO(edge)`: passages that run across a page break.
+
 ### 3.5 Asking a question
 
 `POST /api/readings/{id}/ask` with `page`, `quote`, `rects`, `question`. The server:
@@ -85,6 +96,13 @@ One table covers notes, questions, AI answers and replies:
    - **AI** (allowed): search the web with `search_query` (15 results) → one LLM call (a simple decision per result) sorts the results' titles, URLs and snippets against the charter's **permissible sources** description: `keep` (with a usefulness rating), `ruled_out` (the description explicitly excludes this kind of source), `not_covered` (the description doesn't mention it) or `off_topic` (including copies of the reading itself), plus a short label for the kind of source; the student-facing reasons are built from that label ("Your charter rules out study-guide sites", "Your charter doesn't mention journal articles") → fetch all kept pages in parallel and read the 5 most useful that open (sites that refuse, like Britannica and The Atlantic with a 403, go into `skipped_sources`) and extract the main text (`trafilatura`) → the LLM **quotes the exact sentence** in each that answers the question; up to 3 pages with a real sentence become the sources, and pages with none (e.g. JSTOR's landing pages) go into `skipped_sources` → link out with a text fragment (`url#:~:text=<sentence>`), so the browser jumps to and highlights that sentence. Each used source is saved to `sources` (`found_by = 'ai'`) with its extracted text, so it's searchable from then on. If the web gives no usable source, the layer falls back to the course library, as in no-AI mode. Before an explanation may cite a library source, the same sentence-picking step must find an answering sentence in it.
 5. **Pass 2, AI explanation layer** (allowed): the LLM writes at most `max_explanation_words` words from the sources above (only those with a verified sentence, each shown to the model as the text around that sentence), citing them as `[1]`, `[2]`, and ends with a question that sends the student back to the text. The limit is enforced in code by trimming the explanation, never the closing question. If explanations are allowed but there are no sources to ground one in, there's no explanation and `blocked` gets a `"by": "no_sources"` notice instead of a silent gap. Saved as an annotation (`kind = ai_answer`, author = the "Dialectic AI" user, `parent_id` = the question), so it shows in the margin and takes replies.
 6. Returns all three layers, a `blocked` list (each with the toggle or charter rule that blocked it) and a `skipped_sources` list, so the UI can explain itself.
+
+**Engagement lock and Ask:** the question is saved before the peer layer runs, so it already unlocks the annotations **near the asked passage**. Peer matches **elsewhere** in the reading follow §11 question 8 (until it's decided: show them in the Ask panel, because the asker has engaged).
+
+**How a response is shown** (web Ask panel and Mac panel alike):
+- **Always in this order: peers → sources → AI explanation**, whatever loads first. A layer that arrives early waits for its slot.
+- **Empty layers aren't shown.** A layer blocked by the charter shows its one-line notice in its usual place instead.
+- **The AI explanation starts collapsed** behind a button, **"Still stuck? Show the AI explanation"**, so students meet their classmates and sources first. It's saved as an annotation either way; the button only controls this panel.
 
 ### 3.6 Permissible sources and the course source library
 
@@ -110,7 +128,7 @@ One charter per course: Markdown rules text, a plain-language permissible-source
 | `ai_explanations` | on | Off: no AI explanation layer. |
 | `max_explanation_words` | 120 | Passed into the prompt and truncated server-side. |
 | `show_past_cohorts` | on | Off: visibility rule drops past-cohort annotations. |
-| `annotate_before_peers` | off | **Stretch.** On: you see others' annotations on a page only after writing one of your own there. |
+| `annotate_before_peers` | **on** | The engagement lock (§3.4): classmates' annotations stay locked until you've written a note or asked a question near them. Professor annotations are always visible. Off: everything visible is shown in full. |
 
 **Enforcement is two-pass.** Toggles are hard limits, checked in code before any call. The charter **text** is enforced by the gate (pass 1), which decides per layer whether the request is allowed and names the rule; it's also included in the pass-2 prompts so the answer itself stays within the rules (e.g. context, not interpretation). Rules are numbered in the text so the gate can cite them.
 
@@ -122,7 +140,7 @@ One charter per course: Markdown rules text, a plain-language permissible-source
 
 ### 3.8 Repository search
 
-A search page (`/search?q=`) over all visible annotations **and** the reading text, via FTS5. Each result shows the snippet (FTS5 `snippet()`), the reading and page, and links to the reader at that page with the annotation open.
+A search page (`/search?q=`) over all visible annotations **and** the reading text, via FTS5. **Locked annotations (§3.4) never appear in results**; the search is not a way around the lock. Each result shows the snippet (FTS5 `snippet()`), the reading and page, and links to the reader at that page with the annotation open.
 
 ### 3.9 Mac hotkey: ask from wherever you're reading
 
@@ -134,7 +152,7 @@ A small macOS menu-bar app (`app/mac/`). The web reader stays as it is; this is 
 2. **Read it on the Mac.** A dragged box is turned into text with **macOS Vision** (`VNRecognizeTextRequest`) on the device. The image never leaves the Mac.
 3. **Ask.** A small floating panel shows the captured text and a question box. On Enter it sends `POST /api/ask` (§6) with `{quote, question}` and the `X-User-Id` chosen in the app's menu (same seeded users as the web log-in).
 4. **Locate.** The server matches `quote` against the course readings' text (`pages_fts`, then an exact substring check on that page) to find the **reading, page and section**. It computes the highlight `rects` from the PDF (pdfplumber, as the seed does), so the question shows as a normal highlight in the web reader. `TODO(edge)`: text that isn't from a course reading returns 404, "This passage isn't in a course reading."
-5. **Answer and note it.** It runs the same three-layer `/ask` as §3.5. The panel shows peers → sources → AI explanation (or the blocked notices), with a link that opens the web reader at that annotation. The question and any AI answer are saved as annotations like any other: public, labelled and open to replies.
+5. **Answer and note it.** It runs the same three-layer `/ask` as §3.5. The panel follows the display rules in §3.5 (peers → sources → AI explanation, empty layers hidden, AI collapsed) and the engagement lock (§3.4), with a link that opens the web reader at that annotation. The question and any AI answer are saved as annotations like any other: public, labelled and open to replies.
 
 **Permissions:** the app needs **Accessibility** (to copy the selection) and **Screen Recording** (to capture a box) in System Settings. Grant both on the demo Mac beforehand.
 
@@ -301,7 +319,7 @@ All routes are under `/api`; all except `/users` need `X-User-Id`. Professor-onl
 | POST | `/readings` | prof | Multipart upload: title + PDF; extracts pages with `pypdf` |
 | GET | `/readings/{id}` | all | Metadata + page count |
 | GET | `/readings/{id}/pdf` | all | The PDF file |
-| GET | `/readings/{id}/annotations` | all | Visible annotations (with replies), all pages |
+| GET | `/readings/{id}/annotations` | all | Visible annotations (with replies), all pages. Locked ones (§3.4) as `{id, page, rects, locked: true}` only |
 | POST | `/readings/{id}/annotations` | all | Create note or reply |
 | DELETE | `/annotations/{id}` | author | Delete own annotation (and its replies) |
 | POST | `/readings/{id}/ask` | all | The three-layer answer (§3.5) |
@@ -390,7 +408,7 @@ A full AI answer is four calls: gate → filter results → pick sentences → e
 When time runs short, **cut from the bottom up.** A slipped checkpoint is never a reason to cut something above an item that hasn't been cut yet.
 
 **Must** (no demo without these)
-1. **Web reader:** PDF, highlights, margin, notes and replies (demo steps 1–2), or the paragraph fallback from S1. **Owner: not decided yet.** Nothing in the demo works without it.
+1. **Web reader:** PDF, highlights, margin, notes and replies, **and the engagement lock** with its "N classmates annotated near here" placeholder (demo steps 1–2), or the paragraph fallback from S1. **Owner: not decided yet.** Nothing in the demo works without it.
 2. **Ask, no AI:** peer and library layers plus the Ask panel.
 3. **Charter gate + AI explanation** posted as an annotation (demo step 3).
 4. **Charter page:** editing rules and toggles, and blocked notices in the Ask panel (demo step 4).
@@ -406,7 +424,7 @@ When time runs short, **cut from the bottom up.** A slipped checkpoint is never 
 
 9. Hotkey screenshot box + on-device Vision text recognition.
 10. Sections by heading (§3.10). Fallback: same page.
-11. Search page → charter comments → `annotate_before_peers` → past-student opt-out UI.
+11. Search page → charter comments → past-student opt-out UI.
 12. Charter gaps on the charter page: what the source filter skipped as "not mentioned in your charter", with one-click amendments (`ideas/01-charter-gaps.md`).
 
 ### Timeline
@@ -485,3 +503,4 @@ Because the reading is uploaded live, the seeded annotations can't exist before 
 5. ~~**Model**~~ **Decided:** Claude Sonnet 5.5 on DO (`anthropic-claude-sonnet-5.5`). Still test the gate on the step-4 questions early: a gate that wrongly allows "what does it mean" breaks the demo's best moment.
 6. **Domain:** `dialectic.space` or a subdomain of an existing domain? Decide by 08:00 so DNS can propagate.
 7. **Hotkey demo:** which Mac and which reading app (Notability vs Preview) do we demo on? Permissions must be granted on that Mac before presenting. Does the demo chapter need seeded sub-headings so "same section" visibly differs from "same page"?
+8. **Ask and locked annotations elsewhere:** Ben asks about a passage on page 3. His question unlocks the annotations near it. But the peer search may also find a classmate's note on page 7 that answers his question, which he hasn't unlocked. Should the Ask panel (a) **show it** (asking is engagement, so any classmate answer to the question is fair game), or (b) show only the unlocked ones, plus "1 more classmate answer elsewhere in the reading; engage there to see it"? And if (a), does that note then stay unlocked in his margin on page 7, or only appear in the Ask panel? **Current default: (a), Ask panel only.**
