@@ -22,7 +22,12 @@ BASE = "http://100.90.161.78:8765"  # the laptop copy over Tailscale; dev is htt
 OUT_DIR = Path.home() / "Transfer"  # named by shot-list number, e.g. "shot 3 - Ben unlocks the notes - 1243.mp4"
 VIEWPORT = {"width": 1920, "height": 1080}  # Playwright records at 1x, so this is the video size
 TYPE_DELAY_MS = 40        # per character, so typing reads at human speed
-GLIDE_STEPS = 18          # mouse-move steps per glide: more = slower, smoother cursor
+GLIDE_MS_BASE = 380       # every cursor move takes this long, plus GLIDE_MS_PER_PX per pixel...
+GLIDE_MS_PER_PX = 0.45
+GLIDE_MS_MAX = 1100       # ...but never longer than this
+CURVE = 0.12              # how far a move bows to one side, as a share of its length (0 = straight)
+FRAME_MS = 16             # one mouse event per ~frame while gliding (Playwright manages ~15 a second)
+SMOOTHING = 45            # ms: the drawn cursor's lag behind the mouse. Higher = smoother but laggier
 SEMINAR = "PHIL 247: The Social Contract (seminar)"
 READING_PREFIX = "Week 2"
 
@@ -32,19 +37,49 @@ BEN_NOTE = ("Wait, so I'm both the one giving orders and the one obeying them? "
             "Where did he get this idea of a will that belongs to everyone?")
 SAM_NOTE_START = "Last spring we spent"               # appears once Ben's note is saved
 
-# A drawn cursor: recordings don't show the real pointer. Follows mouse events, pulses on press.
+# A drawn cursor: recordings don't show the real pointer. A macOS-style arrow with a soft shadow that
+# follows mouse events, dips on press, and leaves a fading ripple at each click.
 CURSOR_JS = """
 window.addEventListener('DOMContentLoaded', () => {
+  const style = document.createElement('style');
+  style.textContent = `
+    #demo-cursor { position: fixed; left: -60px; top: -60px; z-index: 2147483647; pointer-events: none;
+      transition: transform 110ms ease-out; transform-origin: 5px 3px;
+      filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); }
+    #demo-cursor.down { transform: scale(0.86); }
+    .demo-ripple { position: fixed; z-index: 2147483646; pointer-events: none; width: 36px; height: 36px;
+      margin: -18px 0 0 -18px; border-radius: 50%; background: rgba(255, 255, 255, .25);
+      border: 2.5px solid rgba(255, 255, 255, .95); box-shadow: 0 0 0 1.5px rgba(0, 0, 0, .35);
+      animation: demo-ripple 520ms ease-out forwards; }
+    @keyframes demo-ripple { from { transform: scale(.35); opacity: 1; } to { transform: scale(1.5); opacity: 0; } }`;
+  document.head.appendChild(style);
   const c = document.createElement('div');
   c.id = 'demo-cursor';
-  c.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M4 2l15 11-7 1.2L8.6 21z" fill="#111" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg>';
-  Object.assign(c.style, {position: 'fixed', left: '-40px', top: '-40px', zIndex: 2147483647,
-    pointerEvents: 'none', transition: 'transform 120ms ease', transformOrigin: '4px 2px'});
+  c.innerHTML = '<svg width="30" height="30" viewBox="0 0 24 24"><path d="M5 3v16.2l4.1-3.9 2.7 6.2 2.6-1.1-2.7-6.1h5.8z" fill="#000" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/></svg>';
   document.body.appendChild(c);
-  const move = (e) => { c.style.left = (e.clientX - 4) + 'px'; c.style.top = (e.clientY - 2) + 'px'; };
-  window.addEventListener('mousemove', move, true);
-  window.addEventListener('mousedown', () => { c.style.transform = 'scale(0.82)'; }, true);
-  window.addEventListener('mouseup', () => { c.style.transform = 'scale(1)'; }, true);
+  // Playwright can only send ~15 mouse events a second, so the drawn cursor doesn't jump to each one:
+  // every animation frame it closes part of the gap to the latest mouse position.
+  let tx = -60, ty = -60, cx = -60, cy = -60, first = true;
+  window.addEventListener('mousemove', (e) => {
+    tx = e.clientX; ty = e.clientY;
+    if (first) { cx = tx; cy = ty; first = false; }
+  }, true);
+  let last = performance.now();
+  const frame = (now) => {
+    // Time-based, not per-frame: the reader draws few frames while PDF pages render.
+    const k = 1 - Math.exp(-(now - last) / SMOOTHING); last = now;
+    cx += (tx - cx) * k; cy += (ty - cy) * k;
+    c.style.left = (cx - 5) + 'px'; c.style.top = (cy - 3) + 'px';
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+  window.addEventListener('mousedown', (e) => {
+    c.classList.add('down');
+    const r = document.createElement('div'); r.className = 'demo-ripple';
+    r.style.left = e.clientX + 'px'; r.style.top = e.clientY + 'px';
+    document.body.appendChild(r); setTimeout(() => r.remove(), 600);
+  }, true);
+  window.addEventListener('mouseup', () => c.classList.remove('down'), true);
 });
 """
 
@@ -98,33 +133,73 @@ def reset_ben(base, ben, reading_id):
 
 # ---------- recording helpers
 
+def ease_in_out(t):
+    return 4 * t ** 3 if t < 0.5 else 1 - (-2 * t + 2) ** 3 / 2
+
+
 class Take:
     def __init__(self, page):
         self.page = page
         self.t0 = time.monotonic()
         self.start = 0.0
-        self.x, self.y = VIEWPORT["width"] * 0.6, VIEWPORT["height"] * 0.5
+        self.x, self.y = VIEWPORT["width"] * 0.62, VIEWPORT["height"] * 0.55
+        self.track = []  # (seconds, event, x, y): the cursor's path, saved next to the video
+
+    def now(self):
+        return time.monotonic() - self.t0
 
     def beat(self, label, start=False):
         """Print when this happens. start=True also marks where the saved video begins (loading is cut)."""
         if start:
-            self.start = time.monotonic() - self.t0
-        print(f"  {time.monotonic() - self.t0 - self.start:6.1f} s  {label}", flush=True)
+            self.start = self.now()
+            self.page.mouse.move(self.x, self.y)  # park the cursor so it's on screen from the first frame
+        print(f"  {self.now() - self.start:6.1f} s  {label}", flush=True)
 
-    def glide(self, x, y, steps=GLIDE_STEPS):
-        self.page.mouse.move(x, y, steps=steps)
-        self.x, self.y = x, y
+    def log(self, event):
+        self.track.append((round(self.now(), 3), event, round(self.x, 1), round(self.y, 1)))
 
-    def glide_to(self, locator, steps=GLIDE_STEPS):
+    def glide(self, x, y, curve=CURVE):
+        """Move like a hand: ease in and out, bowing slightly to one side (a quadratic Bezier)."""
+        x0, y0 = self.x, self.y
+        dx, dy = x - x0, y - y0
+        dist = (dx * dx + dy * dy) ** 0.5
+        if dist < 1:
+            return
+        ms = min(GLIDE_MS_BASE + dist * GLIDE_MS_PER_PX, GLIDE_MS_MAX)
+        # Control point: the midpoint, pushed sideways. Alternate sides by direction so it doesn't look mechanical.
+        side = 1 if dx >= 0 else -1
+        cx, cy = x0 + dx / 2 - dy * curve * side, y0 + dy / 2 + dx * curve * side
+        began = time.monotonic()
+        while True:
+            t = min((time.monotonic() - began) * 1000 / ms, 1.0)
+            e = ease_in_out(t)
+            bx = (1 - e) ** 2 * x0 + 2 * (1 - e) * e * cx + e ** 2 * x
+            by = (1 - e) ** 2 * y0 + 2 * (1 - e) * e * cy + e ** 2 * y
+            self.page.mouse.move(bx, by)
+            self.x, self.y = bx, by
+            self.log("move")
+            if t >= 1.0:
+                break
+            self.page.wait_for_timeout(FRAME_MS)
+
+    def glide_to(self, locator, curve=CURVE):
         box = locator.bounding_box()
-        self.glide(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2, steps)
+        self.glide(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2, curve)
+
+    def down(self):
+        self.page.mouse.down()
+        self.log("down")
+
+    def up(self):
+        self.page.mouse.up()
+        self.log("up")
 
     def click(self, locator):
         self.glide_to(locator)
-        self.page.wait_for_timeout(150)
-        self.page.mouse.down()
-        self.page.wait_for_timeout(90)
-        self.page.mouse.up()
+        self.pause(0.18)
+        self.down()
+        self.pause(0.09)
+        self.up()
 
     def pause(self, seconds):
         self.page.wait_for_timeout(int(seconds * 1000))
@@ -146,9 +221,10 @@ def select_passage(take):
     spot = take.page.evaluate(RANGE_JS, [12, GENERAL_WILL_START, GENERAL_WILL_END_AFTER, "will"])
     take.glide(spot["x0"], spot["y0"])
     take.pause(0.3)
-    take.page.mouse.down()
-    take.glide(spot["x1"], spot["y1"], steps=24)
-    take.page.mouse.up()
+    take.down()
+    take.glide(spot["x1"], spot["y1"], curve=0)  # a drag along the text, not a swoop
+    take.pause(0.1)
+    take.up()
 
 
 # ---------- shots
@@ -172,7 +248,7 @@ def shot3(take, base, ben, reading_id):
     take.click(page.get_by_role("button", name="Save note"))
     page.get_by_text(SAM_NOTE_START).first.wait_for(timeout=20000)
     take.beat("notes unlocked: Ana's and Sam's appear")
-    take.glide_to(page.get_by_text(SAM_NOTE_START).first, steps=50)
+    take.glide_to(page.get_by_text(SAM_NOTE_START).first)
     take.pause(4)
     take.beat("end of the shot")
 
@@ -182,7 +258,7 @@ SHOTS = {"shot3": shot3}
 LABELS = {"shot3": "shot 3 - Ben unlocks the notes"}
 
 
-def record(name, base, headed):
+def record(name, base, headed, cursor):
     from playwright.sync_api import sync_playwright
     ben, reading_id = setup(base)
     reset_ben(base, ben, reading_id)
@@ -193,7 +269,8 @@ def record(name, base, headed):
         context = browser.new_context(viewport=VIEWPORT, 
                                       record_video_dir=str(raw_dir),
                                       record_video_size=VIEWPORT)
-        context.add_init_script(CURSOR_JS)
+        if cursor:
+            context.add_init_script(CURSOR_JS.replace('SMOOTHING', str(SMOOTHING)))
         # "Log in as Ben" the way the log-in page does: the user object in localStorage.
         context.add_init_script(f"localStorage.setItem('dialectic_user', {json.dumps(json.dumps(ben))});")
         page = context.new_page()
@@ -203,7 +280,11 @@ def record(name, base, headed):
         context.close()  # finishes writing the video
         webm = Path(page.video.path())
         browser.close()
-    mp4 = OUT_DIR / f"{LABELS[name]} - {time.strftime('%H%M')}.mp4"
+    suffix = "" if cursor else " (no cursor)"
+    mp4 = OUT_DIR / f"{LABELS[name]} - {time.strftime('%H%M')}{suffix}.mp4"
+    # The cursor's path, in seconds from the start of the saved video, to redraw it in an editor.
+    track = [{"t": round(t - take.start, 3), "event": e, "x": x, "y": y} for t, e, x, y in take.track if t >= take.start]
+    mp4.with_suffix(".cursor.json").write_text(json.dumps({"video": mp4.name, "size": VIEWPORT, "track": track}))
     subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-ss", f"{take.start:.2f}", "-i", str(webm), "-c:v", "libx264", "-pix_fmt", "yuv420p",
                     "-crf", "18", str(mp4)], check=True)
     shutil.rmtree(raw_dir)
@@ -215,5 +296,6 @@ if __name__ == "__main__":
     parser.add_argument("shot", choices=sorted(SHOTS))
     parser.add_argument("--base", default=BASE)
     parser.add_argument("--headed", action="store_true", help="show the browser window while recording")
+    parser.add_argument("--no-cursor", action="store_true", help="don't draw a cursor (its path is still saved)")
     args = parser.parse_args()
-    record(args.shot, args.base.rstrip("/"), args.headed)
+    record(args.shot, args.base.rstrip("/"), args.headed, cursor=not args.no_cursor)

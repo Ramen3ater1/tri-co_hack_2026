@@ -10,4 +10,6 @@ uv run --no-project --with playwright==1.65.2 playwright install chromium   # on
 uv run --no-project --with playwright==1.65.2 python record.py shot3 [--base https://dialectic-dev.yaggy.dev] [--headed]
 ```
 
+The cursor is drawn on the page: a macOS-style pointer that eases in and out along a slight curve, smoothed at full frame rate, with a ripple on each click (`--no-cursor` leaves it out). Every take also saves the cursor's path and clicks as `<video name>.cursor.json` (seconds from the start of the video, pixel x/y), for redrawing a cursor in an editor.
+
 Videos go to `~/Transfer/` named by shot ("shot 3 - Ben unlocks the notes - HHMM.mp4"), with the page-loading seconds cut. It prints when each beat happens, for laying the voiceover on. Pacing, viewport, note text and the target copy are constants at the top of `record.py`. Playwright records at 1× only (a 2× device scale just pads the frame), so the viewport is the video size.
