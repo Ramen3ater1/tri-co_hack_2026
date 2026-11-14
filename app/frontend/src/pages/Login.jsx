@@ -4,6 +4,7 @@ import { get, logIn } from '../api.js';
 import { rememberUsers } from '../colors.js';
 import Avatar from '../components/Avatar.jsx';
 import ErrorNotice from '../components/ErrorNotice.jsx';
+import { IS_MAC } from '../platform.js';
 
 // S01: pick who you are. No passwords (SPEC §3.1). TODO(edge): anyone can be anyone.
 // People are grouped by course; each person is in one course. A big course shows its first
@@ -53,7 +54,7 @@ export default function Login() {
           <strong>{user.name}</strong>
           <span className="muted" style={{ fontSize: 13 }}>{roleLine(user, currentCohort)}</span>
         </button>
-        <a href={`dialectic://login?user=${user.id}`} style={{ fontSize: 13, textDecoration: 'none', padding: '8px 10px' }}>Use on Mac</a>
+        {IS_MAC && <a href={`dialectic://login?user=${user.id}`} style={{ fontSize: 13, textDecoration: 'none', padding: '8px 10px' }}>Use on Mac</a>}
       </li>
     );
   }
@@ -85,7 +86,7 @@ export default function Login() {
             </section>
           );
         })}
-        <span className="muted small" style={{ textAlign: 'center' }}>“Use on Mac” opens the Dialectic menu-bar app as the same person.</span>
+        {IS_MAC && <span className="muted small" style={{ textAlign: 'center' }}>“Use on Mac” opens the Dialectic menu-bar app as the same person.</span>}
       </main>
     </div>
   );

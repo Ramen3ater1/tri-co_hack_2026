@@ -46,7 +46,7 @@ Seed users: **Prof. Rivera** (professor), **Ana** and **Ben** (students), plus *
 
 A page listing the seeded users, **grouped by course**; a course with more than five people shows its first four (the professor, then the seed's featured students) and a **Show all N people** link. Clicking one stores their `user_id` in `localStorage` and sends it as an `X-User-Id` header (alongside the `X-Device-Id` from §9.1). No passwords. `TODO(edge)`: anyone can be anyone.
 
-Each user row also has a small **Use on Mac** link to `dialectic://login?user=<id>`. Clicking it opens the Mac app (§3.9), which saves that user, so both apps act as the same person without picking twice. If the Mac app isn't installed the link does nothing. `TODO(edge)`.
+On a Mac (not an iPad, which also reports itself as a Mac), each user row also has a small **Use on Mac** link to `dialectic://login?user=<id>`. Clicking it opens the Mac app (§3.9), which saves that user, so both apps act as the same person without picking twice. If the Mac app isn't installed the link does nothing. `TODO(edge)`.
 
 ### 3.2 Course home
 

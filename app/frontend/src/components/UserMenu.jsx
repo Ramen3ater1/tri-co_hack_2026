@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { logOut, me, put } from '../api.js';
 import Avatar from './Avatar.jsx';
 import ErrorNotice from './ErrorNotice.jsx';
+import { IS_MAC } from '../platform.js';
 
 // The avatar in the header opens this (S19): share everything you've written with future
-// classes or not (PUT /me/sharing), switch user, use on Mac.
+// classes or not (PUT /me/sharing), switch user, use on Mac (only shown on a Mac).
 // TODO(edge): the switch starts "on"; the API has no per-user setting to read it from.
 export default function UserMenu({ showName = true }) {
   const user = me();
@@ -70,7 +71,7 @@ export default function UserMenu({ showName = true }) {
           {confirmation && <p className="menu-confirm" role="status">{confirmation}</p>}
           {error && <div style={{ margin: '0 10px 8px' }}><ErrorNotice error={error} title="Couldn't change sharing" /></div>}
           <button type="button" className="menu-row link" onClick={switchUser}>Switch user</button>
-          <a className="menu-row link" href={`dialectic://login?user=${user.id}`}>Use on Mac</a>
+          {IS_MAC && <a className="menu-row link" href={`dialectic://login?user=${user.id}`}>Use on Mac</a>}
         </div>
       )}
     </div>
