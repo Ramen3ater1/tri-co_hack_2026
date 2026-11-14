@@ -130,6 +130,13 @@ final class ReaderWindowController: NSObject, WKNavigationDelegate, WKUIDelegate
 
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
                  decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void) {
+        // The web's "Use on Mac" link (dialectic://login?user=…) clicked inside this window:
+        // WebKit can't load our own scheme ("unsupported URL"), so hand it to the app's URL handler.
+        if let url = action.request.url, url.scheme == "dialectic" {
+            NSApp.delegate?.application?(NSApp, open: [url])
+            decisionHandler(.cancel)
+            return
+        }
         // Links to other sites (sources, text fragments) open in the default browser.
         if let url = action.request.url, isExternal(url) {
             NSWorkspace.shared.open(url)
