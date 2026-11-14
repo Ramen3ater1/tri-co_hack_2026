@@ -69,6 +69,14 @@ Who sees which annotation is one SQL snippet, `db.VISIBLE_SQL`, used by every qu
 
 If this rule needs to change, change it there and everything follows.
 
+### The engagement lock
+
+On top of the visibility rule, the charter's `annotate_before_peers` toggle (on by default) hides classmates' annotations until you've engaged near them (SPEC §3.4). `db.full_view_ids(conn, user, reading_id)` returns the ids you see **in full**: the professor's, your own, any near one of your own notes or questions, and replies or AI answers under one of those. Everything else visible is **locked**, and `GET /readings/{id}/annotations` sends it as `{id, page, rects, locked: true}`, with no author, text or replies, so nothing leaks to the browser. Search leaves locked annotations out entirely.
+
+**Near** is measured by position: same page, and at most `db.NEAR_DISTANCE` (0.08 of the page height, about a paragraph) of vertical gap between the two highlights' outer boxes. Tune that one constant. Nothing about unlocking is stored: it's recomputed from your own annotations on every request, so deleting your note locks its neighbours again.
+
+The Ask panel is different on purpose: it shows every matching classmate note in full, wherever it is, because asking is engagement (SPEC §3.5). It doesn't unlock anything in the margin.
+
 ## `/ask`, step by step
 
 This is the heart of the product, in `ask.answer()`:
@@ -132,7 +140,7 @@ The functions in `ai.py` only take **strings**: charter text, the quote, the que
 | The wording of "blocked by toggle" notices | `TOGGLE_LABELS` in `ai.py` |
 | How many peer / library results show, the same-page boost | Constants at the top of `ask.py` |
 | Seed users, charter text, demo annotations | Constants at the top of `seed.py` |
-| Who can see what | `VISIBLE_SQL` in `db.py` |
+| Who can see what | `VISIBLE_SQL` in `db.py`; the engagement lock is `full_view_ids` and `NEAR_DISTANCE` there too |
 | Which words search ignores | `STOPWORDS` in `db.py` |
 | A route or response shape | `main.py`, **and** `SPEC.md` §6 in the same commit |
 
@@ -164,4 +172,4 @@ curl -H 'X-User-Id: 3' -H 'Content-Type: application/json' \
 - **Rarely, the model returns an empty reply** (seen once in about 20 structured calls). That fails the request loudly (a 500 with the message). See the log for the retry discussion.
 - A quote that runs across a page break isn't found by the hotkey route.
 - If an AI call fails, the question has already been saved, so it shows in the margin without an answer.
-- Not built yet: `annotate_before_peers` (stretch) and the step-by-step "Checking the charter…" status (one response for now).
+- Not built yet: the step-by-step "Checking the charter…" status (one response for now).

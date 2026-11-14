@@ -7,6 +7,11 @@ from pathlib import Path
 
 DB_PATH = Path(__file__).parent / "dialectic.db"
 
+# Engagement lock (SPEC §3.4): two highlights are "near" if they're on the same page and the
+# vertical gap between their bounding boxes is at most this fraction of the page height
+# (~a paragraph on the demo PDF). Tune it here.
+NEAR_DISTANCE = 0.08
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY,
@@ -30,7 +35,7 @@ CREATE TABLE IF NOT EXISTS charter (
   ai_explanations INTEGER NOT NULL DEFAULT 1,
   max_explanation_words INTEGER NOT NULL DEFAULT 120,
   show_past_cohorts INTEGER NOT NULL DEFAULT 1,
-  annotate_before_peers INTEGER NOT NULL DEFAULT 0,
+  annotate_before_peers INTEGER NOT NULL DEFAULT 1,  -- the engagement lock (SPEC §3.4)
   updated_at TEXT NOT NULL
 );
 
@@ -186,3 +191,61 @@ def insert_annotation(conn, reading_id, user_id, kind, page, quote, rects_json, 
          int(share_with_future), now()),
     )
     return cur.lastrowid
+
+
+# ---------- the engagement lock (SPEC §3.4) ----------
+
+def vertical_extent(rects):
+    """(top, bottom) of a highlight's rects as page fractions, or None if it has none."""
+    if not rects:
+        return None
+    return min(r["y"] for r in rects), max(r["y"] + r["h"] for r in rects)
+
+
+def is_near(page_a, extent_a, page_b, extent_b):
+    if page_a != page_b or extent_a is None or extent_b is None:
+        return False
+    gap = max(extent_a[0], extent_b[0]) - min(extent_a[1], extent_b[1])  # negative if they overlap
+    return gap <= NEAR_DISTANCE
+
+
+def full_view_ids(conn, user, reading_id):
+    """Ids of the annotations on this reading that `user` sees in full; every other visible one is locked.
+
+    In full: the professor's, your own, ones near a note or question of yours, and replies or AI
+    answers under one of those. With the charter's annotate_before_peers off, everything visible.
+    """
+    rows = conn.execute(
+        f"""SELECT a.id, a.parent_id, a.user_id, a.page, a.rects_json, u.role
+            FROM annotations a JOIN users u ON u.id = a.user_id
+            WHERE a.reading_id = :reading_id AND {VISIBLE_SQL}""",
+        {"reading_id": reading_id, **visibility_params(conn, user)},
+    ).fetchall()
+    lock_on = conn.execute("SELECT annotate_before_peers FROM charter").fetchone()[0]
+    if not lock_on:
+        return {r["id"] for r in rows}
+
+    # Where you've engaged: your own top-level notes and questions (they carry the highlight).
+    engaged = [
+        (r["page"], vertical_extent(json.loads(r["rects_json"]) if r["rects_json"] else None))
+        for r in rows
+        if r["user_id"] == user["id"] and r["parent_id"] is None
+    ]
+    by_id = {r["id"]: r for r in rows}
+
+    def top_level_of(row):
+        while row["parent_id"] is not None and row["parent_id"] in by_id:
+            row = by_id[row["parent_id"]]
+        return row
+
+    def top_level_unlocked(row):
+        if row["role"] == "professor" or row["user_id"] == user["id"]:
+            return True
+        extent = vertical_extent(json.loads(row["rects_json"]) if row["rects_json"] else None)
+        return any(is_near(page, mine, row["page"], extent) for page, mine in engaged)
+
+    full = set()
+    for r in rows:
+        if r["user_id"] == user["id"] or top_level_unlocked(top_level_of(r)):
+            full.add(r["id"])
+    return full

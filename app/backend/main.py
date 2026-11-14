@@ -174,7 +174,8 @@ def reading_pdf(reading_id: int, user=Depends(current_user), conn=Depends(get_co
 
 @app.get("/api/readings/{reading_id}/annotations")
 def list_annotations(reading_id: int, user=Depends(current_user), conn=Depends(get_conn)):
-    """Visible top-level annotations, newest first, each with its visible replies (oldest first)."""
+    """Visible top-level annotations, newest first, each with its visible replies (oldest first).
+    Ones the engagement lock hides come back as {id, page, rects, locked: true} only."""
     get_reading_or_404(conn, reading_id)
     rows = conn.execute(
         f"""SELECT a.*, u.name, u.role, u.cohort, s.title AS section_title FROM annotations a JOIN users u ON u.id = a.user_id
@@ -184,10 +185,17 @@ def list_annotations(reading_id: int, user=Depends(current_user), conn=Depends(g
         {"reading_id": reading_id, **db.visibility_params(conn, user)},
     ).fetchall()
     current_cohort = get_course(conn)["current_cohort"]
+    full_ids = db.full_view_ids(conn, user, reading_id)
     by_id = {}
     top_level = []
     for row in rows:
-        item = annotation_json(row, current_cohort)
+        if row["id"] in full_ids:
+            item = annotation_json(row, current_cohort)
+            item["locked"] = False
+        else:
+            # Engagement lock (SPEC §3.4): position only. No author, cohort or text leaves the server.
+            item = {"id": row["id"], "parent_id": row["parent_id"], "page": row["page"],
+                    "rects": json.loads(row["rects_json"]) if row["rects_json"] else None, "locked": True}
         item["replies"] = []
         by_id[item["id"]] = item
     for item in by_id.values():
@@ -198,9 +206,13 @@ def list_annotations(reading_id: int, user=Depends(current_user), conn=Depends(g
         parent = by_id.get(item["parent_id"])
         while parent is not None and parent["parent_id"] is not None:
             parent = by_id.get(parent["parent_id"])
-        if parent is not None:  # a reply whose parent you can't see stays hidden
+        if parent is not None and not parent["locked"]:  # replies under hidden or locked ones stay hidden
             parent["replies"].append(item)
     top_level.reverse()
+    for item in top_level:
+        if item["locked"]:
+            del item["parent_id"]  # the locked shape is exactly {id, page, rects, locked} (SPEC §6)
+            del item["replies"]
     return top_level
 
 
@@ -421,7 +433,15 @@ def search_repository(q: str, user=Depends(current_user), conn=Depends(get_conn)
            WHERE pages_fts MATCH ? ORDER BY bm25(pages_fts) LIMIT ?""",
         (match, SEARCH_LIMIT),
     ).fetchall()
-    return {"annotations": [dict(r) for r in annotations], "pages": [dict(r) for r in pages]}
+    # Locked annotations never appear: search is not a way around the engagement lock (SPEC §3.8).
+    full_ids = {}
+    unlocked = []
+    for r in annotations:
+        if r["reading_id"] not in full_ids:
+            full_ids[r["reading_id"]] = db.full_view_ids(conn, user, r["reading_id"])
+        if r["annotation_id"] in full_ids[r["reading_id"]]:
+            unlocked.append(dict(r))
+    return {"annotations": unlocked, "pages": [dict(r) for r in pages]}
 
 
 # ---------- the built frontend (production: one process, one port) ----------

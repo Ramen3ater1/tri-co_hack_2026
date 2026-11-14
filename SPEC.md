@@ -239,7 +239,7 @@ CREATE TABLE charter (            -- exactly one row
   ai_explanations INTEGER NOT NULL DEFAULT 1,
   max_explanation_words INTEGER NOT NULL DEFAULT 120,
   show_past_cohorts INTEGER NOT NULL DEFAULT 1,
-  annotate_before_peers INTEGER NOT NULL DEFAULT 0,
+  annotate_before_peers INTEGER NOT NULL DEFAULT 1,  -- the engagement lock (§3.4)
   updated_at TEXT NOT NULL
 );
 
@@ -388,7 +388,7 @@ Other response shapes:
 - `GET /search?q=`: `{"annotations": [{"annotation_id", "reading_id", "reading_title", "page", "kind", "author", "snippet"}], "pages": [{"reading_id", "reading_title", "page", "snippet"}]}`. Snippets mark hits as `[[word]]`: render as text, never as HTML (annotation bodies are user input).
 - **Errors:** `{"detail": "..."}` with 401 (unknown user), 403 (not allowed), 404, 422 (bad input) or 500. A 500's `detail` is the real error (e.g. a missing API key), so show it.
 
-`badge` is `"Professor"`, `"AI"`, a past cohort's name, or `null` for current classmates. `POST /readings/{id}/annotations` takes `{"page", "quote", "rects", "body", "share_with_future"}` for a note, or `{"parent_id", "body"}` for a reply (page comes from the parent). `rects` are page fractions, top-left origin.
+`badge` is `"Professor"`, `"AI"`, a past cohort's name, or `null` for current classmates. Full annotations carry `"locked": false`; locked ones (§3.4) are only `{"id", "page", "rects", "locked": true}`, with no replies. `POST /readings/{id}/annotations` takes `{"page", "quote", "rects", "body", "share_with_future"}` for a note, or `{"parent_id", "body"}` for a reply (page comes from the parent). `rects` are page fractions, top-left origin.
 
 ---
 
