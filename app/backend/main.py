@@ -15,6 +15,7 @@ from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from typing import Literal
 
 import ask
 import db
@@ -30,6 +31,10 @@ UPLOADS_DIR = Path(__file__).parent / "uploads"
 FRONTEND_DIST = Path(__file__).parent.parent / "frontend" / "dist"
 
 app = FastAPI(title="Dialectic")
+
+_conn = db.connect()
+db.migrate(_conn)  # add any new columns to an older database
+_conn.close()
 
 
 @app.exception_handler(Exception)
@@ -585,7 +590,7 @@ def charter(user=Depends(current_user), conn=Depends(get_conn)):
     for toggle in CHARTER_TOGGLES:
         data[toggle] = bool(data[toggle])
     comments = conn.execute(
-        """SELECT c.id, c.body, c.created_at, u.name AS author, u.role AS author_role
+        """SELECT c.id, c.body, c.created_at, c.status, u.name AS author, u.role AS author_role
            FROM charter_comments c JOIN users u ON u.id = c.user_id WHERE c.course_id = ? ORDER BY c.id""",
         (user["course_id"],),
     ).fetchall()
@@ -631,6 +636,21 @@ def add_charter_comment(new: NewComment, user=Depends(current_user), conn=Depend
         "INSERT INTO charter_comments (course_id, user_id, body, created_at) VALUES (?, ?, ?, ?)",
         (user["course_id"], user["id"], new.body, db.now()),
     )
+    conn.commit()
+    return charter(user, conn)
+
+
+class CommentStatus(BaseModel):
+    status: Literal["open", "added", "declined"]
+
+
+@app.patch("/api/charter/comments/{comment_id}")
+def set_charter_comment_status(comment_id: int, update: CommentStatus, user=Depends(professor), conn=Depends(get_conn)):
+    # The professor's answer to a proposal: worked into the charter, declined, or reopened.
+    found = conn.execute("UPDATE charter_comments SET status = ? WHERE id = ? AND course_id = ?",
+                         (update.status, comment_id, user["course_id"])).rowcount
+    if not found:
+        raise HTTPException(404, f"No proposal {comment_id} in your course")
     conn.commit()
     return charter(user, conn)
 

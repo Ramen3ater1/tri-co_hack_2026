@@ -48,7 +48,8 @@ CREATE TABLE IF NOT EXISTS charter_comments (
   course_id INTEGER NOT NULL REFERENCES course(id),
   user_id INTEGER NOT NULL REFERENCES users(id),
   body TEXT NOT NULL,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','added','declined'))  -- professor's answer to a proposal
 );
 
 CREATE TABLE IF NOT EXISTS readings (
@@ -201,6 +202,15 @@ def connect():
 
 def init_schema(conn):
     conn.executescript(SCHEMA)
+
+
+def migrate(conn):
+    # Run at server start: databases made before charter_comments.status existed get the
+    # column in place, so the demo copies don't need a reseed.
+    columns = [row[1] for row in conn.execute("PRAGMA table_info(charter_comments)")]
+    if columns and "status" not in columns:
+        conn.execute("ALTER TABLE charter_comments ADD COLUMN status TEXT NOT NULL DEFAULT 'open'")
+        conn.commit()
 
 
 def fts_query(text):

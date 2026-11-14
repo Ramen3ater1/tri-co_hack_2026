@@ -51,7 +51,7 @@ All under `/api`, all in `main.py`. The exact request and response shapes are in
 | Annotations | `GET`/`POST /readings/{id}/annotations`, `DELETE /annotations/{id}` (with its replies), `PATCH /annotations/{id}` and `PUT /me/sharing` (share with future classes or not) |
 | Asking | `POST /readings/{id}/ask` and `/ask/stream` (web reader), `POST /ask` and `/ask/stream` (Mac hotkey), `GET /questions/{id}/answer` (reopen an answer card) |
 | Mac notes | `POST /note` (a note from the hotkey: the server finds the reading and page) |
-| Charter | `GET`/`PUT /charter`, `POST /charter/comments`, `GET /charter/gaps`, `POST /charter/gaps/dismiss` |
+| Charter | `GET`/`PUT /charter`, `POST /charter/comments`, `PATCH /charter/comments/{id}`, `GET /charter/gaps`, `POST /charter/gaps/dismiss` |
 | Sources | `GET /sources`, `POST /sources` and `DELETE /sources/{id}` (professor) |
 | Search | `GET /search?q=` (words), `GET /search?q=&mode=meaning` (meaning, if the charter's `ai_semantic_search` is on) |
 | Spending | `GET /spend` (totals against this copy's budgets; no `X-User-Id` needed, so it opens on a phone) |
@@ -78,7 +78,7 @@ All under `/api`, all in `main.py`. The exact request and response shapes are in
   - `share_with_future`: whether later classes may see it. Its author can change it at any time.
   - `answer_json` (questions only): the finished `/ask` response, so the answer card can be reopened.
 - **readings** + **reading_pages** + **reading_sections**: the uploaded PDF's path, each page's extracted text (for search, locating quotes and sections), and the headings found at upload. `readings.status` is `processing` while the upload is being OCR'd in the background, then `ready` (or `failed`, with `error`); until `ready` the reading has no pages and its notes/asks return 409.
-- **charter**: one row holding the rules text, the permissible-sources description and the toggles. **charter_comments**: students' proposals.
+- **charter**: one row holding the rules text, the permissible-sources description and the toggles. **charter_comments**: students' proposals, each with a `status` (`open`, `added`, `declined`) the professor sets. `db.migrate()` runs at server start and adds that column to an older database, so it needs no reseed.
 - **sources**: the **course source library**. Every web page the AI used, plus any the professor added by hand.
 - **charter_gaps**: search results the source filter skipped because the charter doesn't mention their kind (URL, title, kind; never who asked), for the charter page's gaps list.
 - **spend**: one row per paid call that wasn't served from the cache: when, which service (`ai` or `search`), tokens or searches, the cost in USD, the device and the Ask it was for. `seed.py --reset` keeps it, so reseeding never resets a budget.

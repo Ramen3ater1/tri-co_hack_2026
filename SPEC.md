@@ -134,7 +134,7 @@ The AI's web search is filtered against this description (§3.5). Every source i
 
 ### 3.7 Class charter
 
-One charter per course: Markdown rules text, a plain-language permissible-sources description (§3.6), and toggles. Everyone can read it at `/charter`; it's also linked in the reader header. The professor edits it; for the MVP, "co-creation" means **students can leave comments/proposals under it**, which the professor works into the text (stretch: see §8).
+One charter per course: Markdown rules text, a plain-language permissible-sources description (§3.6), and toggles. Everyone can read it at `/charter`; it's also linked in the reader header. The professor edits it; for the MVP, "co-creation" means **students can leave comments/proposals under it**, which the professor works into the text (stretch: see §8). The professor answers each proposal: **Add to rules** puts it in the rules text as the next numbered rule (a "Propose allowing" one from charter gaps goes into "Sources we trust" instead) and marks it added on **Save charter**; **Mark added** (worked in by hand) and **Decline** set its status right away, and **Reopen** undoes either. Students see the status on each proposal; the professor has no "Post proposal" box.
 
 | Toggle | Default | Enforced how |
 | --- | --- | --- |
@@ -300,7 +300,8 @@ CREATE TABLE charter_comments (
   course_id INTEGER NOT NULL REFERENCES course(id),
   user_id INTEGER NOT NULL REFERENCES users(id),
   body TEXT NOT NULL,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open'  -- 'open' | 'added' | 'declined': the professor's answer (§3.7)
 );
 
 CREATE TABLE readings (
@@ -427,9 +428,10 @@ All routes are under `/api`; all except `/users` and `/spend` need `X-User-Id`. 
 | POST | `/ask` | all | Hotkey ask (§3.9): `{quote, question}` plus an optional `source_app` (the app the text came from, e.g. `"Notability"`); the server locates the reading, page, section and rects, then runs the same three layers. 404 if the quote isn't in a course reading |
 | POST | `/note` | all | Hotkey note (⌥⇧N, §3.9): `{quote, body, share_with_future}` plus an optional `source_app`; locates like `/ask`, saves a `note` with `via: "hotkey"`, returns the annotation plus `reader_url`. 404 if the quote isn't in a course reading |
 | POST | `/ask/stream` | all | Hotkey ask, step by step (still a plain 404 if the quote isn't found) |
-| GET | `/charter` | all | Text, toggles, comments |
+| GET | `/charter` | all | Text, toggles, comments (each with its `status`) |
 | PUT | `/charter` | prof | Update text and/or toggles |
 | POST | `/charter/comments` | all | Student proposal/comment |
+| PATCH | `/charter/comments/{id}` | prof | `{status}`: `open`, `added` or `declined`; returns the charter |
 | GET | `/charter/gaps` | all | Kinds of source skipped as not covered by the charter (§3.7) |
 | POST | `/charter/gaps/dismiss` | all | `{kind}`: hide that kind from the list; returns the list |
 | GET | `/sources` | all | The course source library |
@@ -678,7 +680,7 @@ Because the reading is uploaded live, the seeded annotations can't exist before 
 
 ## 11. Open questions for review
 
-1. **Co-creation of the charter:** is "students comment, professor edits" enough for the MVP, or should students be able to propose an edit that the professor accepts with one click?
+1. ~~**Co-creation of the charter**~~ **Decided (Sat 10:50):** in between: students post proposals; the professor adds one to the text with one click (then edits and saves), marks it added, or declines it, and students see which (§3.7).
 2. **AI explanation visibility:** the spec makes every AI explanation public, as in the vision. Should the asker be able to discard it before it's posted?
 3. ~~**Search API**~~ **Decided:** Kagi (Brave as fallback). Set a budget alert or check usage on the Kagi billing page before the demo.
 4. **Past students:** the spec fakes them with a seeded cohort. OK for the demo?

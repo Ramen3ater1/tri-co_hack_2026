@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { get, isProfessor, post, put } from '../api.js';
+import { get, isProfessor, patch, post, put } from '../api.js';
 import NavHeader from '../components/NavHeader.jsx';
 import Avatar from '../components/Avatar.jsx';
 import ErrorNotice from '../components/ErrorNotice.jsx';
 
 // The class charter (S12 professor, S13 student, S18 charter gaps). One page: the
-// professor edits, students read and post proposals. Switches save the moment they
+// professor edits and answers proposals, students read and post proposals. Switches save the moment they
 // change (they're hard limits, and demo step 4 flips one live); the two texts save
 // with "Save charter".
 
@@ -27,6 +27,21 @@ function ruleOutSentence(kind) {
   return `No ${kind}.`;
 }
 
+// A student's "Propose allowing" proposal starts with this; the professor's button then adds
+// the sentence to "Sources we trust" instead of the rules.
+const SOURCES_PROPOSAL = 'Could we add this to "Sources we trust": ';
+
+// How a proposal's status reads, for everyone.
+const STATUS_WORDS = { added: 'Added to the charter', declined: 'Declined' };
+
+// Append a proposal to the rules as the next numbered rule (or a plain line if they aren't numbered).
+function withRule(rules, body) {
+  const lines = rules.split('\n').filter((line) => line.trim());
+  const numbered = lines.filter((line) => /^\s*\d+[.)]\s+/.test(line));
+  const line = numbered.length === lines.length ? `${numbered.length + 1}. ${body}` : body;
+  return `${rules.trimEnd()}\n${line}`;
+}
+
 function when(createdAt) {
   const date = new Date(createdAt);
   const days = Math.floor((Date.now() - date) / 86400000);
@@ -46,9 +61,10 @@ function Rules({ text }) {
   return <div className="rules-text">{text}</div>;
 }
 
-function Proposals({ comments, onPost, draft, setDraft, draftRef }) {
+function Proposals({ comments, professor, onPost, onAnswer, onUse, using, draft, setDraft, draftRef }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const open = comments.filter((c) => c.status === 'open').length;
 
   async function submit(event) {
     event.preventDefault();
@@ -64,27 +80,66 @@ function Proposals({ comments, onPost, draft, setDraft, draftRef }) {
     }
   }
 
+  async function answer(id, status) {
+    setError(null);
+    try {
+      await onAnswer(id, status);
+    } catch (e) {
+      setError(e);
+    }
+  }
+
+  // The professor's buttons for one proposal.
+  function Actions({ c }) {
+    if (using[c.id]) return <span className="muted small">In the text above · marked added when you save</span>;
+    if (c.status !== 'open') {
+      return (
+        <span className="actions">
+          <span className={`pill ${c.status === 'added' ? 'mint' : 'off'}`}>{STATUS_WORDS[c.status]}</span>
+          <button type="button" className="btn small" onClick={() => answer(c.id, 'open')}>Reopen</button>
+        </span>
+      );
+    }
+    const forSources = c.body.startsWith(SOURCES_PROPOSAL);
+    return (
+      <span className="actions">
+        <button type="button" className="btn small" onClick={() => onUse(c, forSources)}>{forSources ? 'Add to sources' : 'Add to rules'}</button>
+        <button type="button" className="btn small" onClick={() => answer(c.id, 'added')} title="You've already worked it into the text">Mark added</button>
+        <button type="button" className="btn small" onClick={() => answer(c.id, 'declined')}>Decline</button>
+      </span>
+    );
+  }
+
   return (
     <section className="card charter-block">
-      <h2>Proposals from the class · {comments.length}</h2>
+      <div>
+        <h2>Proposals from the class · {professor ? `${open} open` : comments.length}</h2>
+        {professor && <span className="muted small">Add one to the text (then edit and save), mark it added if you've worked it in yourself, or decline it. Students see your answer.</span>}
+      </div>
       {comments.length === 0 && <span className="muted">No proposals yet.</span>}
       <div>
         {comments.map((c) => (
           <div key={c.id} className="comment">
             <Avatar person={{ name: c.author, role: c.author_role }} size="small" />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span><strong>{c.author}</strong> <span className="muted">· {when(c.created_at)}</span></span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
+              <span>
+                <strong>{c.author}</strong> <span className="muted">· {when(c.created_at)}</span>
+                {!professor && c.status !== 'open' && <> <span className={`pill ${c.status === 'added' ? 'mint' : 'off'}`}>{STATUS_WORDS[c.status]}</span></>}
+              </span>
               <span style={{ whiteSpace: 'pre-wrap' }}>{c.body}</span>
+              {professor && <Actions c={c} />}
             </div>
           </div>
         ))}
       </div>
-      <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <label htmlFor="proposal" className="muted small">Propose a change. Your professor works proposals into the charter.</label>
-        <textarea id="proposal" ref={draftRef} className="textarea" rows={2} value={draft} onChange={(e) => setDraft(e.target.value)} />
-        <button type="submit" className="btn" style={{ alignSelf: 'flex-start' }} disabled={busy || !draft.trim()}>Post proposal</button>
-        <ErrorNotice error={error} title="Couldn't post your proposal" />
-      </form>
+      {!professor && (
+        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <label htmlFor="proposal" className="muted small">Propose a change. Your professor works proposals into the charter.</label>
+          <textarea id="proposal" ref={draftRef} className="textarea" rows={2} value={draft} onChange={(e) => setDraft(e.target.value)} />
+          <button type="submit" className="btn" style={{ alignSelf: 'flex-start' }} disabled={busy || !draft.trim()}>Post proposal</button>
+        </form>
+      )}
+      <ErrorNotice error={error} title={professor ? "Couldn't update that proposal" : "Couldn't post your proposal"} />
     </section>
   );
 }
@@ -144,6 +199,7 @@ export default function Charter() {
   const [rules, setRules] = useState('');
   const [sources, setSources] = useState('');
   const [added, setAdded] = useState({}); // gap kinds whose sentence was added, unsaved
+  const [using, setUsing] = useState({}); // proposal ids added to the text, marked 'added' on save
   const [saved, setSaved] = useState(null);
   const [error, setError] = useState(null);
   const [draft, setDraft] = useState('');
@@ -167,8 +223,11 @@ export default function Charter() {
     setError(null);
     try {
       const sourcesChanged = sources !== charter.permissible_sources;
-      show(await put('/charter', { text_md: rules, permissible_sources: sources }));
+      let next = await put('/charter', { text_md: rules, permissible_sources: sources });
+      for (const id of Object.keys(using)) next = await patch(`/charter/comments/${id}`, { status: 'added' });
+      show(next);
       setAdded({});
+      setUsing({});
       setSaved('Charter saved.');
       // New source text clears the gaps list on the server (it was judged against the old text).
       if (sourcesChanged) setGaps(await get('/charter/gaps'));
@@ -211,6 +270,23 @@ export default function Charter() {
 
   async function postProposal(body) {
     show(await post('/charter/comments', { body }));
+  }
+
+  // Professor: put a proposal into the text; it's marked added when the charter is saved.
+  function useProposal(comment, forSources) {
+    if (forSources) {
+      setSources((text) => `${text.trim()} ${comment.body.slice(SOURCES_PROPOSAL.length).trim()}`);
+    } else {
+      setRules((text) => withRule(text, comment.body));
+    }
+    setUsing((u) => ({ ...u, [comment.id]: true }));
+    setSaved(null);
+  }
+
+  // Professor: answer a proposal. Only the comments come from the reply, so unsaved text edits stay.
+  async function answerProposal(id, status) {
+    const next = await patch(`/charter/comments/${id}`, { status });
+    setCharter((c) => ({ ...c, comments: next.comments }));
   }
 
   return (
@@ -267,7 +343,17 @@ export default function Charter() {
 
               <Gaps gaps={gaps} professor={professor} added={added} onAdd={addSentence} onDismiss={dismiss} onPropose={propose} />
 
-              <Proposals comments={charter.comments} onPost={postProposal} draft={draft} setDraft={setDraft} draftRef={draftRef} />
+              <Proposals
+                comments={charter.comments}
+                professor={professor}
+                onPost={postProposal}
+                onAnswer={answerProposal}
+                onUse={useProposal}
+                using={using}
+                draft={draft}
+                setDraft={setDraft}
+                draftRef={draftRef}
+              />
             </div>
 
             <aside>
