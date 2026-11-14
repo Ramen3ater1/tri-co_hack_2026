@@ -141,6 +141,7 @@ One charter per course: Markdown rules text, a plain-language permissible-source
 | `ai_enabled` | on | Master switch: off means no LLM calls at all. |
 | `ai_find_sources` | on | Off: no web search; plain FTS over the course library. |
 | `ai_explanations` | on | Off: no AI explanation layer. |
+| `ai_semantic_search` | on | Off: the Search page's **Meaning (AI)** mode returns a charter notice instead of results; search by words still works (§3.8). |
 | `max_explanation_words` | 120 | Passed into the prompt and truncated server-side. |
 | `show_past_cohorts` | on | Off: visibility rule drops past-cohort annotations. |
 | `annotate_before_peers` | **on** | The engagement lock (§3.4): classmates' annotations stay locked until you've written a note or asked a question near them. Professor annotations are always visible. Off: everything visible is shown in full. |
@@ -160,6 +161,8 @@ One charter per course: Markdown rules text, a plain-language permissible-source
 ### 3.8 Repository search
 
 A search page (`/search?q=`) over all visible annotations **and** the reading text, via FTS5. **Locked annotations (§3.4) never appear in results**; the search is not a way around the lock. Each result shows the snippet (FTS5 `snippet()`), the reading and page, and links to the reader at that page with the annotation open.
+
+**Meaning (AI) mode** (`/search?q=…&mode=meaning`, a Words | Meaning (AI) switch under the box): finds **reading passages** that say something like the query in other words ("being seen through other people's eyes" → the double-consciousness passage), by embeddings (`semantic.py`, `bge-m3` on DO inference, same key as the LLM; prototyped in `spikes/1035-embeddings`). It searches the readings only, **never annotations**, so it can't get round the lock. Allowed only while the charter's `ai_enabled` and `ai_semantic_search` are on; otherwise the page shows which switch turned it off, with a link to the charter. Each reading is cut into passages of a few sentences (~400 characters) and embedded the first time a meaning search touches it (~1.5 s for the demo chapter), so seeding and uploads never need the network. Calls count against the AI budget (§9.1); the query's vector is cached in `web_cache`. Results below a similarity of 0.45 are dropped.
 
 ### 3.9 Mac hotkey: ask from wherever you're reading
 
@@ -288,6 +291,7 @@ CREATE TABLE charter (            -- one row per course
   max_explanation_words INTEGER NOT NULL DEFAULT 120,
   show_past_cohorts INTEGER NOT NULL DEFAULT 1,
   annotate_before_peers INTEGER NOT NULL DEFAULT 1,  -- the engagement lock (§3.4)
+  ai_semantic_search INTEGER NOT NULL DEFAULT 1,     -- Search page's Meaning (AI) mode (§3.8)
   updated_at TEXT NOT NULL
 );
 
@@ -388,6 +392,14 @@ CREATE VIRTUAL TABLE pages_fts       USING fts5(text, reading_id UNINDEXED, page
 
 Insert/delete triggers on `annotations` and `sources` keep their FTS tables current. `pages_fts` is filled once at upload.
 
+```sql
+CREATE TABLE reading_passages (   -- meaning search (§3.8): filled the first time a meaning search touches a reading
+  id INTEGER PRIMARY KEY, reading_id INTEGER NOT NULL REFERENCES readings(id),
+  page INTEGER NOT NULL, text TEXT NOT NULL,
+  embedding TEXT NOT NULL         -- JSON list of floats (bge-m3, 1024)
+);
+```
+
 **FTS query building:** lowercase `quote + question`, drop stopwords, quote each remaining word, join with `OR`, rank with `bm25()`. Good enough for the demo. `TODO(edge)`: phrase matching, stemming (`tokenize='porter'` is a cheap upgrade).
 
 ---
@@ -423,6 +435,7 @@ All routes are under `/api`; all except `/users` and `/spend` need `X-User-Id`. 
 | GET | `/sources` | all | The course source library |
 | POST · DELETE | `/sources`, `/sources/{id}` | prof | Add by URL (fetched + extracted) / remove |
 | GET | `/search?q=` | all | FTS over visible annotations + reading text |
+| GET | `/search?q=&mode=meaning` | all | Reading passages close in meaning (embeddings), if the charter allows it |
 | GET | `/spend` | anyone | Spending against this copy's budgets (§9.1), no `X-User-Id` needed: `{"ai": {"usd", "calls", "budget_usd"}, "search": {...}, "ai_off", "device_asks_per_hour"}` |
 
 `/ask` response:
@@ -496,6 +509,7 @@ Other response shapes:
 - `GET /sources` (and `POST`/`DELETE`, which return the updated list): `[{"id", "title", "url", "found_by", "created_at", "first_question_id", "first_question", "first_question_author"}]`, newest first. `first_question` is the text of the question it was found for and `first_question_author` the asker's name ("found for Ben's question"); both `null` for sources added by hand.
 - `GET /charter/gaps` (and `POST /charter/gaps/dismiss`): `[{"kind": "journal articles", "count": 12, "examples": [{"title", "url"}]}]`, most frequent first, kinds lowercased, up to 3 examples each.
 - `GET /search?q=`: `{"annotations": [{"annotation_id", "reading_id", "reading_title", "page", "kind", "via", "author_id", "author", "cohort", "badge", "snippet"}], "pages": [{"reading_id", "reading_title", "page", "snippet"}]}`. Snippets mark hits as `[[word]]`: render as text, never as HTML (annotation bodies are user input).
+- `GET /search?q=&mode=meaning`: `{"passages": [{"reading_id", "reading_title", "page", "text", "score"}], "blocked": null | {"by": "toggle" | "limit", "label"}}`. Best first, at most 8. `blocked` names the charter switch that's off (`"AI may search readings by meaning — off"` or `"AI enabled — off"`) or the spending-limit notice.
 - **Errors:** `{"detail": "..."}` with 401 (unknown user), 403 (not allowed), 404, 422 (bad input) or 500. A 500's `detail` is the real error (e.g. a missing API key), so show it.
 
 `badge` is `"Professor"`, `"AI"`, a past cohort's name, or `null` for current classmates. Full annotations carry `"locked": false`; locked ones (§3.4) are only `{"id", "page", "rects", "locked": true}` plus their group (above), with no replies. `POST /readings/{id}/annotations` takes `{"page", "quote", "rects", "body", "share_with_future"}` for a note (`quote` may be empty for a box selection, §3.3; the ask routes need a non-empty one), or `{"parent_id", "body"}` for a reply (page comes from the parent). `rects` are page fractions, top-left origin.

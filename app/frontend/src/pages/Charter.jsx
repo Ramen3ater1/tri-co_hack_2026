@@ -14,6 +14,7 @@ const SWITCHES = [
   { key: 'ai_enabled', label: 'AI enabled', help: 'Off means no AI calls at all.', student: null },
   { key: 'ai_find_sources', label: 'AI may find sources', help: 'Off: only the course library is searched.', student: 'Find sources' },
   { key: 'ai_explanations', label: 'AI may write explanations', help: 'Short, public, labelled, open to replies.', student: 'Write explanations' },
+  { key: 'ai_semantic_search', label: 'AI may search readings by meaning', help: 'Finds passages that say something in other words. Off: search matches words only.', student: 'Search readings by meaning' },
   { key: 'show_past_cohorts', label: "Show past classes' notes", help: 'Only notes their authors shared.', student: "Past classes' notes" },
   { key: 'annotate_before_peers', label: 'Write before you read peers', help: "Classmates' notes stay hidden until a student writes a note or asks near them. Your notes are always visible.", student: 'Write before you read peers' },
 ];
@@ -130,7 +131,7 @@ function Gaps({ gaps, professor, onAdd, onDismiss, onPropose, added }) {
 
 // A switch as a student sees it: AI switches only count while AI is enabled at all.
 function StudentPill({ charter, switchKey }) {
-  const aiSwitch = switchKey === 'ai_find_sources' || switchKey === 'ai_explanations';
+  const aiSwitch = ['ai_find_sources', 'ai_explanations', 'ai_semantic_search'].includes(switchKey);
   const on = aiSwitch ? charter.ai_enabled && charter[switchKey] : charter[switchKey];
   const words = switchKey === 'show_past_cohorts' ? (on ? 'Shown' : 'Hidden') : (on ? 'On' : 'Off');
   return <span className={`pill ${on ? 'mint' : 'off'}`}>{words}</span>;

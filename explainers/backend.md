@@ -31,6 +31,7 @@ In production the same process also serves the built React app (`app/frontend/di
 | `ocr.py` | ~105 | OCRs every upload (SPEC §3.11): finds scanned pages, strips their old text layer with `pikepdf`, runs `ocrmypdf --skip-text`. Run in a background thread by `POST /readings`. Also `box_text()`: the text inside a Select-area box (the PDF's text there, else Tesseract on that area). |
 | `sections.py` | ~120 | Splits a reading into sections by its headings at upload, and finds which section a highlight is in. |
 | `search.py` | ~120 | Kagi web search and fetching pages' main text (several at once), all cached in the database. |
+| `semantic.py` | ~120 | Meaning search of readings (SPEC §3.8): cuts each reading into passages of a few sentences, embeds them with `bge-m3` on DO inference the first time a meaning search touches the reading (stored in `reading_passages`), and ranks passages by cosine similarity to the query. Readings only, never annotations. Model, passage size and score cutoff are constants at the top. |
 | `locate.py` | ~85 | For the Mac hotkey: finds which reading and page a copied passage is from, and its highlight boxes in the PDF. |
 | `seed.py` | ~160 | DEMO data: users, course, charter, and the past-student annotations. |
 | `seed_large.py` | ~330 | DEMO: a second course, a big lecture (AMST 101) with ~70 people and ~100 notes on the same chapter. |
@@ -52,7 +53,7 @@ All under `/api`, all in `main.py`. The exact request and response shapes are in
 | Mac notes | `POST /note` (a note from the hotkey: the server finds the reading and page) |
 | Charter | `GET`/`PUT /charter`, `POST /charter/comments`, `GET /charter/gaps`, `POST /charter/gaps/dismiss` |
 | Sources | `GET /sources`, `POST /sources` and `DELETE /sources/{id}` (professor) |
-| Search | `GET /search?q=` |
+| Search | `GET /search?q=` (words), `GET /search?q=&mode=meaning` (meaning, if the charter's `ai_semantic_search` is on) |
 | Spending | `GET /spend` (totals against this copy's budgets; no `X-User-Id` needed, so it opens on a phone) |
 
 ## How a request flows
@@ -81,6 +82,7 @@ All under `/api`, all in `main.py`. The exact request and response shapes are in
 - **sources**: the **course source library**. Every web page the AI used, plus any the professor added by hand.
 - **charter_gaps**: search results the source filter skipped because the charter doesn't mention their kind (URL, title, kind; never who asked), for the charter page's gaps list.
 - **spend**: one row per paid call that wasn't served from the cache: when, which service (`ai` or `search`), tokens or searches, the cost in USD, the device and the Ask it was for. `seed.py --reset` keeps it, so reseeding never resets a budget.
+- **reading_passages**: meaning search's index: each reading's passages (page, text) and their embeddings as JSON lists of floats. Empty until the first meaning search touches a reading; `seed.py --reset` starts it again.
 - **web_cache**: search results and fetched pages (keyed by query or URL), and the replies of the LLM calls, including the explanation (keyed by a hash of the exact prompt). It's demo insurance and speed: once a question has been asked, it replays the same gate verdict, search and sources much faster. `seed.py --reset` keeps this table.
 
 The database runs in **WAL mode** with a 5-second **busy timeout** (`db.connect()`), so many people can read while someone writes, and two writers wait for each other instead of failing with "database is locked". It means the database has two side files, `dialectic.db-wal` and `-shm`; `seed.py --reset` deletes them with it. Each connection is opened with `check_same_thread=False`, because FastAPI may open a request's connection on one thread and close it on another (pages that load several things at once hit this); each request still has its own connection.

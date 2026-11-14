@@ -23,6 +23,7 @@ import ocr
 import search
 import sections
 import seed
+import semantic
 import spend
 
 UPLOADS_DIR = Path(__file__).parent / "uploads"
@@ -574,7 +575,8 @@ def hotkey_note(req: HotkeyNoteRequest, user=Depends(current_user), conn=Depends
 
 # ---------- routes: charter ----------
 
-CHARTER_TOGGLES = ["ai_enabled", "ai_find_sources", "ai_explanations", "show_past_cohorts", "annotate_before_peers"]
+CHARTER_TOGGLES = ["ai_enabled", "ai_find_sources", "ai_explanations", "ai_semantic_search",
+                   "show_past_cohorts", "annotate_before_peers"]
 
 
 @app.get("/api/charter")
@@ -598,6 +600,7 @@ class CharterUpdate(BaseModel):
     ai_enabled: bool | None = None
     ai_find_sources: bool | None = None
     ai_explanations: bool | None = None
+    ai_semantic_search: bool | None = None
     max_explanation_words: int | None = None
     show_past_cohorts: bool | None = None
     annotate_before_peers: bool | None = None
@@ -721,9 +724,21 @@ def spending(conn=Depends(get_conn)):
 SEARCH_LIMIT = 20
 
 
+# Shown when the charter (or a spending limit) stops a meaning search.
+SEMANTIC_OFF_LABELS = {
+    "ai_enabled": "AI enabled — off",
+    "ai_semantic_search": "AI may search readings by meaning — off",
+}
+
+
 @app.get("/api/search")
-def search_repository(q: str, user=Depends(current_user), conn=Depends(get_conn)):
-    """FTS over visible annotations and the readings' text. Snippets mark hits as [[word]]: render them as text, never as HTML."""
+def search_repository(q: str, mode: str = "words", user=Depends(current_user), conn=Depends(get_conn),
+                      x_device_id: str | None = Header(None)):
+    """mode=words: FTS over visible annotations and the readings' text. Snippets mark hits as
+    [[word]]: render them as text, never as HTML.
+    mode=meaning: reading passages closest in meaning (semantic.py), if the charter allows it."""
+    if mode == "meaning":
+        return search_by_meaning(conn, user, q, x_device_id)
     match = db.fts_query(q)
     if match is None:
         return {"annotations": [], "pages": []}
@@ -759,6 +774,21 @@ def search_repository(q: str, user=Depends(current_user), conn=Depends(get_conn)
             del result["role"]
             unlocked.append(result)
     return {"annotations": unlocked, "pages": [dict(r) for r in pages]}
+
+
+def search_by_meaning(conn, user, q, device_id):
+    """Reading passages only, never annotations: no way round the engagement lock (SPEC §3.8)."""
+    charter = get_charter(conn, user["course_id"])
+    for toggle in ["ai_enabled", "ai_semantic_search"]:
+        if not charter[toggle]:
+            return {"passages": [], "blocked": {"by": "toggle", "label": SEMANTIC_OFF_LABELS[toggle]}}
+    if not q.strip():
+        return {"passages": [], "blocked": None}
+    try:
+        passages = semantic.search(conn, user["course_id"], q.strip(), spend.Meter(conn, device_id, None))
+    except spend.LimitReached as exc:
+        return {"passages": [], "blocked": {"by": "limit", "label": str(exc)}}
+    return {"passages": passages, "blocked": None}
 
 
 # ---------- the built frontend (production: one process, one port) ----------

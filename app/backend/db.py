@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS charter (
   max_explanation_words INTEGER NOT NULL DEFAULT 120,
   show_past_cohorts INTEGER NOT NULL DEFAULT 1,
   annotate_before_peers INTEGER NOT NULL DEFAULT 1,  -- the engagement lock (SPEC §3.4)
+  ai_semantic_search INTEGER NOT NULL DEFAULT 1,     -- search readings by meaning (SPEC §3.8)
   updated_at TEXT NOT NULL
 );
 
@@ -131,6 +132,16 @@ CREATE TABLE IF NOT EXISTS spend (
   usd REAL NOT NULL,
   device_id TEXT NOT NULL,     -- X-Device-Id, or 'unknown'
   question_id INTEGER          -- the Ask it was for: the per-device limit counts distinct Asks
+);
+
+-- Semantic search (SPEC §3.8, semantic.py): a reading's passages and their embeddings, a JSON
+-- list of floats. Filled the first time a meaning search touches the reading.
+CREATE TABLE IF NOT EXISTS reading_passages (
+  id INTEGER PRIMARY KEY,
+  reading_id INTEGER NOT NULL REFERENCES readings(id),
+  page INTEGER NOT NULL,
+  text TEXT NOT NULL,
+  embedding TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS web_cache (
