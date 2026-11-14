@@ -105,3 +105,4 @@ Append only, newest at the bottom. Format: `- HH:MM (Day) — what, and why. [wh
 - 06:12 (Sat) — starting: fix #1, professor sees every note in full (lock skips the professor viewer). [Shaun/Claude]
 - 06:13 (Sat) — Fixed #1: db.full_view_ids returns everything visible when the viewer is the professor, so the reader, question view and search all skip the lock for them (SPEC §3.4). Checked on a scratch DB: student still locked, professor sees in full. No gh CLI here, so no 'Working on this' comment on the issue. [Shaun/Claude]
 - 06:14 (Sat) — Dev copy now deploys itself: dialectic-autodeploy.timer checks main every minute (build beside + swap, reseed on schema change, health check, failed commits not retried). Live commit at /version.txt. DEPLOY.md + CLAUDE.md updated. [Owen/Claude]
+- 06:23 (Sat) — starting: fix #3, adding a note doesn't unlock the "1 note near here" card (Ana, reading 1). [Lyles/Claude]
