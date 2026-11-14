@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { me } from '../api.js';
 import Avatar from './Avatar.jsx';
 import ErrorNotice from './ErrorNotice.jsx';
-import { CheckIcon, ChevronIcon, CloseIcon, ScaleIcon } from './Icons.jsx';
+import { CheckIcon, ChevronIcon, ClockIcon, CloseIcon, ScaleIcon } from './Icons.jsx';
 
 // The Ask answer card (S07–S11, S20), anchored under the asked passage. Sections are
 // always in this order, each only if it has content: From your class → Sources → AI
@@ -96,6 +96,19 @@ function CharterNotice({ block }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
           <strong>{block.layer === 'sources_ai' ? 'Web search failed, so these come from the course library' : block.label}</strong>
           <code>{block.reason}</code>
+        </div>
+      </div>
+    );
+  }
+  if (block.by === 'limit') {
+    // A spending limit (SPEC §9.1: this device's hourly Asks, the copy's budget, or AI
+    // switched off on this copy). The server writes the whole notice; the charter didn't
+    // cause it, so no charter link.
+    return (
+      <div className="notice">
+        <span className="notice-icon" aria-hidden="true"><ClockIcon /></span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <strong>{block.label}</strong>
         </div>
       </div>
     );
@@ -201,9 +214,9 @@ export default function AnswerCard({ answer, aiReplies, onClose, onAskAgain, onP
 
   const sourceBlocks = answer.blocked.filter((b) => b.layer === 'sources_ai');
   const aiBlocks = answer.blocked.filter((b) => b.layer === 'ai_answer');
-  // Only an error on the source step needs saying in the Sources slot; a toggle or rule
+  // In the Sources slot only an error or a spending limit needs saying; a toggle or rule
   // there just means the library was searched instead, which isn't news to show.
-  const sourceErrors = sourceBlocks.filter((b) => b.by === 'error');
+  const sourceErrors = sourceBlocks.filter((b) => b.by === 'error' || b.by === 'limit');
   const hasPeer = answer.peer?.length > 0;
   const hasSources = answer.sources?.length > 0 || answer.skipped.length > 0 || sourceErrors.length > 0;
   const ai = answer.aiAnswer;

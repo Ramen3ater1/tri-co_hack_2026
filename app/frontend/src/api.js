@@ -21,9 +21,38 @@ export function isProfessor() {
   return me()?.role === 'professor';
 }
 
+// This browser's device ID (SPEC §9.1): a random ID made once and kept apart from the
+// logged-in user, so logging out or switching users doesn't reset the per-device Ask
+// limit. If storage is unavailable (private mode, blocked site data), keep one for the session.
+const DEVICE_KEY = 'dialectic_device';
+let sessionDeviceId = null;
+
+// crypto.randomUUID only exists on secure origins (https or localhost); a plain-http
+// address gets a random ID made the old way.
+function newDeviceId() {
+  if (window.crypto?.randomUUID) return crypto.randomUUID();
+  return 'dev-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+}
+
+function deviceId() {
+  try {
+    let id = localStorage.getItem(DEVICE_KEY);
+    if (!id) {
+      id = newDeviceId();
+      localStorage.setItem(DEVICE_KEY, id);
+    }
+    return id;
+  } catch {
+    if (!sessionDeviceId) sessionDeviceId = newDeviceId();
+    return sessionDeviceId;
+  }
+}
+
 function headers(extra = {}) {
   const user = me();
-  return user ? { 'X-User-Id': String(user.id), ...extra } : extra;
+  const base = { 'X-Device-Id': deviceId() };
+  if (user) base['X-User-Id'] = String(user.id);
+  return { ...base, ...extra };
 }
 
 async function failure(res) {

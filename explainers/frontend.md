@@ -9,7 +9,7 @@ The frontend is a **React single-page app built with Vite**: `react-router-dom` 
 ```
 browser
   └─ React app
-       pages/*.jsx ──▶ api.js ──HTTP + X-User-Id──▶ /api/... (FastAPI, see explainers/backend.md)
+       pages/*.jsx ──▶ api.js ──HTTP + X-User-Id + X-Device-Id──▶ /api/... (FastAPI, see explainers/backend.md)
        Reader ──▶ react-pdf ──▶ GET /api/readings/{id}/pdf
 ```
 
@@ -23,7 +23,7 @@ Dependencies: `react` + `react-dom`, `react-router-dom` (pages and links), `reac
 | File | Lines | What it's for |
 | --- | --- | --- |
 | `src/main.jsx` | ~35 | The routes. Every page but `/login` is wrapped in `LoggedIn`, which sends you to `/login` if nobody is stored. |
-| `src/api.js` | ~95 | `get` / `post` / `put` / `patch` / `del`, `askStream()` for the streamed Ask, `pdfFile()` for react-pdf, and who's logged in (`me()`, `logIn()`, `logOut()`, `isProfessor()`). |
+| `src/api.js` | ~125 | `get` / `post` / `put` / `patch` / `del`, `askStream()` for the streamed Ask, `pdfFile()` for react-pdf, who's logged in (`me()`, `logIn()`, `logOut()`, `isProfessor()`), and this browser's device ID (`deviceId()`). |
 | `src/colors.js` | ~40 | Person colours: `colorFor(person)` and `initial(name)`. |
 | `src/styles.css` | ~310 | The only stylesheet. Colour tokens at the top, then one block per screen. |
 | `src/pages/Login.jsx` | ~65 | `/login` (S01). |
@@ -48,10 +48,12 @@ There are no passwords (SPEC §3.1). `Login` lists `GET /api/users`. Clicking a 
 - A **401** means the stored id is unknown (e.g. after `seed.py --reset` renumbered users). `api.js` clears it and goes to `/login`.
 - `Login` also stores the user list (`dialectic_users`). Peer results in an Ask answer carry an author's name but not their id, so `colorFor` uses that list to look up their colour.
 
+**This browser is a "device"** (SPEC §9.1, spending limits). `deviceId()` in `api.js` makes a random ID the first time it's needed (`crypto.randomUUID()`, or a Math.random one on a plain-http address where that doesn't exist) and keeps it in `localStorage` under `dialectic_device`, **separate from the user**, so logging out or switching users keeps it. Every request sends it as **`X-Device-Id`**: the JSON calls, the PDF fetch and the streamed Ask. If storage is unavailable (private window, blocked site data) the ID lives in memory for the session. The server uses it only to count paid Asks per device per hour; clearing storage gets round that, which is fine (the copy's budget is the real cap).
+
 ## How a request flows
 
 1. A page calls e.g. `get('/course')` in a `useEffect`.
-2. `api.js` adds `X-User-Id` (and `Content-Type: application/json` when there's a body; for `FormData`, like the PDF upload, it lets the browser set the multipart header).
+2. `api.js` adds `X-User-Id` and `X-Device-Id` (and `Content-Type: application/json` when there's a body; for `FormData`, like the PDF upload, it lets the browser set the multipart header).
 3. On a non-2xx response it throws an `Error` whose message is the server's `detail` (for a 500 that's the real error, e.g. a missing API key).
 4. The page catches it and shows it with `<ErrorNotice>`. Nothing is swallowed (CLAUDE.md: fail loudly).
 
@@ -145,8 +147,9 @@ Measured with the real backend: about 25 s the first time a question is asked, a
 | `rule` | Amber: "No AI explanation for this question", the rule (`label`) and the gate's `reason` (S11). The other sections still show. |
 | `no_sources` | Amber, the label only. |
 | `error` | Red, with the real error in monospace (S20). On the source step it says the library was used instead. |
+| `limit` | A spending limit (SPEC §9.1): this device's AI questions for the hour are used up, this copy's budget is used up, or AI is switched off on this copy. Amber, with a clock icon instead of the charter's scales, and the server's `label` shown **as-is**, with no charter link (the charter didn't cause it). Classmates and library sources still show around it. |
 
-A toggle or rule on the *sources* layer shows no notice: the library was searched instead, and those results appear as normal sources.
+A toggle or rule on the *sources* layer shows no notice: the library was searched instead, and those results appear as normal sources. An `error` or `limit` there does show, in the Sources slot. A limit usually blocks both AI layers, so its notice appears twice: once in Sources, once in the AI slot.
 
 ## The other pages
 
@@ -175,6 +178,7 @@ A toggle or rule on the *sources* layer shows no notice: the library was searche
 | The sentences Allow / Rule out add | `allowSentence` / `ruleOutSentence` in `Charter.jsx` |
 | Course title on the login page | `COURSE_TITLE` in `Login.jsx` (DEMO: it's shown before any course call) |
 | Where `/api` goes in development | `BACKEND_URL` in `vite.config.js` |
+| The device ID's storage key | `DEVICE_KEY` in `api.js` |
 | A request or response shape | **Not here first:** `SPEC.md` §6 is the contract. Change it there and in the backend in the same commit, then follow it here. |
 
 ## Running it
@@ -195,5 +199,6 @@ To see the engagement lock and live updates, log in as Ben in one browser and as
 - **Not checked by hand yet:** a real mouse selection in a real browser (the test built the selection in script), a phone-width layout, the S11 rule refusal and S20 error states live (they're built from the shapes in SPEC §6).
 - The **sharing switch** in the user menu always starts "on": the API has no per-user setting to read it from.
 - The Ask answer card is anchored to the passage inside the page, so at a narrow zoom it can be wider than the page (it overflows sideways rather than being clipped).
+- **Spending limits checked** (05:14 Sat, headless, backend run with `DEVICE_ASKS_PER_HOUR=1`): the device ID stays the same across switching users and is sent on every request; a second fresh Ask from the same browser shows the device-limit notice in the Sources and AI slots, with classmates and a library source still in order.
 - `react-router` prints two "future flag" warnings in the console; they're harmless.
 - The bundle is one ~560 kB JavaScript file plus the pdf.js worker; fine for a demo.
