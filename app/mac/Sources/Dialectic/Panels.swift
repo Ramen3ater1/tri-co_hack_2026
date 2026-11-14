@@ -109,7 +109,7 @@ struct AskView: View {
                     HStack {
                         Text("Saved as a question on p. \(located.page)").font(.system(size: 12)).foregroundColor(Theme.muted)
                         Spacer()
-                        Button("Open in reader") { openURL(SERVER_URL + located.reader_url) }
+                        Button("Open in reader") { openInReader(located.reader_url) }
                             .buttonStyle(PrimaryButtonStyle(color: Theme.ink))
                     }
                 }
@@ -291,7 +291,7 @@ struct NoteView: View {
                 if let saved = model.saved {
                     Text("Saved as a note\(saved.page.map { " on p. \($0)" } ?? "").").font(.system(size: 12)).foregroundColor(Theme.muted)
                     Spacer()
-                    Button("Open in reader") { openURL(SERVER_URL + saved.reader_url) }
+                    Button("Open in reader") { openInReader(saved.reader_url) }
                         .buttonStyle(PrimaryButtonStyle(color: Theme.ink))
                 } else {
                     Text(NOTE_HINT).font(.system(size: 12)).foregroundColor(Theme.muted)

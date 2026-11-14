@@ -482,7 +482,10 @@ struct ThreadView: View {
             }
             HStack {
                 if let readingId = model.located?.reading_id {
-                    LinkButton(title: "Open in reader", url: "\(SERVER_URL)/readings/\(readingId)?page=\(root.page ?? 1)&annotation=\(root.id)", size: 12.5)
+                    Button { openInReader("/readings/\(readingId)?page=\(root.page ?? 1)&annotation=\(root.id)") } label: {
+                        Text("Open in reader").font(.system(size: 12.5, weight: .medium)).foregroundColor(Theme.you)
+                    }
+                    .buttonStyle(.plain)
                 }
                 Spacer()
                 if model.sending { ProgressView().controlSize(.small) }

@@ -44,6 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     let panels = PanelController()
     let overlay = OverlayController()
+    let reader = ReaderWindowController()
     var statusItem: NSStatusItem!
     var users: [User] = []
     var usersError: String?
@@ -56,9 +57,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.image = NSImage(systemSymbolName: "text.quote", accessibilityDescription: "Dialectic")
         statusItem.button?.imagePosition = .imageLeading
+        installMainMenu()
         rebuildMenu()
         registerHotKeys()
-        Task { await loadUsers() }
+        Task {
+            await loadUsers()
+            reader.show()  // the web reader, signed in as the menu's user
+        }
         print("Dialectic running. Server: \(SERVER_URL). Hotkeys: \(HOTKEY_ASK_LABEL) ask, \(HOTKEY_NOTE_LABEL) note, \(HOTKEY_HIGHLIGHTS_LABEL) highlights.")
     }
 
@@ -106,6 +111,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let current = users.first(where: { $0.id == currentUserId() })
         statusItem.button?.title = current.map { " \($0.name)" } ?? ""
 
+        menu.addItem(withTitle: "Open Dialectic", action: #selector(openReader), keyEquivalent: "o")
+        menu.addItem(.separator())
         menu.addItem(withTitle: "Ask about selection (\(HOTKEY_ASK_LABEL))", action: #selector(askHotKey), keyEquivalent: "")
         menu.addItem(withTitle: "Note on selection (\(HOTKEY_NOTE_LABEL))", action: #selector(noteHotKey), keyEquivalent: "")
         let highlights = menu.addItem(withTitle: "Show classmates' highlights (\(HOTKEY_HIGHLIGHTS_LABEL))", action: #selector(highlightsHotKey), keyEquivalent: "")
@@ -128,9 +135,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(withTitle: "Quit Dialectic", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         for item in menu.items where item.action != #selector(NSApplication.terminate(_:)) { item.target = self }
         statusItem.menu = menu
+        reader.signIn(as: current, users: users)  // reloads the reader only if the user changed
     }
 
     @objc func pickUser(_ sender: NSMenuItem) { setUser(sender.tag) }
+    @objc func openReader() { reader.show() }
     @objc func reloadUsers() { Task { await loadUsers() } }
     @objc func askHotKey() { hotKeyPressed(.ask) }
     @objc func noteHotKey() { hotKeyPressed(.note) }
@@ -307,6 +316,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 enum DialecticMain {
     static func main() {
+        setvbuf(stdout, nil, _IOLBF, 0)  // logs show up line by line even when piped to a file
         // `Dialectic --render <dir>`: draw every screen with stub data to PNGs and quit (RenderCheck.swift).
         if CommandLine.arguments.count >= 3, CommandLine.arguments[1] == "--render" {
             MainActor.assumeIsolated { renderCheck(into: CommandLine.arguments[2]) }
