@@ -36,8 +36,8 @@ let annotations: [[String: Any]] = [
     open(2, "shut out from their world by a vast veil",
          "First appearance of the Veil, one of the book's governing images. Track where it returns in later chapters.",
          "Prof. Rivera", "professor", "Fall 2026", "Professor"),
-    ["id": 4, "page": 2, "rects": rects("this double-consciousness, this sense of always looking at one’s self through the eyes of others"), "locked": true],
-    ["id": 6, "page": 2, "rects": rects("two warring ideals in one dark body"), "locked": true],
+    ["id": 4, "page": 2, "rects": rects("this double-consciousness, this sense of always looking at one’s self through the eyes of others"), "locked": true, "group": 4, "group_notes": 2],
+    ["id": 6, "page": 2, "rects": rects("two warring ideals in one dark body"), "locked": true, "group": 4, "group_notes": 2],
 ]
 let stub: [String: Any] = [
     "_comment": "STUB: POST /api/locate pending Owen's OK (design.md §3.2). Page 2 of the seed PDF, demo annotations as GET /readings/1/annotations returns them for Ben.",

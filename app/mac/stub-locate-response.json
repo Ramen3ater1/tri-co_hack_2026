@@ -68,6 +68,8 @@
       "via" : "web"
     },
     {
+      "group" : 4,
+      "group_notes" : 2,
       "id" : 4,
       "locked" : true,
       "page" : 2,
@@ -87,6 +89,8 @@
       ]
     },
     {
+      "group" : 4,
+      "group_notes" : 2,
       "id" : 6,
       "locked" : true,
       "page" : 2,

@@ -16,6 +16,9 @@ let NEAR_DISTANCE = 0.08         // same as db.py: a locked cluster is annotatio
 let MIN_MATCH_CHARS = 12         // OCR lines shorter than this aren't used for the fit
 let MAX_FIT_ERROR_PT = 8.0       // fits worse than this are thrown away
 let MARGIN_WIDTH: CGFloat = 376
+// SPEC §3.3 wording: a count of notes, not people (locked annotations carry no author).
+let LOCKED_HINT = "Add a note or ask a question to see them."
+func lockedTitle(_ n: Int) -> String { "\(n) note\(n == 1 ? "" : "s") near here" }
 let PRIVACY_FOOTER = "Read on your Mac: only the recognised text is sent to find the page. The screenshot never leaves this Mac."
 
 // ---------- page fitting ----------
@@ -142,6 +145,7 @@ struct PageThread: Identifiable {
     let number: Int
     let annotation: Annotation?
     let locked: [Annotation]
+    var noteCount: Int { locked.first?.group_notes ?? locked.count }
     var id: Int { annotation?.id ?? -(locked.first?.id ?? 0) }
     var top: Double { (annotation?.rects ?? locked.first?.rects)?.map(\.y).min() ?? 1 }
     var role: Role { annotation.map { Role.of(authorId: $0.author?.id, role: $0.author?.role) } ?? .classmate }
@@ -153,12 +157,16 @@ func verticalGap(_ a: [Rect], _ b: [Rect]) -> Double {
     return max(0, max(aTop, bTop) - min(aBottom, bBottom))
 }
 
-/// Open annotations each get a thread; locked ones are grouped by nearness. Numbered top to bottom.
+/// Open annotations each get a thread; locked ones one per lock-card group (the server's `group`,
+/// or by nearness if it doesn't send one). Numbered top to bottom.
 func buildThreads(_ annotations: [Annotation]) -> [PageThread] {
     var groups: [(Annotation?, [Annotation])] = annotations.filter { !$0.isLocked }.map { ($0, []) }
     var clusters: [[Annotation]] = []
     for item in annotations.filter(\.isLocked).sorted(by: { ($0.rects?.first?.y ?? 1) < ($1.rects?.first?.y ?? 1) }) {
-        if let last = clusters.last?.last, verticalGap(last.rects ?? [], item.rects ?? []) <= NEAR_DISTANCE {
+        if let group = item.group, let i = clusters.firstIndex(where: { $0.first?.group == group }) {
+            clusters[i].append(item)
+        } else if item.group == nil, let last = clusters.last?.last, last.group == nil,
+                  verticalGap(last.rects ?? [], item.rects ?? []) <= NEAR_DISTANCE {
             clusters[clusters.count - 1].append(item)
         } else {
             clusters.append([item])
@@ -359,7 +367,7 @@ struct MarginView: View {
                                 .contentShape(Rectangle())
                                 .onTapGesture { model.selectedId = annotation.id; model.replyText = "" }
                         } else {
-                            LockedCard(count: thread.locked.count, number: thread.number)
+                            LockedCard(count: thread.noteCount, number: thread.number)
                         }
                     }
                     if model.threads.isEmpty && model.fit != nil {
@@ -414,9 +422,9 @@ struct LockedCard: View {
         RoleCard(role: .classmate, dashed: true) {
             HStack(spacing: 6) {
                 Pin(number: number, color: Theme.classmatePin)
-                Text("\(count) classmate\(count == 1 ? "" : "s") annotated near here").font(.system(size: 13, weight: .semibold))
+                Text(lockedTitle(count)).font(.system(size: 13, weight: .semibold))
             }
-            Text("Add a note or ask a question to see theirs.").font(.system(size: 12.5)).foregroundColor(Theme.ink)
+            Text(LOCKED_HINT).font(.system(size: 12.5)).foregroundColor(Theme.ink)
             HStack(spacing: 4) {
                 Text("Select the passage, then").font(.system(size: 11.5)).foregroundColor(Theme.muted)
                 KeyCap(label: HOTKEY_NOTE_LABEL)

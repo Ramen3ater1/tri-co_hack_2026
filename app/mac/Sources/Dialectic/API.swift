@@ -41,6 +41,8 @@ struct Annotation: Decodable, Identifiable {
     let badge: String?
     let locked: Bool?
     let replies: [Annotation]?
+    let group: Int?          // locked only: notes near each other share a group (SPEC §6)
+    let group_notes: Int?    // locked only: how many notes the group's lock card counts
 
     var isLocked: Bool { locked == true }
 }

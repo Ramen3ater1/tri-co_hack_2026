@@ -5,7 +5,7 @@ Menu-bar app (SPEC §3.9, `design.md`). You read wherever you already read (Prev
 | Key | Does |
 | --- | --- |
 | **⌥⇧D** | Ask about the selected text. Panel: From your class → Sources → "Still stuck? Show the AI explanation" (collapsed), then **Open in reader**. |
-| **⌥⇧N** | Write a note on the selected text (`POST /api/note`). Says so when the passage is near a locked cluster: "Your note opens theirs." |
+| **⌥⇧N** | Write a note on the selected text (`POST /api/note`). Says so when the passage is near a locked cluster: "N notes near here. Your note opens them." |
 | **⌥⇧H** | Show / hide classmates' highlights over the reading window: boxes by role (professor green, classmates magenta, you blue), dashed outlines for locked clusters, numbered pins, a status pill, and a margin strip with the threads. Click a card for the thread and reply. |
 
 Code: `Sources/Dialectic/` — `DialecticApp.swift` (constants, menu, hotkeys, copy selection), `Panels.swift` (Ask, Note), `Overlay.swift` (capture, Vision, page fit, overlay windows, margin, thread), `Style.swift` (canvas tokens and shared pieces), `API.swift` (shapes and HTTP), `RenderCheck.swift` (the check below). Tunables are constants at the top of each file; `SERVER_URL` is in `DialecticApp.swift`.

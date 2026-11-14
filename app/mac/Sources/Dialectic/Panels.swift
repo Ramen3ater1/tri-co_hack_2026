@@ -140,9 +140,9 @@ struct AnswerView: View {
                     ForEach(visiblePeers) { peer in peerCard(peer) }
                     if lockedCount > 0 {
                         RoleCard(role: .classmate, dashed: true) {
-                            Text("\(lockedCount) classmate\(lockedCount == 1 ? "" : "s") annotated near here")
+                            Text(lockedTitle(lockedCount))
                                 .font(.system(size: 13, weight: .semibold))
-                            Text("Add a note or ask a question there to see theirs.").font(.system(size: 12)).foregroundColor(Theme.muted)
+                            Text(LOCKED_HINT).font(.system(size: 12)).foregroundColor(Theme.muted)
                         }
                     }
                 }
@@ -271,7 +271,7 @@ struct NoteView: View {
             }
             if let near = model.context?.nearLockedCount, near > 0, model.saved == nil {
                 RoleCard(role: .classmate, dashed: true) {
-                    Text("\(near) classmate\(near == 1 ? "" : "s") annotated near here. Your note opens theirs.")
+                    Text("\(lockedTitle(near)). Your note opens them.")
                         .font(.system(size: 12.5)).foregroundColor(Theme.ink)
                 }
             }
