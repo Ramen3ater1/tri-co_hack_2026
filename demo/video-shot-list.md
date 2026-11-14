@@ -2,7 +2,7 @@
 
 Rewritten Sat 14 Nov for the philosophy seed (SPEC §2, §10). Course: **PHIL 247: The Social Contract (seminar)**. Reading: **Week 2 · Rousseau, The Social Contract** (Bennett's version). The earlier Du Bois version of this list is in git history.
 
-## Before recording (done Sat 14 Nov ~12:40)
+## Before recording (done Sat 14 Nov ~12:10)
 
 Two copies are ready. Shot 5 has two versions; film both and pick in the edit.
 
@@ -18,7 +18,7 @@ On both: the seed is reset with Rousseau uploaded; **Ana's note is on the p. 12 
 - To restart the laptop copy: `cd app/backend && GATE_CONTEXT_ONLY=0 uv run --env-file ../../.env uvicorn main:app --port 8765`.
 - For shot 6, open `~/Documents/Dialectic demo readings/PHIL 247 seminar/Week 2 - Rousseau, The Social Contract.pdf` in Preview at p. 7, with the Mac app pointed at dev.
 
-What each answer says (read once, Sat ~12:40):
+What each answer says (read once, Sat ~12:10):
 
 - **Shot 4 (dev):** class: Sam, Ana, Theo. 1 source (*Three General Wills in Rousseau*, Review of Politics), **14 skipped** (Wikipedia, general encyclopedias, social media…). AI: traces the idea through the Discourse on Political Economy (1755), the Geneva Manuscript and the 1762 text, with three conceptions. Its first sentence ("The supplied source … says nothing about earlier thinkers") is a bit stiff; the local copy's version is better (3 sources incl. IEP and the Cambridge Companion, 12 skipped, mentions Plato, Montesquieu and the 1762 ban).
 - **Shot 5A (dev):** same source, 14 skipped. AI opens "Under Rule 2, I won't explain what Rousseau means by the general will", then the term's history and how scholars have disagreed about it.
@@ -41,4 +41,4 @@ What each answer says (read once, Sat ~12:40):
 
 ## Checked so far
 
-- Sat ~12:40: everything under *Before recording* was run against both copies through the API (not clicked through in a browser). Gate verdicts match the plan: 4 and 6 fully allowed; 5 context-only on dev, refused on the laptop copy.
+- Sat ~12:10: everything under *Before recording* was run against both copies through the API (not clicked through in a browser). Gate verdicts match the plan: 4 and 6 fully allowed; 5 context-only on dev, refused on the laptop copy.
