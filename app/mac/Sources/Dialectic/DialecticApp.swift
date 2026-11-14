@@ -36,6 +36,8 @@ let COPY_WAIT_SECONDS = 0.6
 /// /api/ask searches the web and calls the LLM, so it can take a while.
 let ASK_TIMEOUT_SECONDS: TimeInterval = 120
 let USER_DEFAULTS_KEY = "userId"
+/// Where the log goes when the app isn't started from a terminal (Finder, `open`).
+let LOG_PATH = NSHomeDirectory() + "/Library/Logs/Dialectic.log"
 
 let NO_TEXT_IN_BOX_MESSAGE = "Couldn't read any text in that box."
 let NO_USER_MESSAGE = "Pick who you are in the Dialectic menu-bar menu first."
@@ -77,6 +79,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             reader.show()  // the web reader, signed in as the menu's user
         }
         print("Dialectic running. Server: \(SERVER_URL). Hotkeys: \(HOTKEY_ASK_LABEL) ask, \(HOTKEY_NOTE_LABEL) note, \(HOTKEY_HIGHLIGHTS_LABEL) highlights.")
+        print("Permissions: Accessibility \(AXIsProcessTrusted() ? "granted" : "NOT granted"), Screen Recording \(CGPreflightScreenCaptureAccess() ? "granted" : "NOT granted"). User id: \(currentUserId().map(String.init) ?? "none"). App: \(Bundle.main.bundlePath)")
     }
 
     /// Clicking the Dock icon (shown while the reader window is open or minimised) brings the reader back.
@@ -89,6 +92,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func application(_ application: NSApplication, open urls: [URL]) {
         for url in urls {
             let parts = URLComponents(url: url, resolvingAgainstBaseURL: false)
+            // dialectic://hotkey?key=ask|note|highlights: the same path as pressing the hotkey (for testing).
+            if url.scheme == "dialectic", url.host == "hotkey" {
+                let key = parts?.queryItems?.first(where: { $0.name == "key" })?.value
+                print("Hotkey by URL: \(key ?? "?")")
+                hotKeyPressed(key == "note" ? .note : key == "highlights" ? .highlights : .ask)
+                continue
+            }
             guard url.scheme == "dialectic", url.host == "login",
                   let value = parts?.queryItems?.first(where: { $0.name == "user" })?.value, let id = Int(value) else {
                 print("Ignoring unknown URL: \(url)")
@@ -251,6 +261,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func hotKeyPressed(_ key: HotKey) {
+        print("Hotkey pressed: \(key)")
         switch key {
         case .highlights:
             overlay.toggle()
@@ -264,6 +275,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Asks macOS to show the Accessibility prompt the first time; the human grants it.
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
         guard AXIsProcessTrustedWithOptions(options) else {
+            print("Accessibility NOT granted: can't copy the selection")
             showMessage(NO_ACCESSIBILITY_MESSAGE)
             return
         }
@@ -274,6 +286,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             try? await Task.sleep(nanoseconds: 250_000_000)
         }
         var quote = await copySelection()
+        print("Copied selection: \(quote.map { "\($0.count) characters" } ?? "nothing")")
         if quote?.isEmpty ?? true {
             // Nothing copied (common in Notability with scanned or annotated PDFs): drag a box instead.
             guard CGPreflightScreenCaptureAccess() else {
@@ -282,7 +295,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
             do {
-                guard let boxText = try await textFromDraggedBox() else { return }  // Esc: cancelled
+                guard let boxText = try await textFromDraggedBox() else {
+                    print("Box capture cancelled (Esc)")
+                    return
+                }
                 guard !boxText.isEmpty else {
                     showMessage(NO_TEXT_IN_BOX_MESSAGE)
                     return
@@ -389,6 +405,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 enum DialecticMain {
     static func main() {
+        if isatty(STDOUT_FILENO) == 0 {
+            // Opened from Finder or `open`: there's no terminal, so keep the log in a file.
+            freopen(LOG_PATH, "a", stdout)
+            freopen(LOG_PATH, "a", stderr)
+        }
         setvbuf(stdout, nil, _IOLBF, 0)  // logs show up line by line even when piped to a file
         // `Dialectic --render <dir>`: draw every screen with stub data to PNGs and quit (RenderCheck.swift).
         if CommandLine.arguments.count >= 3, CommandLine.arguments[1] == "--render" {

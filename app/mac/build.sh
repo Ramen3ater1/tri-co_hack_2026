@@ -44,9 +44,12 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 </plist>
 PLIST
 
-# Ad-hoc signature: enough to run locally. Note: macOS ties the Accessibility grant to the
-# signature, so after a rebuild you may need to toggle Dialectic off and on again in System Settings.
-codesign --force --sign - "$APP"
+# Sign with your Apple Development certificate if you have one: then macOS keeps the Accessibility
+# and Screen Recording grants across rebuilds. Without one, ad-hoc ("-"), and grants break on rebuild.
+SIGN_ID="${DIALECTIC_SIGN_ID:-$(security find-identity -p codesigning -v | grep -m1 "Apple Development" | sed -E 's/.*"(.*)".*/\1/')}"
+SIGN_ID="${SIGN_ID:--}"
+echo "Signing with: $SIGN_ID"
+codesign --force --sign "$SIGN_ID" "$APP"
 # Tell Launch Services about the dialectic:// scheme now, not on first launch.
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$APP"
 
