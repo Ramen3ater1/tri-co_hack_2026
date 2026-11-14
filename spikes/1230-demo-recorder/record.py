@@ -36,6 +36,10 @@ GENERAL_WILL_END_AFTER = "direction of the general"   # the sentence ends at the
 BEN_NOTE = ("Wait, so I'm both the one giving orders and the one obeying them? "
             "Where did he get this idea of a will that belongs to everyone?")
 SAM_NOTE_START = "Last spring we spent"               # appears once Ben's note is saved
+QUESTION_4 = "Where does the idea of the general will come from, and what did it mean in 1762?"
+QUESTION_5 = "What does Rousseau mean by the general will?"
+ANSWER_TIMEOUT_MS = 120000   # a cached answer takes a few seconds; a live one ~20 s
+SOURCE_PAGE_SECONDS = 5      # how long shot 4 stays on the source page it opens
 
 # A drawn cursor: recordings don't show the real pointer. A macOS-style arrow with a soft shadow that
 # follows mouse events, dips on press, and leaves a fading ripple at each click.
@@ -127,7 +131,7 @@ def setup(base):
 def reset_ben(base, ben, reading_id):
     """Delete Ben's own notes and questions on the reading, so the lock card is back."""
     for a in api(base, "GET", f"/api/readings/{reading_id}/annotations", ben["id"]):
-        if a.get("author", {}).get("id") == ben["id"] and not a.get("parent_id"):
+        if (a.get("author") or {}).get("id") == ben["id"] and not a.get("parent_id"):
             api(base, "DELETE", f"/api/annotations/{a['id']}", ben["id"])
 
 
@@ -144,6 +148,8 @@ class Take:
         self.start = 0.0
         self.x, self.y = VIEWPORT["width"] * 0.62, VIEWPORT["height"] * 0.55
         self.track = []  # (seconds, event, x, y): the cursor's path, saved next to the video
+        self.label = None  # a shot can name its own file (shot 5: 5A or 5B)
+        self.extra = []    # (page, label): other tabs the shot opened, saved as their own videos
 
     def now(self):
         return time.monotonic() - self.t0
@@ -205,7 +211,7 @@ class Take:
         self.page.wait_for_timeout(int(seconds * 1000))
 
 
-def open_reader(take, base, ben, reading_id):
+def open_reader(take, base, ben, reading_id, wait_for=".lock-card"):
     page = take.page
     page.goto(f"{base}/readings/{reading_id}")
     page.wait_for_selector('.pdf-page[data-page="12"] .textLayer span', timeout=60000)
@@ -213,7 +219,7 @@ def open_reader(take, base, ben, reading_id):
     spot = page.evaluate(RANGE_JS, [12, GENERAL_WILL_START, GENERAL_WILL_END_AFTER, "will"])
     page.evaluate("""(y) => { const col = document.querySelector('.pdf-column');
                               col.scrollTop += y - col.clientHeight * 0.32; }""", spot["center"])
-    page.wait_for_selector(".lock-card")
+    page.wait_for_selector(wait_for)
     take.pause(1.5)  # let the margin settle on p. 12
 
 
@@ -225,6 +231,74 @@ def select_passage(take):
     take.glide(spot["x1"], spot["y1"], curve=0)  # a drag along the text, not a swoop
     take.pause(0.1)
     take.up()
+
+
+# The passage's highlight boxes as page fractions, one per line, as the reader saves them.
+RECTS_JS = """
+([pageNo, start, endAfter, endWord]) => {
+  const layer = document.querySelector(`.pdf-page[data-page="${pageNo}"] .textLayer`);
+  const box = document.querySelector(`.pdf-page[data-page="${pageNo}"] .react-pdf__Page`).getBoundingClientRect();
+  const walker = document.createTreeWalker(layer, NodeFilter.SHOW_TEXT);
+  const nodes = []; let text = '';
+  while (walker.nextNode()) { nodes.push([walker.currentNode, text.length]); text += walker.currentNode.data; }
+  const s = text.indexOf(start), after = text.indexOf(endAfter, s);
+  const e = text.indexOf(endWord, after + endAfter.length) + endWord.length;
+  const at = (i) => { for (let k = nodes.length - 1; k >= 0; k--) if (nodes[k][1] <= i) return [nodes[k][0], i - nodes[k][1]]; };
+  const range = document.createRange(); range.setStart(...at(s)); range.setEnd(...at(e));
+  const lines = [];
+  for (const r of range.getClientRects()) {
+    if (r.width < 1) continue;
+    const line = lines.find((l) => Math.abs(l.top - r.top) < r.height / 2);
+    if (line) { line.left = Math.min(line.left, r.left); line.right = Math.max(line.right, r.right); line.bottom = Math.max(line.bottom, r.bottom); }
+    else lines.push({left: r.left, right: r.right, top: r.top, bottom: r.bottom});
+  }
+  // The reader quotes window.getSelection().toString() (which turns the text layer's <br>s into spaces), so do the same.
+  const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+  const quote = sel.toString().replace(/\\s+/g, ' ').trim(); sel.removeAllRanges();
+  return {quote,
+          rects: lines.map((l) => ({x: (l.left - box.left) / box.width, y: (l.top - box.top) / box.height,
+                                    w: (l.right - l.left) / box.width, h: (l.bottom - l.top) / box.height}))};
+}
+"""
+
+
+def restore_bens_note(take, base, ben, reading_id):
+    """Off camera: Ben's note from shot 3, so the passage is already unlocked."""
+    page = take.page
+    page.goto(f"{base}/readings/{reading_id}")
+    page.wait_for_selector('.pdf-page[data-page="12"] .textLayer span', timeout=60000)
+    where = page.evaluate(RECTS_JS, [12, GENERAL_WILL_START, GENERAL_WILL_END_AFTER, "will"])
+    api(base, "POST", f"/api/readings/{reading_id}/annotations", ben["id"],
+        {"body": BEN_NOTE, "page": 12, "quote": where["quote"], "rects": where["rects"]})
+
+
+def smooth_scroll_to(take, locator):
+    locator.evaluate("(el) => el.scrollIntoView({behavior: 'smooth', block: 'nearest'})")
+    take.pause(0.9)
+
+
+def ask(take, question):
+    """Select the passage, switch to Ask, type the question and send it."""
+    page = take.page
+    select_passage(take)
+    page.wait_for_selector("#note")
+    take.pause(0.5)
+    take.click(page.get_by_role("tab", name="Ask"))
+    page.wait_for_selector("#question")
+    take.pause(0.3)
+    take.click(page.locator("#question"))  # the Ask tab keeps focus, so click into the box like a person would
+    take.pause(0.3)
+    page.keyboard.type(question, delay=TYPE_DELAY_MS)
+    take.pause(0.6)
+    take.click(page.locator(".popover").get_by_role("button", name="Ask", exact=True))
+    take.beat("question sent")
+
+
+def wait_for_answer(take):
+    """Until the answer is complete: the AI button, or a charter notice where the explanation would be."""
+    page = take.page
+    page.locator(".ai-button, .answer-card .notice:has-text('No AI explanation')").first.wait_for(timeout=ANSWER_TIMEOUT_MS)
+    take.beat("answer complete")
 
 
 # ---------- shots
@@ -253,9 +327,95 @@ def shot3(take, base, ben, reading_id):
     take.beat("end of the shot")
 
 
-SHOTS = {"shot3": shot3}
+def shot4(take, base, ben, reading_id):
+    page = take.page
+    restore_bens_note(take, base, ben, reading_id)
+    open_reader(take, base, ben, reading_id, wait_for=f"text={BEN_NOTE[:30]}")
+    take.beat("on p. 12, Ben's note in the margin: start of the shot", start=True)
+    take.pause(0.8)
+    ask(take, QUESTION_4)
+    wait_for_answer(take)
+    card = page.locator(".answer-card")
+    take.pause(0.6)
+    take.glide_to(card.locator(".peer-item").first)
+    take.beat("classmates")
+    take.pause(1.8)
+    skipped = card.locator("details.skipped summary")
+    smooth_scroll_to(take, skipped)
+    take.glide_to(skipped)
+    take.beat("'N results skipped' (zoom here)")
+    take.pause(2.2)
+    link = card.locator(".source-item a").first
+    take.glide_to(link)
+    take.pause(0.4)
+    with page.context.expect_page() as opened:
+        take.click(link)
+    source_page = opened.value
+    take.beat("source link clicked (its page is saved as a separate video)")
+    source_page.wait_for_load_state("domcontentloaded")
+    source_page.wait_for_timeout(SOURCE_PAGE_SECONDS * 1000)
+    take.extra.append((source_page, "shot 4 - the source page it opens"))
+    source_page.close()
+    page.bring_to_front()
+    take.pause(0.5)
+    ai_button = card.locator(".ai-button")
+    smooth_scroll_to(take, ai_button)
+    take.click(ai_button)
+    explanation = card.locator(".ai-explanation")
+    explanation.wait_for()
+    take.beat("AI explanation open")
+    smooth_scroll_to(take, explanation)
+    take.glide_to(explanation)
+    take.pause(5)
+    take.beat("end of the shot")
+
+
+def shot5(take, base, ben, reading_id):
+    page = take.page
+    restore_bens_note(take, base, ben, reading_id)
+    open_reader(take, base, ben, reading_id, wait_for=f"text={BEN_NOTE[:30]}")
+    take.beat("on p. 12: start of the shot", start=True)
+    take.pause(0.8)
+    ask(take, QUESTION_5)
+    wait_for_answer(take)
+    card = page.locator(".answer-card")
+    take.pause(0.6)
+    refusal = card.locator(".notice:has-text('No AI explanation')")
+    if refusal.count():
+        take.label = "shot 5B - refusal citing rule 2"
+        smooth_scroll_to(take, refusal)
+        take.glide_to(refusal)
+        take.beat("refusal notice quoting rule 2 (zoom here)")
+        take.pause(3)
+        source = card.locator(".source-item").first
+        smooth_scroll_to(take, source)
+        take.glide_to(source)
+        take.beat("sources still there")
+        take.pause(3)
+    else:
+        take.label = "shot 5A - context-only explanation"
+        ai_button = card.locator(".ai-button")
+        smooth_scroll_to(take, ai_button)
+        take.click(ai_button)
+        explanation = card.locator(".ai-explanation")
+        explanation.wait_for()
+        smooth_scroll_to(take, explanation)
+        take.glide_to(explanation)
+        take.beat("explanation opens 'Under Rule 2, I won't…' (zoom here)")
+        take.pause(5)
+    take.beat("end of the shot")
+
+
+SHOTS = {"shot3": shot3, "shot4": shot4, "shot5": shot5}
 # File names, matching demo/video-shot-list.md.
-LABELS = {"shot3": "shot 3 - Ben unlocks the notes"}
+LABELS = {"shot3": "shot 3 - Ben unlocks the notes",
+          "shot4": "shot 4 - Ben asks, classmates then sources then AI",
+          "shot5": "shot 5"}  # shot 5 names itself 5A or 5B from what the copy answered
+
+
+def to_mp4(webm, mp4, start):
+    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-ss", f"{start:.2f}", "-i", str(webm), "-c:v", "libx264",
+                    "-pix_fmt", "yuv420p", "-crf", "18", str(mp4)], check=True)
 
 
 def record(name, base, headed, cursor):
@@ -277,16 +437,22 @@ def record(name, base, headed, cursor):
         print(f"Recording {name} against {base}")
         take = Take(page)
         SHOTS[name](take, base, ben, reading_id)
-        context.close()  # finishes writing the video
+        context.close()  # finishes writing the videos
         webm = Path(page.video.path())
+        extra = [(Path(p.video.path()), label) for p, label in take.extra]
         browser.close()
-    suffix = "" if cursor else " (no cursor)"
-    mp4 = OUT_DIR / f"{LABELS[name]} - {time.strftime('%H%M')}{suffix}.mp4"
+    reset_ben(base, ben, reading_id)  # leave the copy as prepared
+    copy = "dev" if "dialectic-dev" in base else "laptop"
+    tag = f"({copy}{'' if cursor else ', no cursor'}) {time.strftime('%H%M')}"
+    mp4 = OUT_DIR / f"{take.label or LABELS[name]} {tag}.mp4"
     # The cursor's path, in seconds from the start of the saved video, to redraw it in an editor.
     track = [{"t": round(t - take.start, 3), "event": e, "x": x, "y": y} for t, e, x, y in take.track if t >= take.start]
     mp4.with_suffix(".cursor.json").write_text(json.dumps({"video": mp4.name, "size": VIEWPORT, "track": track}))
-    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-ss", f"{take.start:.2f}", "-i", str(webm), "-c:v", "libx264", "-pix_fmt", "yuv420p",
-                    "-crf", "18", str(mp4)], check=True)
+    to_mp4(webm, mp4, take.start)
+    for extra_webm, label in extra:
+        extra_mp4 = OUT_DIR / f"{label} {tag}.mp4"
+        to_mp4(extra_webm, extra_mp4, 0)
+        print(f"Saved {extra_mp4}")
     shutil.rmtree(raw_dir)
     print(f"Saved {mp4}")
 
