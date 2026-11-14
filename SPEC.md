@@ -83,7 +83,7 @@ One table covers notes, questions, AI answers and replies:
 - you have engaged **near** it: you've written a note **or asked a question** whose highlight is near its highlight. A question counts as engagement: we trust students, and when someone has a question, their classmates' annotations are the best answers to it, so withholding them would be perverse;
 - it's a reply, or an AI answer, under an annotation you can see in full.
 
-Otherwise it's **locked**: the API returns it as `{"id", "page", "rects", "locked": true}` plus its lock-card group (§6), with no author, cohort or text, so nothing leaks through the browser. The UI shows locked ones only as a count (§3.3): one card per group of nearby locked notes, "N classmates annotated near here", where N is the number of **distinct authors** in the group (the server counts them; it never says who).
+Otherwise it's **locked**: the API returns it as `{"id", "page", "rects", "locked": true}` plus its lock-card group (§6), with no author, cohort or text, so nothing leaks through the browser. The UI shows locked ones only as a count (§3.3): one card per group of nearby locked notes, "N notes near here" (`group_notes`). The server also sends `group_authors`, the number of distinct classmates in the group (never who), in case the card should count people instead.
 
 **Near** means roughly "the same paragraph", measured by position rather than exact matching. Two highlights are near if they're on the same page and the vertical gap between their bounding boxes is at most `NEAR_DISTANCE` (a constant in `db.py`, start at `0.08` of the page height, about a paragraph; tune it on the demo PDF). With the S1 paragraph fallback, near means the same paragraph or the one either side. `TODO(edge)`: passages that run across a page break.
 
@@ -418,7 +418,7 @@ Annotation shape (`GET /readings/{id}/annotations` returns a list of these, newe
 
 `answer_summary` is set on questions with a saved answer, for the margin card: `{"peer": 3, "peer_authors": 2, "sources": 1, "ai_answer": true}` ("Answered: 2 classmates, 1 source, AI context"); otherwise `null`.
 
-A locked annotation is `{"id": 4, "page": 2, "rects": [...], "locked": true, "group": 4, "group_notes": 2, "group_authors": 2}`. Locked annotations near each other (same page, within `NEAR_DISTANCE`) share a `group` (the smallest id in it): draw **one lock card per group**, "`group_authors` classmates annotated near here".
+A locked annotation is `{"id": 4, "page": 2, "rects": [...], "locked": true, "group": 4, "group_notes": 2, "group_authors": 2}`. Locked annotations near each other (same page, within `NEAR_DISTANCE`) share a `group` (the smallest id in it): draw **one lock card per group**, "`group_notes` notes near here" (§3.3). `group_authors` is how many distinct classmates wrote them, never who.
 
 **Streamed ask** (`/readings/{id}/ask/stream`, `/ask/stream`): `Content-Type: application/x-ndjson`, one JSON object per line, read with `fetch` and a stream reader (not `EventSource`, which can't POST). Each line has an `event`:
 
