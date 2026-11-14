@@ -148,12 +148,13 @@ At upload, each reading is split into **sections** by its headings: the PDF's ou
 
 - **Backend:** Python 3.12, managed with **uv** (`app/backend/pyproject.toml` + `uv.lock`), FastAPI, `sqlite3` from the standard library (no ORM), `pypdf` for PDF text, `httpx` for the LLM and search calls, `trafilatura` to extract a web page's main text. `uvicorn` to serve.
 - **Web search:** **Kagi Search API** (preview, ~$12 per 1,000 queries, billed to a Kagi account; a day of building and the demo is a dollar or two). Chosen for the privacy story alongside DigitalOcean inference, and for results with little SEO spam, which helps keep study-guide sites out. All of it lives in one function, `search(query) -> [{title, url, snippet}]` in `search.py`, so swapping providers is a small change.
-  - Call (check the current docs at help.kagi.com when building; the API is in preview): `GET https://kagi.com/api/v0/search?q=<query>&limit=8` with header `Authorization: Bot $KAGI_API_KEY`. Results are the items in `data` with `t == 0` (`url`, `title`, `snippet`); `t == 1` items are related searches, ignore them.
+  - Call (**v1, tested 02:00 Sat with our key**): `POST https://kagi.com/api/v1/search` with JSON body `{"query": "<query>"}` and header `Authorization: Bearer $KAGI_API_KEY` (`Bot` also works). Results are in `data.search`, a list of `{url, title, snippet, time, props}` (about 30; take the first 8). Ignore `data.video`, `data.infobox` and `data.related_search`. Snippets contain HTML (`<strong>`, `&#39;`): strip tags and unescape before showing or sending them on.
+  - **The legacy v0 API (`GET /api/v0/search`, `data[]` with `t == 0`) returns 401 with new keys.** Don't use it.
   - Fallback if Kagi misbehaves on the day: Brave Search API, same function signature.
 - **Frontend:** React + Vite, `react-router`, `react-pdf`. Plain CSS. No state library.
 - **PWA:** a `manifest.webmanifest` and icon, nothing more.
 - **Mac hotkey app (§3.9):** one small **SwiftUI** menu-bar app, built with Xcode (or `swift build`). Uses only Apple frameworks: Vision (on-device text recognition), AppKit (hotkey, floating panel, pasteboard), `URLSession` for the API. The server URL and hotkey are constants at the top of `DialecticApp.swift`. No third-party packages.
-- **LLM:** DigitalOcean serverless inference, which is OpenAI-compatible (`POST {DO_INFERENCE_URL}/chat/completions`). Model name in `.env`.
+- **LLM:** DigitalOcean serverless inference, which is OpenAI-compatible (`POST {DO_INFERENCE_URL}/chat/completions`). Model: **`anthropic-claude-sonnet-5.5`** (the exact ID from DO's `/v1/models` list), set as `DO_MODEL` in `.env`.
 
 ```
 app/
@@ -433,6 +434,6 @@ Because the reading is uploaded live, the seeded annotations can't exist before 
 2. **AI explanation visibility:** the spec makes every AI explanation public, as in the vision. Should the asker be able to discard it before it's posted?
 3. ~~**Search API**~~ **Decided:** Kagi (Brave as fallback). Set a budget alert or check usage on the Kagi billing page before the demo.
 4. **Past students:** the spec fakes them with a seeded cohort. OK for the demo?
-5. **Model:** which model on DO serverless inference? It must return reliable JSON for the gate, filter and sentence picking. Test the gate on the step-4 questions early: a gate that wrongly allows "what does it mean" breaks the demo's best moment.
+5. ~~**Model**~~ **Decided:** Claude Sonnet 5.5 on DO (`anthropic-claude-sonnet-5.5`). Still test the gate on the step-4 questions early: a gate that wrongly allows "what does it mean" breaks the demo's best moment.
 6. **Domain:** `dialectic.space` or a subdomain of an existing domain? Decide by 08:00 so DNS can propagate.
 7. **Hotkey demo:** which Mac and which reading app (Notability vs Preview) do we demo on? Permissions must be granted on that Mac before presenting. Does the demo chapter need seeded sub-headings so "same section" visibly differs from "same page"?
