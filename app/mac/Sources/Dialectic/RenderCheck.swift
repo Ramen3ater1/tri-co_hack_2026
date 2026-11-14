@@ -96,6 +96,14 @@ func renderCheck(into dir: String) {
     print(String(format: "fit: %d OCR lines; a=%.1f (want %.1f) b=%.1f (want 0) c=%.1f (want %.1f) d=%.1f (want 0)",
                  ocr.count, fit.a, pageSize.width, fit.b, fit.c, pageSize.height, fit.d))
 
+    // 1b. The ⌥⇧D/⌥⇧N box fallback reads a cropped box of that page back as the quote.
+    let page = renderer.cgImage!
+    let box = page.cropping(to: CGRect(x: 0, y: Int(0.555 * Double(page.height)), width: page.width, height: Int(0.06 * Double(page.height))))!
+    let boxText = try! recognizedText(box)
+    print("box text: \(boxText)")
+    let wanted = squash("this double-consciousness, this sense of always looking at one’s self through the eyes of others")
+    print(squash(boxText).contains(wanted) ? "box text contains the double-consciousness quote: OK" : "BOX TEXT MISSING THE QUOTE")
+
     // 2. The overlay on that page: locked (board 1), then opened (board 4) with a thread selected (board 5).
     let model = OverlayModel()
     model.located = stub.located

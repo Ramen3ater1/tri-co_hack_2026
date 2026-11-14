@@ -6,6 +6,8 @@ Menu-bar app (SPEC §3.9, `design.md`). You read wherever you already read (Prev
 | --- | --- |
 | **⌥⇧D** | Ask about the selected text. Panel: From your class → Sources → "Still stuck? Show the AI explanation" (collapsed), then **Open in reader**. |
 | **⌥⇧N** | Write a note on the selected text (`POST /api/note`). Says so when the passage is near a locked cluster: "N notes near here. Your note opens them." |
+
+If ⌥⇧D or ⌥⇧N copies nothing (Notability with scanned or annotated PDFs, images), a crosshair appears: drag a box round the passage. Vision reads it on the Mac, the image is deleted at once, and only the text is sent as the quote. Esc cancels. No text in the box: "Couldn't read any text in that box." Not in a course reading: the server's "This passage isn't in a course reading."
 | **⌥⇧H** | Show / hide classmates' highlights over the reading window: boxes by role (professor green, classmates magenta, you blue), dashed outlines for locked clusters, numbered pins, a status pill, and a margin strip with the threads. Click a card for the thread and reply. |
 
 Code: `Sources/Dialectic/` — `DialecticApp.swift` (constants, menu, hotkeys, copy selection), `Panels.swift` (Ask, Note), `Overlay.swift` (capture, Vision, page fit, overlay windows, margin, thread), `Style.swift` (canvas tokens and shared pieces), `API.swift` (shapes and HTTP), `RenderCheck.swift` (the check below). Tunables are constants at the top of each file; `SERVER_URL` is in `DialecticApp.swift`.
@@ -25,7 +27,7 @@ Needs Xcode or the Command Line Tools (Swift 5.9+), **macOS 14+** (ScreenCapture
 
 1. **Pick who you are** in the menu-bar menu, or click **Use on Mac** on the web log-in page (`dialectic://login?user=<id>`).
 2. **Accessibility** (⌥⇧D and ⌥⇧N copy your selection): the first press shows macOS's prompt. Turn Dialectic on in System Settings → Privacy & Security → Accessibility.
-3. **Screen Recording** (⌥⇧H reads the page on screen): the first ⌥⇧H shows the prompt. Turn Dialectic on in System Settings → Privacy & Security → Screen Recording, then **quit and reopen** Dialectic. The screenshot stays on the Mac; only recognised text is sent.
+3. **Screen Recording** (⌥⇧H reads the page on screen; the drag-a-box fallback captures the box): the first ⌥⇧H shows the prompt. Turn Dialectic on in System Settings → Privacy & Security → Screen Recording, then **quit and reopen** Dialectic. The screenshot stays on the Mac; only recognised text is sent.
 4. After a rebuild the ad-hoc signature changes and macOS may quietly stop trusting the app: remove Dialectic from both lists and add it again.
 
 ## Stubbed: `POST /api/locate` (needs Owen's OK, then SPEC §6)
@@ -51,6 +53,5 @@ POST /api/locate        X-User-Id: <id>
 
 ## Not built / edges
 
-- Screenshot-a-box + Vision when nothing is selected (SPEC §3.9 steps 1–2): ⌥⇧D/⌥⇧N still say "Select some text first".
 - Leader lines from margin cards to boxes; clicking a box on the page (the overlay is click-through).
 - `TODO(edge)`: two pages side by side, rotated or scanned PDFs, several displays (uses the reading window's screen).

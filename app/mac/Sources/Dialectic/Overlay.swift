@@ -132,6 +132,13 @@ func recognizeLines(_ image: CGImage, windowSize: CGSize) throws -> [OCRLine] {
     }
 }
 
+/// All the text in an image, in reading order (top to bottom, then left to right), lines joined by spaces.
+func recognizedText(_ image: CGImage) throws -> String {
+    let lines = try recognizeLines(image, windowSize: CGSize(width: image.width, height: image.height))
+    return lines.sorted { abs($0.rect.midY - $1.rect.midY) < $0.rect.height / 2 ? $0.rect.minX < $1.rect.minX : $0.rect.midY < $1.rect.midY }
+        .map(\.text).joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+}
+
 /// Global top-left (CoreGraphics) rect → Cocoa screen rect.
 func cocoaRect(_ r: CGRect) -> NSRect {
     let primaryHeight = NSScreen.screens.first?.frame.height ?? 0

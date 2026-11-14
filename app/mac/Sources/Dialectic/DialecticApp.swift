@@ -25,7 +25,7 @@ let COPY_WAIT_SECONDS = 0.6
 let ASK_TIMEOUT_SECONDS: TimeInterval = 120
 let USER_DEFAULTS_KEY = "userId"
 
-let NO_SELECTION_MESSAGE = "Select some text first, then press \(HOTKEY_ASK_LABEL) to ask or \(HOTKEY_NOTE_LABEL) to write a note."
+let NO_TEXT_IN_BOX_MESSAGE = "Couldn't read any text in that box."
 let NO_USER_MESSAGE = "Pick who you are in the Dialectic menu-bar menu first."
 let NO_ACCESSIBILITY_MESSAGE =
     "Dialectic needs Accessibility access to copy your selection. Turn it on in System Settings → Privacy & Security → Accessibility, then try again."
@@ -191,10 +191,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSApp.hide(nil)
             try? await Task.sleep(nanoseconds: 250_000_000)
         }
-        guard let text = await copySelection(), !text.isEmpty else {
-            showMessage(NO_SELECTION_MESSAGE)
-            return
+        var quote = await copySelection()
+        if quote?.isEmpty ?? true {
+            // Nothing copied (common in Notability with scanned or annotated PDFs): drag a box instead.
+            guard CGPreflightScreenCaptureAccess() else {
+                CGRequestScreenCaptureAccess()  // macOS shows its prompt; the human grants it
+                showMessage(NO_SCREEN_RECORDING_MESSAGE)
+                return
+            }
+            do {
+                guard let boxText = try await textFromDraggedBox() else { return }  // Esc: cancelled
+                guard !boxText.isEmpty else {
+                    showMessage(NO_TEXT_IN_BOX_MESSAGE)
+                    return
+                }
+                quote = boxText
+            } catch {
+                print("Box capture failed: \(error)")
+                showMessage("Couldn't capture that box: \(error.localizedDescription)")
+                return
+            }
         }
+        guard let text = quote else { return }
         guard currentUserId() != nil else {
             showMessage(NO_USER_MESSAGE)
             return
@@ -256,6 +274,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         pasteboard.clearContents()
         if !saved.isEmpty { pasteboard.writeObjects(saved) }
+        return text
+    }
+
+    /// Crosshair → drag a box (`screencapture -i`) → Vision on this Mac → text. The image is deleted
+    /// straight away; only the text leaves the Mac. nil if the person pressed Esc.
+    func textFromDraggedBox() async throws -> String? {
+        let path = NSTemporaryDirectory() + "dialectic-box-\(UUID().uuidString).png"
+        defer { try? FileManager.default.removeItem(atPath: path) }
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+        process.arguments = ["-i", "-x", path]  // interactive box, no sound
+        try await withCheckedThrowingContinuation { (done: CheckedContinuation<Void, Error>) in
+            process.terminationHandler = { _ in done.resume() }
+            do { try process.run() } catch { done.resume(throwing: error) }
+        }
+        guard FileManager.default.fileExists(atPath: path) else { return nil }
+        guard let source = CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil),
+              let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+            throw APIError(status: 0, message: "Couldn't open the captured image")
+        }
+        let text = try await Task.detached { try recognizedText(image) }.value
+        print("Box: read \(text.count) characters with Vision")
         return text
     }
 

@@ -78,3 +78,4 @@ Append only, newest at the bottom. Format: `- HH:MM (Day) — what, and why. [wh
 - 04:53 (Sat) — Pulled explainers/frontend.md back out: it described code that doesn't exist yet. It'll be written from the real code once app/frontend is built. [Owen/Claude]
 - 04:53 (Sat) — starting: web frontend in app/frontend/ (React + Vite) from ideas/02, in its build order: login/course, reader + lock, ask, charter, then the rest. [Owen/Claude]
 - 04:58 (Sat) — starting: Mac screenshot fallback for ⌥⇧D/⌥⇧N (drag a box → Vision → quote). [josoup/Claude]
+- 04:59 (Sat) — Mac: ⌥⇧D/⌥⇧N fall back to drag-a-box when ⌘C copies nothing (screencapture -i -x → Vision on device → image deleted → text as quote); 404 shows the server's message as is. Checked: Vision on a cropped rendered box returns the full double-consciousness quote. SPEC §3.9 wording already matched. [josoup/Claude]

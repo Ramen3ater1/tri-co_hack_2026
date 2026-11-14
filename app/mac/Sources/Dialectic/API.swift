@@ -181,7 +181,8 @@ func request(_ path: String, method: String = "GET", body: Data? = nil, timeout:
     let (data, response) = try await URLSession.shared.data(for: req)
     let status = (response as? HTTPURLResponse)?.statusCode ?? 0
     if !(200..<300).contains(status) {
-        throw APIError(status: status, message: "Server said \(status): \(errorDetail(data))")
+        // A 404 detail is written for people ("This passage isn't in a course reading."): show it as is.
+        throw APIError(status: status, message: status == 404 ? errorDetail(data) : "Server said \(status): \(errorDetail(data))")
     }
     return data
 }
