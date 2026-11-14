@@ -6,7 +6,6 @@ Menu-bar app (SPEC §3.9, `design.md`). You read wherever you already read (Prev
 | --- | --- |
 | **⌥⇧D** | Ask about the selected text. Panel: From your class → Sources → "Still stuck? Show the AI explanation" (collapsed), then **Open in reader**. |
 | **⌥⇧N** | Write a note on the selected text (`POST /api/note`). Says so when the passage is near a locked cluster: "N notes near here. Your note opens them." |
-
 | **⌥⇧H** | Show / hide classmates' highlights over the reading window: boxes by role (professor green, classmates magenta, you blue), dashed outlines for locked clusters, numbered pins, a status pill, and a margin strip with the threads. Click a card for the thread and reply. |
 
 If ⌥⇧D or ⌥⇧N copies nothing (Notability with scanned or annotated PDFs, images), a crosshair appears: drag a box round the passage. Vision reads it on the Mac, the image is deleted at once, and only the text is sent as the quote. Esc cancels. No text in the box: "Couldn't read any text in that box." Not in a course reading: the server's "This passage isn't in a course reading."
