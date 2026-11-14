@@ -615,6 +615,8 @@ Agree the API shapes in §6 first; the frontend can stub `/ask` with the JSON ab
 
 Anyone can log in as anyone (including the professor), so participants *will* change the charter and annotate the demo passage. Keeping them on the sandbox means the judges' copy stays exactly as we left it.
 
+**Changed 13:50 Sat:** judges and the audience see the same one-slide presentation, so there is **one public link, `yag.gy/dia` (302) → the sandbox**, for everyone. The clean demo is the video; the demo copy is a spare we keep reset and repoint the link to if the sandbox breaks. Details: `DEPLOY.md`, *The public link*.
+
 **Steps** (once per copy, in `/srv/dialectic-demo` and `/srv/dialectic-sandbox`):
 
 1. **Deploy only from `stable`** (`git clone -b stable …`, then `git pull` to update), so the live URLs always show something that works. To roll back, check out the previous `good-…` tag; never rewrite `stable`. Then `cd app/backend && uv sync`.

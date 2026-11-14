@@ -8,8 +8,8 @@ One DigitalOcean droplet (2 GB, Ubuntu 24.04) just for the hackathon, separate f
 
 | Copy | URL | Who it's for | Checkout | Port | Service | Limits (`.env`) |
 | --- | --- | --- | --- | --- | --- | --- |
-| **demo** | `https://dialectic.yaggy.dev` | Judges, and us on stage | `/srv/dialectic-demo` | 8000 | `dialectic@demo` | AI $10, search $3, no device limit |
-| **sandbox** | `https://dialectic-sandbox.yaggy.dev` (also `dialectic.space`) | Participants (public link) | `/srv/dialectic-sandbox` | 8001 | `dialectic@sandbox` | AI $12, search $4, 10 paid Asks/device/hour |
+| **demo** | `https://dialectic.yaggy.dev` | Spare: a clean copy we keep reset, and switch the public link to if the sandbox breaks | `/srv/dialectic-demo` | 8000 | `dialectic@demo` | AI $10, search $3, no device limit |
+| **sandbox** | `https://dialectic-sandbox.yaggy.dev` (also `dialectic.space`) | Everyone: judges and participants, via the slide's link `yag.gy/dia` | `/srv/dialectic-sandbox` | 8001 | `dialectic@sandbox` | AI $12, search $4, 10 paid Asks/device/hour |
 | **dev** | `https://dialectic-dev.yaggy.dev` (also `dev.dialectic.space`) | Teammates trying the newest work and reporting problems; may be briefly broken | `/srv/dialectic-dev` | 8002 | `dialectic@dev` | AI $3, search $1, no device limit |
 
 How a request gets there: browser → **Cloudflare** (DNS for both domains is proxied, and Cloudflare serves the public HTTPS certificate) → **Caddy** on the droplet (`/etc/caddy/Caddyfile`, from `deploy/Caddyfile`) → the copy's **uvicorn** process on `127.0.0.1:<port>`, run by systemd from `deploy/dialectic@.service` as the `dialectic` user. FastAPI serves both the API and the built frontend (`app/frontend/dist`).
@@ -24,6 +24,14 @@ Every minute, a timer on the droplet (`dialectic-autodeploy.timer`) checks GitHu
 - **If a deploy fails** (a dependency or the build breaks), dev keeps running the previous version, and that commit isn't retried until the next push. See why: `ssh root@IP "journalctl -u dialectic-autodeploy -n 30 --no-pager -o cat"`.
 - **Pause it:** `ssh root@IP "systemctl stop dialectic-autodeploy.timer"` (`start` to resume).
 - **Change it:** the script is a fixed copy in `/usr/local/sbin/dialectic-autodeploy-dev`, not run from the checkout, so pushes can't change what runs as root. After editing `deploy/autodeploy-dev.sh` or its unit files: `scp deploy/autodeploy-dev.sh deploy/dialectic-autodeploy.* root@IP:/tmp/`, then `ssh root@IP "install -m 755 /tmp/autodeploy-dev.sh /usr/local/sbin/dialectic-autodeploy-dev && cp /tmp/dialectic-autodeploy.* /etc/systemd/system/ && systemctl daemon-reload"`.
+
+## The public link: `yag.gy/dia`
+
+Judges and the audience see the same presentation: one slide with the video and one link, **`https://yag.gy/dia`**. It's a **302** redirect (Cloudflare redirect rule on `yag.gy`, above the catch-all) to the **sandbox**, `https://dialectic-sandbox.yaggy.dev`. The clean, curated demo is the video; the live link is for poking around, so other people's notes in it are fine.
+
+- **302, not 301**, so browsers don't remember it and we can repoint it.
+- **If the sandbox breaks or gets messed up:** change the rule's target to `https://dialectic.yaggy.dev` (the demo copy, kept reset). The slide doesn't change.
+- Don't put `dialectic.space` on the slide: campus wifi blocks it (`LOG.md`, 10:56 Sat).
 
 Only dev does this. The demo and sandbox copies change only when a person promotes `main` to `stable` and runs `update.sh`.
 
@@ -64,7 +72,12 @@ ssh root@IP "sudo -u dialectic bash -c 'cd /srv/dialectic-demo/app/backend && ~/
 
 `--reset` keeps `web_cache` (rehearsed answers) and the `spend` table (so budgets aren't reset). Leave out `--with-reading` to start with no reading, if the professor will upload it live in demo step 1.
 
-### Before judging (demo copy)
+### Before submitting
+
+1. **Reset the sandbox** (the command above with `sandbox` in place of `demo` in both places) and check its budget (*Check spending*): it's what `yag.gy/dia` opens.
+2. Check `https://yag.gy/dia` lands on the sandbox.
+
+### Keeping the spare ready (demo copy)
 
 1. Reset it (above).
 2. **Rehearse each demo question once** on `https://dialectic.yaggy.dev` and read the answer: what plays on stage is the cached one (`TODO.md`).
@@ -74,7 +87,7 @@ ssh root@IP "sudo -u dialectic bash -c 'cd /srv/dialectic-demo/app/backend && ~/
 ### Check spending
 
 ```sh
-curl -s https://dialectic.space/api/spend
+curl -s https://dialectic-sandbox.yaggy.dev/api/spend   # dialectic.space is blocked on campus
 curl -s https://dialectic.yaggy.dev/api/spend
 ```
 

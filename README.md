@@ -18,7 +18,7 @@ How the team tries Dialectic and gets things changed. No setup needed beyond a G
 
 A good first run is the demo path: as Ben, open the reading, write a note near the locked card on page 3, then select the double-consciousness passage and ask where the idea comes from. Then, as Prof. Rivera, turn off "AI may write explanations" on the Charter page and ask again.
 
-Use the `yaggy.dev` addresses: campus wifi blocks `dialectic.space`. Don't test on the judges' copy (`dialectic.yaggy.dev`); see [`DEPLOY.md`](DEPLOY.md) for all three copies.
+Use the `yaggy.dev` addresses: campus wifi blocks `dialectic.space`. The public link on our slide, `yag.gy/dia`, opens the sandbox (`dialectic-sandbox.yaggy.dev`), which judges use too. Test on dev, not on the spare demo copy (`dialectic.yaggy.dev`); see [`DEPLOY.md`](DEPLOY.md) for all three copies.
 
 ### 2. Optional: get the Mac app
 
@@ -46,7 +46,7 @@ Both open a GitHub form with the page, who you're logged in as and your browser 
 1. Anyone asks their Claude, in the repo: **"work through the open feedback issues"**. `CLAUDE.md` tells it how: label each one, close duplicates, claim one, fix it on `main` with `Fixes #<n>` (which closes the issue) and comment when it's done. Product questions go to `SPEC.md` §11 for a decision instead.
 2. **The dev copy updates itself** about 1–2 minutes after a push to `main`. [`/version.txt`](https://dialectic-dev.yaggy.dev/version.txt) shows which commit it's running. Reload and check the fix.
 3. **Mac app changes** are rebuilt on every push (about a minute): download the new build from Actions as in step 2.
-4. **The judges' copy changes only when a person promotes** `main` to `stable` after checking the demo path ([`DEPLOY.md`](DEPLOY.md)), so a broken change on dev never reaches the judges by accident.
+4. **The public copies (sandbox, which judges use, and the spare demo copy) change only when a person promotes** `main` to `stable` after checking the demo path ([`DEPLOY.md`](DEPLOY.md)), so a broken change on dev never reaches the judges by accident.
 
 ## Project docs
 
