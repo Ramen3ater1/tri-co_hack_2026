@@ -178,12 +178,30 @@ function SourceList({ sources }) {
   );
 }
 
+// Shown in place of the source list when the search found results but skipped every one.
+const NO_SOURCES_TITLE = 'No usable sources this time';
+const NO_SOURCES_CHARTER = "Every web result was a kind of source your class charter doesn't allow, so none are shown. See which below.";
+const NO_SOURCES_OTHER = "Every web result was skipped (blocked by the charter, unreachable, or no passage that answers the question). See why below.";
+
+function NoSources({ skipped }) {
+  const allCharter = skipped.every((s) => s.why === 'not_permitted' || s.why === 'not_covered');
+  return (
+    <div className="notice">
+      <span className="notice-icon" aria-hidden="true">{allCharter ? <ScaleIcon /> : '!'}</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <strong>{NO_SOURCES_TITLE}</strong>
+        <span>{allCharter ? <>{NO_SOURCES_CHARTER} <a href="/charter">Read the charter</a></> : NO_SOURCES_OTHER}</span>
+      </div>
+    </div>
+  );
+}
+
 // Ruled-out and not-covered results are shown WITHOUT a link (the charter excludes them);
 // unreachable and no-answer ones are linked so the student can read them themselves.
-function Skipped({ skipped }) {
+function Skipped({ skipped, open }) {
   if (!skipped.length) return null;
   return (
-    <details className="skipped">
+    <details className="skipped" open={open}>
       <summary>{plural(skipped.length, 'result')} skipped</summary>
       <ul>
         {skipped.map((s) => (
@@ -233,6 +251,7 @@ export default function AnswerCard({ answer, aiReplies, onClose, onAskAgain, onP
   const sourceErrors = sourceBlocks.filter((b) => b.by === 'error' || b.by === 'limit');
   const hasPeer = answer.peer?.length > 0;
   const hasSources = answer.sources?.length > 0 || answer.skipped.length > 0 || sourceErrors.length > 0;
+  const allSkipped = answer.sources !== null && answer.sources.length === 0 && answer.skipped.length > 0;
   const ai = answer.aiAnswer;
   const wordCount = ai ? ai.body.split(/\s+/).filter(Boolean).length : 0;
   const collapsed = aiOpen && ai; // with the explanation open, peers and sources shrink to a row each
@@ -277,14 +296,15 @@ export default function AnswerCard({ answer, aiReplies, onClose, onAskAgain, onP
           {collapsed ? (
             <button type="button" className="summary-row" onClick={() => setAiOpen(false)}>
               <strong>{++n} · Sources</strong>
-              <span className="muted">{answer.sources.map((s, i) => `${i + 1} · ${site(s.url)}`).join('   ')}</span>
+              <span className="muted">{allSkipped ? NO_SOURCES_TITLE : answer.sources.map((s, i) => `${i + 1} · ${site(s.url)}`).join('   ')}</span>
             </button>
           ) : (
             <>
               <h4>{++n} · Sources</h4>
               {sourceErrors.map((b, i) => <CharterNotice key={i} block={b} />)}
+              {allSkipped && <NoSources skipped={answer.skipped} />}
               <SourceList sources={answer.sources || []} />
-              <Skipped skipped={answer.skipped} />
+              <Skipped skipped={answer.skipped} open={allSkipped} />
             </>
           )}
         </section>
