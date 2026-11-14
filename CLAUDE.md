@@ -31,6 +31,17 @@ We're building an MVP for a demo, not production software. Optimise for speed an
 - **Log as you go.** After any decision, pivot, dead end or notable finding, append to `LOG.md`: `- HH:MM (Day) — what, and why. [who/session]`. One line where possible. "Tried X, didn't work because Y" is worth logging.
 - **Experiments go in `spikes/`**, never straight into `app/`. Say in the spike's README (one or two lines) what it tests and the result.
 - **Commit early and often**, small commits with plain messages. Don't rewrite shared history (no force-push, no rebase of pushed branches).
-- **Parallel sessions use git worktrees** (`git worktree add ../tri-co-hackathon-<task> -b <task>`) so they don't edit the same files at once.
+- **Parallel sessions use git worktrees** (`git worktree add ../tri-co_hack_2026-<task> -b <task>`) so they don't edit the same files at once.
 - **Keep secrets out of git**: API keys go in `.env` (gitignored); keep `.env.example` up to date with the variable names.
 - **Watch the clock.** Past Saturday 12:00, prefer finishing and polishing over new features; the demo path must work end to end by 15:00.
+
+## Working alongside other people's agents
+
+Several people, each with their own Claude sessions, share one `main`. Keep it simple: **no PRs, no long-lived branches.**
+
+1. **Pull first.** `git pull --rebase` before starting a task and again right before pushing. If a rebase conflicts in code you didn't write, stop and ask your human rather than guessing.
+2. **Claim the task.** Append `- HH:MM (Day) — starting: <task>. [who]` to `LOG.md`, then commit and push it, so other agents see it on their next pull. Check `LOG.md` for claims before picking something up.
+3. **Stay in your area.** The split is in `SPEC.md` §8. If you need to change someone else's files, keep the change minimal and say so in `LOG.md`.
+4. **The API in `SPEC.md` §6 is the contract.** If you change a route or a response shape, update `SPEC.md` in the same commit and log it.
+5. **Push small and often, straight to `main`.** Only push code that runs (the app still starts); half-done work stays local.
+6. **Worktrees** (above) are only for your own parallel sessions on one machine: merge the branch into `main` and push within the hour, then delete it.
