@@ -24,7 +24,7 @@ Dialectic is a collaborative reading platform for college courses (e.g. Haverfor
 Seed users: **Prof. Rivera** (professor), **Ana** and **Ben** (students), plus **Sam (Spring 2026)**, a past student whose annotations are opted in.
 
 1. **Professor sets up the course.** Prof. Rivera logs in, uploads `souls-of-black-folk-ch1.pdf` (Ch. 1, "Of Our Spiritual Strivings") and fills in the charter: rules text, a plain-language **permissible sources** description, and toggles, with all AI toggles **on**.
-2. **Ana annotates; Ben has to engage to see it (friction).** Ana highlights the "double-consciousness" passage and writes a note. Ben logs in and opens the reading. Next to that passage the margin shows only **"2 classmates annotated near here. Add a note or ask a question to see theirs."** (Prof. Rivera's note on "the Veil" is visible straight away.) Ben highlights the passage and writes his own note, and Ana's note and Sam's note from last year (marked "Spring 2026") appear. That's the engagement lock (§3.4).
+2. **Ana annotates; Ben has to engage to see it (friction).** Ana highlights the "double-consciousness" passage and writes a note. Ben logs in and opens the reading. Next to that passage the margin shows only **"2 notes near here. Add a note or ask a question to see them."** (Prof. Rivera's note on "the Veil" is visible straight away.) Ben highlights the passage and writes his own note, and Ana's note and Sam's note from last year (marked "Spring 2026") appear. That's the engagement lock (§3.4).
 3. **Ben asks a question.** Ben highlights "double-consciousness" → **Ask** → "Where does this idea come from, and what did it mean in 1903?" The answer panel shows, in order:
    1. **From your class:** matching peer, past-student and professor annotations (Ana's, Sam's), each linking to its place in the text.
    2. **Sources:** sources the AI found on the web that fit the charter's permissible-sources description, each linking out to the exact sentence that answers the question. A small note shows what was filtered out ("2 results skipped: study-guide sites aren't permitted").
@@ -54,7 +54,7 @@ One course, seeded (`HIST 214: Black Intellectual Traditions`, or similar). Show
 
 - Left: the PDF, rendered with **`react-pdf`** (pdf.js) **with its text layer on**, so text is selectable.
 - Right: margin panel listing annotations on the current page, newest first, each with author, cohort badge ("Spring 2026", "Professor", "AI"), text and replies.
-- **Locked annotations** (§3.4) appear in the margin as one placeholder per cluster, at their position: "**N classmates annotated near here.** Add a note or ask a question to see theirs." No author or text. Their highlights aren't drawn.
+- **Locked annotations** (§3.4) appear in the margin as one placeholder per cluster, at their position: "**N notes near here.** Add a note or ask a question to see them." (A count of notes, not people: locked annotations carry no author.) No author or text. Their highlights aren't drawn.
 - Highlights from all visible annotations are drawn over the page as translucent boxes. Clicking one scrolls the margin to it.
 - Selecting text shows a small popover: **Annotate** | **Ask**.
 - **Live updates.** While the tab is visible, the reader refetches `GET /readings/{id}/annotations` every **5 s** (`POLL_MS`, a constant at the top of the file), and again whenever the window gets focus. That's how a question asked from the Mac hotkey shows up in a classmate's margin without a reload. Polling, not websockets: one server, a handful of users. Server-sent events only if there's time at the end.
@@ -468,7 +468,7 @@ A full AI answer is four calls: gate → filter results → pick sentences → e
 When time runs short, **cut from the bottom up.** A slipped checkpoint is never a reason to cut something above an item that hasn't been cut yet.
 
 **Must** (no demo without these)
-1. **Web reader:** PDF, highlights, margin, notes and replies, **and the engagement lock** with its "N classmates annotated near here" placeholder (demo steps 1–2), or the paragraph fallback from S1. **Owner: not decided yet.** Nothing in the demo works without it.
+1. **Web reader:** PDF, highlights, margin, notes and replies, **and the engagement lock** with its "N notes near here" placeholder (demo steps 1–2), or the paragraph fallback from S1. **Owner: not decided yet.** Nothing in the demo works without it.
 2. **Ask, no AI:** peer and library layers plus the Ask panel.
 3. **Charter gate + AI explanation** posted as an annotation (demo step 3).
 4. **Charter page:** editing rules and toggles, and blocked notices in the Ask panel (demo step 4).
