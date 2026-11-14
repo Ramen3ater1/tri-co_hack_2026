@@ -80,7 +80,7 @@ function Reply({ reply, onDelete }) {
       <Avatar person={reply.author} size="tiny" />
       <span className={`body${reply.kind === 'ai_answer' ? ' ai-body' : ''}`}>
         <strong>{mine ? 'You' : reply.author.name}</strong>
-        {reply.badge === 'AI' && <> <span className="pill ai">AI</span></>}{' '}
+{' '}
         {reply.body}
       </span>
       {mine && <button type="button" className="link-button danger small" onClick={() => onDelete(reply)}>Delete</button>}

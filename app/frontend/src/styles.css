@@ -54,7 +54,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .btn.primary:hover { background: var(--accent-dark); }
 .btn.dark { background: var(--ink); border-color: var(--ink); color: #FFF; }
 .btn.small { min-height: 32px; padding: 0 10px; font-size: 13px; }
-.link-button { border: 0; background: transparent; padding: 0; color: var(--accent); cursor: pointer; font-size: inherit; }
+.link-button { border: 0; background: transparent; padding: 0; color: var(--accent); cursor: pointer; font-size: inherit; text-align: left; }
 .link-button:hover { color: var(--accent-dark); text-decoration: underline; }
 .link-button.danger { color: var(--danger); }
 
@@ -153,7 +153,7 @@ mark { background: var(--quote); color: inherit; border-radius: 3px; padding: 0 
 
 /* ---------- Reader (S03–S11) ---------- */
 
-.reader { height: 100vh; display: flex; flex-direction: column; }
+.reader { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
 .reader-header { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 12px 28px; background: var(--card); border-bottom: 1px solid var(--field); }
 .reader-header .wordmark { margin-right: 0; }
 .breadcrumb { font-size: 14px; color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -211,6 +211,7 @@ mark { background: var(--quote); color: inherit; border-radius: 3px; padding: 0 
 .margin-card .body { white-space: pre-wrap; overflow-wrap: anywhere; }
 .margin-card .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
 .margin-card .ai-body { font-family: var(--serif); font-size: 14px; }
+.margin-card .ai-body strong { font-family: var(--sans); font-size: 13px; }
 .reply { display: flex; gap: 8px; padding: 8px 10px; background: var(--paper); border-radius: 10px; }
 .reply .body { flex: 1; }
 .reply-form { display: flex; gap: 6px; }
@@ -303,7 +304,7 @@ a.cite:hover { color: #FFF; background: var(--accent); }
 @media (max-width: 760px) {
   .nav-header, .reader-header { padding: 10px 16px; }
   .page-title h1 { font-size: 30px; }
-  .reader { height: auto; min-height: 100vh; }
+  .reader { height: auto; min-height: 100vh; overflow: visible; }
   .reader-body { flex-direction: column; padding: 0; }
   .pdf-column { padding: 16px; overflow: auto; }
   .page-number { display: none; }
