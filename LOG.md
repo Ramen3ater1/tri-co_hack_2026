@@ -13,3 +13,4 @@ Append only, newest at the bottom. Format: `- HH:MM (Day) — what, and why. [wh
 - 01:17 (Sat) — Added a stable branch: main for fast iteration, stable = always submittable, promoted by a human at each checkpoint (tagged good-HHMM); droplet deploys from stable. [Owen/Claude]
 - 01:22 (Sat) — starting: backend (schema, seed, routes, /ask, ai.py, search.py) in app/backend/. [Owen/Claude]
 - 01:23 (Sat) — Backend env uses uv: app/backend/pyproject.toml + uv.lock, Python pinned to 3.12; .env loaded via `uv run --env-file`. SPEC §4/§9 updated (no requirements.txt). [Owen/Claude]
+- 01:24 (Sat) — Added README.md with a Development section (install uv and Node, .env, uv sync, run, uv add not pip). [Owen/Claude]

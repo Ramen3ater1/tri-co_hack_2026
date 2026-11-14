@@ -350,7 +350,7 @@ Stretch, in order: search page → charter comments → `annotate_before_peers` 
    }
    ```
    HTTPS matters here: text-fragment links and the PWA manifest both behave better on a secure origin.
-7. Reseed with `python seed.py --reset` before the demo (it keeps `web_cache`).
+7. Reseed with `uv run seed.py --reset` (from `app/backend`) before the demo (it keeps `web_cache`).
 8. **Submit `stable`** (or the last `good-…` tag before 16:00). GitHub shows `main` by default, so either link the submission to `stable` or fast-forward `main` to it at the end.
 
 SQLite file lives at `app/backend/dialectic.db` (gitignored), backed up with `cp` before the demo.
