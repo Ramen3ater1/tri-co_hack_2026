@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { me } from '../api.js';
 import Avatar from './Avatar.jsx';
+import ReplyBox from './ReplyBox.jsx';
 import { LockIcon } from './Icons.jsx';
 
 // The right-hand column (S03, S05): cards for the current page in the order they sit on
@@ -125,7 +126,7 @@ function AnnotationCard({ annotation, active, cardRef, onSelect, onReply, onDele
         {replying || annotation.replies.length > 0 ? (
           <form className="reply-form" onSubmit={sendReply} onClick={(e) => e.stopPropagation()}>
             <label htmlFor={`reply-${annotation.id}`} className="visually-hidden">Reply to {annotation.author.name}</label>
-            <input id={`reply-${annotation.id}`} className="input" type="text" placeholder="Reply…" autoFocus={replying} value={reply} onChange={(e) => setReply(e.target.value)} />
+            <ReplyBox id={`reply-${annotation.id}`} placeholder="Reply… (Shift+Enter for a new line)" autoFocus={replying} value={reply} onChange={setReply} onSend={sendReply} />
           </form>
         ) : (
           <button type="button" className="link-button" style={{ alignSelf: 'flex-start', fontSize: 13 }} onClick={(e) => { e.stopPropagation(); setReplying(true); }}>Reply</button>

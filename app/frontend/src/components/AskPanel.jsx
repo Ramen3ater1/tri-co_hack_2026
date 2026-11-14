@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { me } from '../api.js';
 import Avatar from './Avatar.jsx';
 import ErrorNotice from './ErrorNotice.jsx';
+import ReplyBox from './ReplyBox.jsx';
 import { CheckIcon, ChevronIcon, ClockIcon, CloseIcon, ScaleIcon } from './Icons.jsx';
 
 // The Ask answer card (S07–S11, S20), anchored under the asked passage. Sections are
@@ -333,7 +334,7 @@ export default function AnswerCard({ answer, aiReplies, onClose, onAskAgain, onP
               ))}
               <form className="reply-form" onSubmit={sendReply}>
                 <label htmlFor="ai-reply" className="visually-hidden">Reply to the AI explanation</label>
-                <input id="ai-reply" className="input" type="text" placeholder="Reply to the AI explanation…" value={reply} onChange={(e) => setReply(e.target.value)} />
+                <ReplyBox id="ai-reply" placeholder="Reply to the AI explanation…" value={reply} onChange={setReply} onSend={sendReply} />
                 <button type="submit" className="btn small" disabled={!reply.trim()}>Reply</button>
               </form>
             </>

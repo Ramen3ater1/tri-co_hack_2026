@@ -229,8 +229,9 @@ mark { background: var(--quote); color: inherit; border-radius: 3px; padding: 0 
 .margin-card .ai-body strong { font-family: var(--sans); font-size: 13px; }
 .reply { display: flex; gap: 8px; padding: 8px 10px; background: var(--paper); border-radius: 10px; }
 .reply .body { flex: 1; }
-.reply-form { display: flex; gap: 6px; }
-.reply-form .input { min-height: 32px; padding: 6px 10px; font-size: 13px; }
+.reply-form { display: flex; gap: 6px; align-items: flex-end; }
+.reply-form .textarea { min-height: 32px; padding: 6px 10px; font-size: 13px; resize: none; overflow-y: auto; }
+.reply .body { white-space: pre-wrap; overflow-wrap: anywhere; }
 .lock-card { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; background: var(--paper); border: 1.5px dashed var(--dashed); border-radius: 14px; font-size: 14px; line-height: 1.5; }
 .lock-card.near-selection { background: var(--accent-soft); border-color: var(--focus); }
 .lock-icons { flex: none; display: flex; }
