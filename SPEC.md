@@ -42,7 +42,7 @@ Seed users: **Prof. Rivera** (professor), **Ana** and **Ben** (students), plus *
 
 ### 3.1 Log in as
 
-A page listing the seeded users. Clicking one stores their `user_id` in `localStorage` and sends it as an `X-User-Id` header. No passwords. `TODO(edge)`: anyone can be anyone.
+A page listing the seeded users. Clicking one stores their `user_id` in `localStorage` and sends it as an `X-User-Id` header (alongside the `X-Device-Id` from §9.1). No passwords. `TODO(edge)`: anyone can be anyone.
 
 Each user row also has a small **Use on Mac** link to `dialectic://login?user=<id>`. Clicking it opens the Mac app (§3.9), which saves that user, so both apps act as the same person without picking twice. If the Mac app isn't installed the link does nothing. `TODO(edge)`.
 
@@ -482,7 +482,7 @@ When time runs short, **cut from the bottom up.** A slipped checkpoint is never 
 2. **Ask, no AI:** peer and library layers plus the Ask panel.
 3. **Charter gate + AI explanation** posted as an annotation (demo step 3).
 4. **Charter page:** editing rules and toggles, and blocked notices in the Ask panel (demo step 4).
-5. **Deployed** on the domain from `stable`, demo rehearsed.
+5. **Deployed** on the new droplet from `stable` as two copies (demo and sandbox, §9), with the spending limits (§9.1), and the demo rehearsed.
 
 **Should**
 
@@ -513,7 +513,7 @@ Checkpoints are the times things must work by. If one slips by more than 45 minu
 | 09:00 | Charter page: view, prof edit (rules, permissible sources, toggles); blocked notices in the Ask panel | **Demo step 4 works.** |
 | 09:00 | **Mac hotkey app (independent track, `app/mac/`):** hotkey → copy selection → floating panel → show the `/ask` response | Owner: josoup. Builds against the stub response, so it needs nothing from anyone else until the route exists. Start with a 1 h spike (hotkey + selection copy). Screenshot + Vision only once everything else works (#9). **Doesn't move other checkpoints.** |
 | 09:30 | **`POST /api/ask` (hotkey route):** locate the quote → reading, page, rects; reuse the three layers | Backend owner, after demo step 3 works. The Mac app swaps its stub for the real URL. |
-| 10:30 | Deploy to droplet on the domain; run the full demo there | Deploy early so the last hours aren't spent on it. |
+| 10:30 | Deploy the demo and sandbox copies to the new droplet; spending limits on; run the full demo there | Deploy early so the last hours aren't spent on it. |
 | 12:00 | Search page; charter comments | Stretch #1 |
 | 12:00+ | Polish only: copy, empty states, seed data quality, demo script in `demo/` | Per CLAUDE.md: no new features after noon. |
 | 15:00 | Full demo path rehearsed on the deployed URL | |
@@ -530,26 +530,66 @@ Agree the API shapes in §6 first; the frontend can stub `/ask` with the JSON ab
 
 ---
 
-## 9. Deployment (existing DigitalOcean droplet)
+## 9. Deployment (a new droplet, two copies)
 
-1. **The droplet deploys only from `stable`** (`git checkout stable && git pull`), so the live URL always shows something that works. To roll back, check out the previous `good-…` tag there; never rewrite `stable`. Then `cd app/backend && uv sync` (installs uv's pinned Python 3.12 and the locked deps into `app/backend/.venv`).
+**A new small droplet just for the hackathon** (2 GB, Ubuntu, in the existing DigitalOcean account), not the existing one: it keeps Owen's other API completely isolated, and DigitalOcean bills only while it exists (a weekend is about a dollar). Destroy it after the debrief. If we do end up on the existing droplet, give each Dialectic service `MemoryMax=500M` and `CPUQuota=50%` in its systemd unit so a spike can't take the other API down.
+
+**Two copies of the app** on the droplet, each its own checkout of `stable` with its own database, uploads and budget:
+
+| Copy | URL | Who gets it | Limits |
+| --- | --- | --- | --- |
+| **demo** | an unlisted host, e.g. `judges.dialectic.space` | The judges (in the submission) and us on stage | No per-device limit; its own budget |
+| **sandbox** | `dialectic.space` | The ~50 participants, to play with | Per-device limit and a smaller budget (§9.1) |
+
+Anyone can log in as anyone (including the professor), so participants *will* change the charter and annotate the demo passage. Keeping them on the sandbox means the judges' copy stays exactly as we left it.
+
+**Steps** (once per copy, in `/srv/dialectic-demo` and `/srv/dialectic-sandbox`):
+
+1. **Deploy only from `stable`** (`git clone -b stable …`, then `git pull` to update), so the live URLs always show something that works. To roll back, check out the previous `good-…` tag; never rewrite `stable`. Then `cd app/backend && uv sync`.
 2. `cd app/frontend && npm ci && npm run build`.
-3. `.env` on the droplet only (never in git).
-4. Run `uv run --env-file ../../.env uvicorn main:app --host 127.0.0.1 --port 8000` (from `app/backend`) under a small **systemd** unit (`Restart=always`).
-5. **Domain:** `dialectic.space` if we buy it, otherwise a subdomain of an existing domain (e.g. `dialectic.<existing-domain>`). Either way, an `A` record to the droplet's IP. Do this **early** (by 08:00) so DNS has time to propagate.
-6. Put it behind whatever reverse proxy is already on the droplet. If there isn't one, **Caddy** gets the HTTPS certificate automatically:
+3. `.env` in each checkout (never in git): the shared keys plus that copy's budget and limits (§9.1).
+4. A **systemd** unit per copy (`Restart=always`) running `uv run --env-file ../../.env uvicorn main:app --host 127.0.0.1 --port <port>` from `app/backend`: demo on 8000, sandbox on 8001.
+5. **Domain:** `dialectic.space` or a subdomain of an existing domain; `A` records for both hosts to the new droplet's IP. Do it **early** (by 08:00) so DNS can propagate.
+6. **Caddy** for HTTPS (certificates are automatic):
    ```
-   dialectic.space {
+   judges.dialectic.space {
      reverse_proxy 127.0.0.1:8000
    }
+   dialectic.space {
+     reverse_proxy 127.0.0.1:8001
+   }
    ```
-   HTTPS matters here: text-fragment links and the PWA manifest both behave better on a secure origin.
-7. Reseed with `uv run seed.py --reset` (from `app/backend`) before the demo (it keeps `web_cache`).
-8. **Submit `stable`** (or the last `good-…` tag before 16:00). GitHub shows `main` by default, so either link the submission to `stable` or fast-forward `main` to it at the end.
+7. **Before judging:** `uv run seed.py --reset` on the demo copy (it keeps `web_cache` and the spend table), run each demo question once so its answer is cached, and `cp` the database as a backup.
+8. **Laptop backup:** run `stable` locally with a copy of the demo database, in case the venue wifi or the droplet fails during our slot.
+9. **Submit `stable`** (or the last `good-…` tag before 16:00) and the demo copy's URL. GitHub shows `main` by default, so either link the submission to `stable` or fast-forward `main` to it at the end.
 
-SQLite file lives at `app/backend/dialectic.db` (gitignored), backed up with `cp` before the demo.
+**Before going public, the backend needs** `PRAGMA journal_mode=WAL` and `PRAGMA busy_timeout=5000` in `db.connect()`. Without them, SQLite returns "database is locked" when several people write at once.
 
----
+**Capacity:** one FastAPI process is ~150–300 MB. Routes are plain `def` functions, so FastAPI runs each in a thread pool (40 by default), and a slow Ask (10–20 s, almost all waiting on the AI and Kagi) doesn't block other requests. 50 users is well within a 2 GB droplet; the real limits are cost (§9.1) and people changing shared data (the two copies).
+
+### 9.1 Spending limits
+
+Two outside services cost money:
+- **DigitalOcean inference:** ~$35 of prepaid credit with no auto-reload. When it runs out, AI calls fail. Development is already drawing on it, so check the balance before setting budgets.
+- **Kagi:** $0.012 per search, invoiced monthly, with a $10 limit set in Kagi.
+
+Cached answers (`web_cache`) cost nothing. Two layers of protection:
+
+**1. Per-device limit (fairness, sandbox only).** There are no accounts, so a "device" is a random ID: the web app creates one on first load (`crypto.randomUUID()`, kept in `localStorage`), the Mac app keeps one in `UserDefaults`, and both send it as an **`X-Device-Id`** header on every request. A request without one counts as a single shared "unknown" device.
+- Each device gets `DEVICE_ASKS_PER_HOUR` (sandbox: 10; `0` = no limit, used on the demo copy) Asks that spend money. An Ask that replays entirely from the cache doesn't count.
+- Over the limit, the Ask still runs the peer and library layers. The AI layers come back as `blocked` entries with the notice *"You've used this device's AI questions for the hour. Classmates' answers and the course library still work."*
+- **Not by IP address:** at the venue everyone shares the wifi's public IP, so an IP limit would block the whole room at once.
+- Clearing browser storage gets round it. That's fine: it's for fairness, and layer 2 is the real cap.
+
+**2. Global budget (true excess, both copies).** Every paid call is recorded **at the point of spending**: in `ai.chat_once()` (DigitalOcean) and `search.search()` (Kagi), only when the call isn't served from the cache. A `spend` table holds `(at, service, units, usd, device_id)`.
+- **DigitalOcean cost** = the response's `usage` tokens × `LLM_USD_PER_MTOK_IN` / `LLM_USD_PER_MTOK_OUT` (constants at the top of `ai.py`; fill them in from DigitalOcean's pricing page for Claude Sonnet 5.5).
+- **Kagi cost** = `KAGI_USD_PER_SEARCH = 0.012` per search.
+- **Before each paid call,** if that service's total has reached its budget (`AI_BUDGET_USD`, `SEARCH_BUDGET_USD` in `.env`), raise `BudgetExceeded`. The Ask turns this into blocked AI layers with *"This copy of Dialectic has used up its AI budget. Classmates' answers and the course library still work."* Nothing crashes, and the demo's peer layer keeps working.
+- **Budgets** (adjust after checking the DigitalOcean balance): demo copy AI $10 and search $3; sandbox AI $12 and search $4. Together that leaves margin under the $35 credit and Kagi's $10 limit.
+- The `spend` table **survives `seed.py --reset`** (like `web_cache`), so reseeding never resets a budget.
+- `GET /api/spend` returns each service's total against its budget, for a quick check from a phone. It's read-only and shows nothing per-device.
+
+**Emergency stop:** `AI_OFF=1` in a copy's `.env`, then restart its service. It blocks all paid calls server-wide. The charter's `ai_enabled` switch isn't enough, because anyone can log in as the professor and turn it back on.
 
 ## 10. Seed data (DEMO)
 
