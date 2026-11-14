@@ -197,6 +197,10 @@ At upload, each reading is split into **sections** by its headings: the PDF's ou
 - **PWA:** a `manifest.webmanifest` and icon, nothing more.
 - **Mac hotkey app (§3.9):** one small **SwiftUI** menu-bar app, built with Xcode (or `swift build`). Uses only Apple frameworks: Vision (on-device text recognition), AppKit (hotkey, floating panel, pasteboard), `URLSession` for the API. The server URL and hotkey are constants at the top of `DialecticApp.swift`. No third-party packages.
 - **LLM:** DigitalOcean serverless inference, which is OpenAI-compatible (`POST {DO_INFERENCE_URL}/chat/completions`). Model: **`anthropic-claude-sonnet-5.5`** (the exact ID from DO's `/v1/models` list), set as `DO_MODEL` in `.env`.
+- **Bring your own AI (self-hosting).** Everything provider-specific is configuration or one function, so an institution can run Dialectic on its own infrastructure (pitch: `demo/business-model.md`):
+  - **AI:** any OpenAI-compatible endpoint (vLLM or Ollama on campus GPUs, a university Azure OpenAI or Bedrock gateway, a campus AI service) by changing `DO_INFERENCE_URL`, `DO_INFERENCE_KEY` and `DO_MODEL`. Keep the AI call in `ai.py`'s one `chat()` function and keep provider-specific options (like reasoning effort) as constants at the top, so this stays true.
+  - **Search:** `search()` in `search.py` is the only place Kagi appears; a library's catalogue search could replace it.
+  - `TODO(edge)`: smaller models may follow the charter less reliably; a self-test running the gate cases against a new model is future work, not MVP.
 
 ```
 app/
