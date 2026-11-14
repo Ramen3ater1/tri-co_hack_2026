@@ -17,6 +17,9 @@ jobs:
   build:
     runs-on: macos-latest
     timeout-minutes: 20
+    env:
+      # Secrets can't be tested in a step's `if:`, so expose whether they're set.
+      HAS_SIGNING: ${{ secrets.MAC_CERT_P12 != '' && secrets.NOTARY_APPLE_ID != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -25,13 +28,58 @@ jobs:
           sed -i '' "s|^let DEFAULT_SERVER_URL = \".*\"|let DEFAULT_SERVER_URL = \"$BUILD_SERVER_URL\"|" app/mac/Sources/Dialectic/DialecticApp.swift
           grep -n '^let DEFAULT_SERVER_URL' app/mac/Sources/Dialectic/DialecticApp.swift
 
+      # Developer ID signing + notarization, when the secrets are set (josoup's Apple account;
+      # list in app/mac/README.md). Without them the build is ad-hoc signed, as before.
+      - name: Import the Developer ID certificate
+        if: env.HAS_SIGNING == 'true'
+        env:
+          P12: ${{ secrets.MAC_CERT_P12 }}
+          P12_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+        run: |
+          KC="$RUNNER_TEMP/sign.keychain-db"
+          KC_PASSWORD="$(uuidgen)"
+          security create-keychain -p "$KC_PASSWORD" "$KC"
+          security set-keychain-settings "$KC"   # no auto-lock mid-build
+          security unlock-keychain -p "$KC_PASSWORD" "$KC"
+          echo "$P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KC" -P "$P12_PASSWORD" -T /usr/bin/codesign
+          rm "$RUNNER_TEMP/cert.p12"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KC_PASSWORD" "$KC"
+          security list-keychains -d user -s "$KC" login.keychain
+          ID="$(security find-identity -v -p codesigning "$KC" | grep -m1 "Developer ID Application" | sed -E 's/.*"(.*)".*/\1/')"
+          if [ -z "$ID" ]; then echo "::error::MAC_CERT_P12 has no 'Developer ID Application' identity"; security find-identity -v -p codesigning "$KC"; exit 1; fi
+          echo "Signing identity: $ID"
+          echo "DIALECTIC_SIGN_ID=$ID" >> "$GITHUB_ENV"
+
       - name: Build
-        run: ./app/mac/build.sh
+        run: DIALECTIC_VERSION="${GITHUB_SHA::7}" ./app/mac/build.sh
+
+      # Apple scans the app and issues a ticket; stapling it to the app lets it open on any Mac
+      # with no "damaged" warning and no xattr step. Usually 2-10 minutes.
+      - name: Notarize
+        if: env.HAS_SIGNING == 'true'
+        timeout-minutes: 15
+        env:
+          NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+          NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
+        run: |
+          cd app/mac/build
+          ditto -c -k --keepParent Dialectic.app notarize.zip
+          AUTH=(--apple-id "$NOTARY_APPLE_ID" --password "$NOTARY_PASSWORD" --team-id "$NOTARY_TEAM_ID")
+          OUT="$(xcrun notarytool submit notarize.zip "${AUTH[@]}" --wait --output-format json)"
+          echo "$OUT"
+          if [ "$(echo "$OUT" | jq -r .status)" != "Accepted" ]; then
+            xcrun notarytool log "$(echo "$OUT" | jq -r .id)" "${AUTH[@]}"
+            exit 1
+          fi
+          xcrun stapler staple Dialectic.app
+          spctl --assess --type execute --verbose Dialectic.app
+          rm notarize.zip
 
       - name: Zip the app
         run: |
           cd app/mac/build
-          echo "${GITHUB_SHA::7}" > Dialectic.app/Contents/Resources/version.txt
           ditto -c -k --keepParent Dialectic.app "Dialectic-dev-${GITHUB_SHA::7}.zip"
 
       - uses: actions/upload-artifact@v4

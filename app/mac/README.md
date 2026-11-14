@@ -34,7 +34,17 @@ Menu-bar menu → **Report a problem…** opens the same GitHub feedback form as
 
 ## Download a build (no Xcode needed)
 
-Every push to `main` that touches `app/mac/` is built on GitHub's macOS runners (`.github/workflows/mac-app.yml`, ~1 min). Open the latest **Mac app** run under the repo's **Actions** tab and download **Dialectic-dev-mac** (a zip of `Dialectic.app`). That build talks to the **dev copy**, `https://dialectic-dev.yaggy.dev`, not localhost; the commit it was built from is in `Dialectic.app/Contents/Resources/version.txt`. It's a universal app (Intel and Apple Silicon), ad-hoc signed: macOS calls a downloaded copy **"damaged"** until you run `xattr -dr com.apple.quarantine /Applications/Dialectic.app` (once per download; right-click → Open no longer gets round it). Then grant permissions as in *First run* below. The same run's **render-check** artifact has PNGs of every screen (stub data), for reviewing UI changes without a Mac.
+Every push to `main` that touches `app/mac/` is built on GitHub's macOS runners (`.github/workflows/mac-app.yml`, ~1 min). Open the latest **Mac app** run under the repo's **Actions** tab and download **Dialectic-dev-mac** (a zip of `Dialectic.app`). That build talks to the **dev copy**, `https://dialectic-dev.yaggy.dev`, not localhost; the commit it was built from is in `Dialectic.app/Contents/Resources/version.txt`. It's a universal app (Intel and Apple Silicon). Once the signing secrets below are set, it's **signed with Developer ID and notarized** (the run's *Notarize* step ran, ~2-10 min extra): it opens like any download, and Accessibility and Screen Recording grants carry over from one build to the next. Without the secrets it's ad-hoc signed: macOS calls a downloaded copy **"damaged"** until you run `xattr -dr com.apple.quarantine /Applications/Dialectic.app` (once per download; right-click → Open no longer gets round it), and grants break on every build. Then grant permissions as in *First run* below. The same run's **render-check** artifact has PNGs of every screen (stub data), for reviewing UI changes without a Mac.
+
+**Signing secrets** (repo Settings → Secrets and variables → Actions; josoup's paid Apple account). CI notarizes only when all five are set:
+
+| Secret | What |
+| --- | --- |
+| `MAC_CERT_P12` | A *Developer ID Application* certificate with its private key, exported from Keychain Access as `.p12`, then `base64 -i cert.p12` (Xcode → Settings → Accounts → Manage Certificates → **+** makes one; account holder only) |
+| `MAC_CERT_PASSWORD` | The password you gave the `.p12` |
+| `NOTARY_APPLE_ID` | The Apple ID email of that account |
+| `NOTARY_PASSWORD` | An app-specific password from account.apple.com (not the account password) |
+| `NOTARY_TEAM_ID` | The 10-character Team ID (developer.apple.com → Membership) |
 
 ## Build and run
 
