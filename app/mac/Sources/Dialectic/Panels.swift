@@ -322,6 +322,7 @@ struct ComposerView: View {
     @ObservedObject var ask: AskModel      // observed too, so the header follows an answer arriving
     @ObservedObject var note: NoteModel
     @ObservedObject var overlay: OverlayModel
+    @ObservedObject var session: SessionModel
     let users: [User]
 
     var place: String {
@@ -338,8 +339,17 @@ struct ComposerView: View {
                     .help("Show classmates' highlights on the page you're reading")
                 KeyCap(label: HOTKEY_LABEL)
             }
-            if !place.isEmpty {
+            HStack {
                 Text(place).font(.system(size: 12.5)).foregroundColor(Theme.muted).lineLimit(1).truncationMode(.middle)
+                Spacer()
+                Button {
+                    AppDelegate.shared.panels.panel.orderOut(nil)  // the session watches the reading app, not this panel
+                    AppDelegate.shared.toggleSession()
+                } label: {
+                    Text(session.active ? "End session" : "Start session").font(.system(size: 12.5, weight: .medium)).foregroundColor(Theme.you)
+                }
+                .buttonStyle(.plain)
+                .help("Notice the passages you highlight in your own PDF app; save them as notes at the end")
             }
             if model.mode == .note, let near = note.context?.nearLockedCount, near > 0, note.saved == nil {
                 RoleCard(role: .classmate, dashed: true) {

@@ -23,9 +23,15 @@ private func sample<T: Decodable>(_ json: String, as type: T.Type) -> T {
 private struct FakePage: View {
     let lines: [PageLine]
     let size: CGSize
+    var marks: [Rect] = []   // drawn as yellow highlighter under the text
     var body: some View {
         ZStack(alignment: .topLeading) {
             Rectangle().fill(Color.white)
+            ForEach(Array(marks.enumerated()), id: \.offset) { _, r in
+                Rectangle().fill(Color(hex: 0xFFE45C))
+                    .frame(width: r.w * size.width, height: r.h * size.height)
+                    .offset(x: r.x * size.width, y: r.y * size.height)
+            }
             ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
                 let box = CGRect(x: line.rect.x * size.width, y: line.rect.y * size.height,
                                  width: line.rect.w * size.width, height: line.rect.h * size.height)
@@ -132,9 +138,29 @@ func renderCheck(into dir: String) {
                                  context: ctx, onSaved: {})
     composer.mode = .ask
     composer.ask.question = "Where does the idea of double-consciousness come from?"
-    savePNG(ComposerView(model: composer, ask: composer.ask, note: composer.note, overlay: model, users: users), "\(dir)/2-panel-ask.png")
+    savePNG(ComposerView(model: composer, ask: composer.ask, note: composer.note, overlay: model, session: SessionModel(), users: users), "\(dir)/2-panel-ask.png")
     composer.mode = .note
-    savePNG(ComposerView(model: composer, ask: composer.ask, note: composer.note, overlay: model, users: users), "\(dir)/3-panel-note.png")
+    savePNG(ComposerView(model: composer, ask: composer.ask, note: composer.note, overlay: model, session: SessionModel(), users: users), "\(dir)/3-panel-note.png")
     let answer = sample(ASK_JSON, as: AskResponse.self)
     savePNG(AnswerView(response: answer, users: users, showAI: .constant(false)).frame(width: 468).padding(16).background(Color.white), "\(dir)/2-ask-answer.png")
+
+    // 4. Session highlights: colour detection on a page with a yellow mark, and on one without.
+    let markQuote = stub.annotations!.first { $0.id == 3 }!   // "a sort of seventh son, born with a veil, …"
+    let marked = ImageRenderer(content: FakePage(lines: stub.lines, size: pageSize, marks: markQuote.rects!))
+    marked.scale = 2
+    let found = try! highlightedQuotes(in: marked.cgImage!)
+    print("session, marked page: \(found)")
+    print(found.contains(where: { squash($0).contains(squash("seventh son, born with a veil")) }) && found.count == 1
+          ? "session colour detection on the marked page: OK" : "SESSION COLOUR DETECTION FAILED on the marked page")
+    let plain = try! highlightedQuotes(in: renderer.cgImage!)
+    print(plain.isEmpty ? "session colour detection on the plain page: OK (nothing found)" : "SESSION FALSE POSITIVES on the plain page: \(plain)")
+    savePNG(FakePage(lines: stub.lines, size: pageSize, marks: markQuote.rects!), "\(dir)/6-session-marked-page.png")
+
+    let session = SessionModel()
+    session.active = true
+    session.highlights = [SessionHighlight(quote: found.first ?? "a sort of seventh son, born with a veil", page: 2, note: "The veil as a gift, not only a barrier."),
+                          SessionHighlight(quote: "two warring ideals in one dark body", page: 2)]
+    session.notInReading = 1
+    savePNG(SessionPill(model: session), "\(dir)/6-session-pill.png")
+    savePNG(SessionReviewView(model: session, scrolls: false, done: {}), "\(dir)/6-session-review.png")
 }

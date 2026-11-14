@@ -54,6 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     let panels = PanelController()
     let overlay = OverlayController()
+    let session = SessionController()
     let reader = ReaderWindowController()
     var statusItem: NSStatusItem!
     var users: [User] = []
@@ -147,6 +148,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(withTitle: "Ask or note on selection (\(HOTKEY_LABEL))", action: #selector(hotKeyFromMenu), keyEquivalent: "")
         let highlights = menu.addItem(withTitle: "Show highlights", action: #selector(toggleHighlights), keyEquivalent: "")
         highlights.state = overlay.isActive ? .on : .off
+        menu.addItem(withTitle: session.model.active ? "End session" : "Start session", action: #selector(toggleSession), keyEquivalent: "")
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "I am:", action: nil, keyEquivalent: ""))
         if let usersError {
@@ -220,6 +222,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSWorkspace.shared.open(parts.url!)
     }
     @objc func hotKeyFromMenu() { hotKeyPressed() }
+    /// Session highlights on/off: the menu item, the panel's button and the pill's End.
+    @objc func toggleSession() {
+        if session.model.active { session.stop() } else { session.start() }
+        rebuildMenu()
+    }
+
     /// The overlay's on/off switch: the menu item and the panel's toggle (it has no hotkey of its own).
     @objc func toggleHighlights() {
         overlay.toggle()
@@ -309,7 +317,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let context = overlay.model.active ? overlay.model.context(for: text) : nil
         let composer = ComposerModel(quote: text, context: context, onSaved: { [weak self] in self?.overlay.refreshNow() })
         watch(composer)
-        panels.show(ComposerView(model: composer, ask: composer.ask, note: composer.note, overlay: overlay.model, users: users))
+        panels.show(ComposerView(model: composer, ask: composer.ask, note: composer.note, overlay: overlay.model, session: session.model, users: users))
     }
 
     /// Re-fit the panel whenever its content changes (an answer arriving makes it taller).

@@ -12,7 +12,13 @@ If ⌃⌥D copies nothing (Notability with scanned or annotated PDFs, images), a
 
 Menu-bar menu: **Ask or note on selection (⌃⌥D)**, **Show highlights**, **Open Dialectic**, who you are, the server.
 
-## Reader window
+## Session highlights
+
+**Start session** (link in the ⌃⌥D panel, or the menu-bar menu) while your PDF app is in front. Highlight in your own app as you read; a pill at the top says **"Dialectic session · N highlights · End"** (plus "N not in a course reading" when a mark isn't in one). **End** (pill, panel or menu) opens a review: each new highlight with its page and an optional note box; **Save notes** saves the ones that have a note, through `POST /api/note`, so they count for the lock like any note.
+
+How it sees them (`Session.swift`, constants at the top): every 2 s it captures the reading window in memory (never written to disk), Vision reads the text with a box per word, and each word's background pixels are checked for a highlighter colour (saturated and bright, unlike white paper or dark text). Runs of marked words on a line become one quote. Marks already there when you pressed Start are ignored, the same text is counted once, and each quote is located like any other (only text leaves the Mac). Handwriting and pen marks aren't captured; a mark across two lines gives two quotes (`TODO(edge)`). The render check tests the colour detection on page 2 with a drawn yellow mark (finds exactly that quote) and without (finds nothing).
+
+
 
 **Open Dialectic** (menu, ⌘O; also shown at launch) opens a 1280×860 window. While it's open Dialectic acts as a normal app (its own menu bar, a Dock icon, ⌘Tab); close it and it goes back to living in the menu bar only. The window holds the web app in a `WKWebView`, loading `READER_URL` (top of `ReaderWindow.swift`, default `SERVER_URL`: in production FastAPI serves the built frontend on the same port). **In development** point it at Vite instead: `npm run dev` in `app/frontend` serves on `http://localhost:5173` and forwards `/api` to `:8000`.
 
@@ -86,4 +92,16 @@ Not in `SPEC.md` yet (josue's pick, Sat 08:57; needs Owen's OK). Proposed wordin
 - **§3.9 step 3:** *"**Ask or note.** One floating panel shows the captured text and two tabs, **Ask | Note** (the last one used is remembered). Ask sends `POST /api/ask` (§6) with `{quote, question}`; Note sends `POST /api/note` with `{quote, body, share_with_future}`. Both use the `X-User-Id` chosen in the app's menu."*
 - **§3.9, new line:** *"**Classmates' highlights** over the reading window are a switch in the panel header and in the menu-bar menu, not a hotkey."*
 - **§6, `/note` row:** "Hotkey note (⌥⇧N, §3.9)" becomes "Hotkey note (the Note tab of ⌃⌥D, §3.9)".
+
+## Proposed change (pending Owen): saving a highlight without a note
+
+Session highlights without a note are dropped today, because the server only saves notes. Proposed:
+
+```
+POST /api/highlight     X-User-Id: <id>
+{"quote": "..."}        → locates like /note, saves kind = "highlight" (no body), via "hotkey"
+200 {annotation}        404 {"detail": "This passage isn't in a course reading."}
+```
+
+Open question for SPEC §11: does a bare highlight count as engagement for the lock (§3.4)? Suggested default: **no**, only notes and questions open classmates' notes; a highlight is drawn in your colour but opens nothing.
 
