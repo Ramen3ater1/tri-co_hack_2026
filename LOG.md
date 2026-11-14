@@ -77,3 +77,4 @@ Append only, newest at the bottom. Format: `- HH:MM (Day) — what, and why. [wh
 - 04:50 (Sat) — Added explainers/frontend.md: planned layout of app/frontend (files, api.js + X-User-Id, Vite /api proxy since the backend has no CORS, reader layering from spike S1, lock cards by server group, NDJSON ask stream handling, safety rules, build order with status). Written before the frontend exists; update it as it's built. [Owen/Claude]
 - 04:53 (Sat) — Pulled explainers/frontend.md back out: it described code that doesn't exist yet. It'll be written from the real code once app/frontend is built. [Owen/Claude]
 - 04:53 (Sat) — starting: web frontend in app/frontend/ (React + Vite) from ideas/02, in its build order: login/course, reader + lock, ask, charter, then the rest. [Owen/Claude]
+- 04:58 (Sat) — starting: Mac screenshot fallback for ⌥⇧D/⌥⇧N (drag a box → Vision → quote). [josoup/Claude]
