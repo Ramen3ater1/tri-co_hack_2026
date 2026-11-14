@@ -11,3 +11,4 @@ Append only, newest at the bottom. Format: `- HH:MM (Day) — what, and why. [wh
 - 00:58 (Sat) — Added agent co-development rules to CLAUDE.md: pull --rebase, claim tasks in LOG.md, push small to main, no PRs. [Owen/Claude]
 - 01:12 (Sat) — CLAUDE.md: plain-English spec edits through Claude; SPEC.md stays the only copy. [Owen/Claude]
 - 01:17 (Sat) — Added a stable branch: main for fast iteration, stable = always submittable, promoted by a human at each checkpoint (tagged good-HHMM); droplet deploys from stable. [Owen/Claude]
+- 01:22 (Sat) — starting: backend (schema, seed, routes, /ask, ai.py, search.py) in app/backend/. [Owen/Claude]
