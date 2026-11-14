@@ -16,6 +16,7 @@ import search
 PEER_LIMIT = 5
 LIBRARY_LIMIT = 3
 MAX_WEB_SOURCES = 3
+MAX_PAGES_TO_READ = 5  # fetch up to this many permitted pages, keep up to MAX_WEB_SOURCES with an answer
 SAME_PAGE_BOOST = 2.0  # bm25 scores are negative (lower = better), so we subtract this
 FRAGMENT_WORDS = 5     # long sentences link as textStart,textEnd with this many words each
 
@@ -90,6 +91,14 @@ def save_source(conn, title, url, text, question_id):
     return cur.lastrowid
 
 
+def skipped_entry(result, why, reason):
+    """why: 'not_permitted' (the charter rules it out: don't link it),
+    'unreachable' (permitted but we couldn't open or read it) or
+    'no_answer' (permitted and read, but nothing in it answered the question).
+    The last two are fine sources, so the frontend links them for the student to read."""
+    return {"url": result["url"], "title": result["title"], "why": why, "reason": reason}
+
+
 def web_layer(conn, charter, question_id, quote, question, search_query):
     """AI sources: web search -> charter filter -> fetch -> pick the answering sentence -> save to library.
 
@@ -98,14 +107,14 @@ def web_layer(conn, charter, question_id, quote, question, search_query):
     results = search.search(conn, search_query)
     if not results:
         return [], []
-    verdict = ai.filter_sources(charter["permissible_sources"], question, results)
-    skipped = [{"url": results[s["index"]]["url"], "reason": s["reason"]} for s in verdict["skipped"]]
+    verdict = ai.filter_sources(conn, charter["permissible_sources"], question, results)
+    skipped = [skipped_entry(results[s["index"]], "not_permitted", s["reason"]) for s in verdict["skipped"]]
 
-    # The filter returns a few spare candidates, best first: some sites refuse to be fetched
-    # (Britannica and The Atlantic answer 403), and we stop once we have enough.
+    # Fetch a few more pages than we need, best first: some sites refuse us (Britannica and
+    # The Atlantic answer 403) and some pages are just a landing page (JSTOR).
     fetched = []
     for index in verdict["keep"]:
-        if len(fetched) == MAX_WEB_SOURCES:
+        if len(fetched) == MAX_PAGES_TO_READ:
             break
         result = results[index]
         try:
@@ -113,24 +122,28 @@ def web_layer(conn, charter, question_id, quote, question, search_query):
         except httpx.HTTPError as e:
             # Not a bug, just a site that won't let us in: show it as skipped instead of failing /ask.
             print(f"fetch failed, skipping {result['url']}: {e}")
-            skipped.append({"url": result["url"], "reason": "Couldn't open this page"})
+            skipped.append(skipped_entry(result, "unreachable", "Couldn't open this page"))
             continue
         if not page["text"]:
-            skipped.append({"url": result["url"], "reason": "Couldn't read any text on this page"})
+            skipped.append(skipped_entry(result, "unreachable", "Couldn't read any text on this page"))
             continue
         fetched.append({"title": result["title"] or page["title"], "url": result["url"], "text": page["text"]})
     if not fetched:
         return [], skipped
 
-    sentences = ai.pick_sentences(question, quote, fetched)
+    # A page only counts as a source if the AI finds a real sentence in it that answers the question.
+    sentences = ai.pick_sentences(conn, question, quote, fetched)
     sources = []
     for index, source in enumerate(fetched):
         sentence = sentences.get(index)
+        if sentence is None or len(sources) == MAX_WEB_SOURCES:
+            skipped.append(skipped_entry(source, "no_answer", "Couldn't find a passage here that answers the question"))
+            continue
         source_id = save_source(conn, source["title"], source["url"], source["text"], question_id)
         sources.append({
             "source_id": source_id,
             "title": source["title"],
-            "url": text_fragment_url(source["url"], sentence) if sentence else source["url"],
+            "url": text_fragment_url(source["url"], sentence),
             "quote": sentence,
             "text": source["text"],
         })
@@ -167,7 +180,7 @@ def answer(conn, reading, user, page, quote, rects, question):
     # 4. Pass 1: the gate, only if some AI layer is still possible.
     search_query = None
     if can_find_sources or can_explain:
-        verdict = ai.gate(charter["text_md"], reading["title"], quote, question)
+        verdict = ai.gate(conn, charter["text_md"], reading["title"], quote, question)
         if can_find_sources and not verdict["find_sources"]["allowed"]:
             blocked.append(rule_block(charter, "sources_ai", verdict["find_sources"]))
             can_find_sources = False
@@ -178,9 +191,12 @@ def answer(conn, reading, user, page, quote, rects, question):
 
     # 5. Pass 2, sources: the web with AI, otherwise the course library.
     skipped_sources = []
+    sources = []
     if can_find_sources:
         sources, skipped_sources = web_layer(conn, charter, question_id, quote, question, search_query)
-    else:
+    if not sources:
+        # No AI allowed, or the web gave nothing usable (e.g. every good site refused us):
+        # the course library is the fallback either way.
         sources = library_layer(conn, quote, question)
 
     # 6. Pass 2, explanation: only grounded in the sources above, posted publicly as the AI.

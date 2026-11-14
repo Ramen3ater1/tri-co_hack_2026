@@ -3,16 +3,18 @@
 The cache is DEMO safety: once the demo question has run, its search results and pages
 replay from the DB, so a flaky network on stage doesn't matter. seed.py --reset keeps it.
 """
+import html as html_lib
 import json
 import os
+import re
 
 import httpx
 import trafilatura
 
 import db
 
-KAGI_URL = "https://kagi.com/api/v0/search"
-SEARCH_LIMIT = 8
+KAGI_URL = "https://kagi.com/api/v1/search"  # v1; the legacy v0 GET returns 401 with new keys
+SEARCH_LIMIT = 15  # of ~30 Kagi returns; extra candidates because some good sites refuse our fetcher
 FETCH_TIMEOUT_S = 15
 MAX_EXCERPT_CHARS = 20_000
 # A generic client name: no user or project details go to the sites we fetch.
@@ -32,6 +34,11 @@ def cache_put(conn, key, value):
     conn.commit()
 
 
+def clean_html(text):
+    """Kagi snippets contain HTML (<strong>, &#39;): strip tags, unescape entities."""
+    return html_lib.unescape(re.sub(r"<[^>]+>", "", text)).strip()
+
+
 def search(conn, query):
     """Web search. Returns [{title, url, snippet}]. Only `query` leaves the server."""
     key = f"search:{query}"
@@ -41,18 +48,17 @@ def search(conn, query):
     api_key = os.environ.get("KAGI_API_KEY")
     if not api_key:
         raise RuntimeError("KAGI_API_KEY is not set (put it in .env), or turn off 'AI may find sources' in the charter")
-    resp = httpx.get(
+    resp = httpx.post(
         KAGI_URL,
-        params={"q": query, "limit": SEARCH_LIMIT},
-        headers={"Authorization": f"Bot {api_key}"},
+        json={"query": query},
+        headers={"Authorization": f"Bearer {api_key}"},
         timeout=FETCH_TIMEOUT_S,
     )
     resp.raise_for_status()
-    # Items with t == 0 are results; t == 1 are related searches.
+    # data.search holds the web results (about 30); video, infobox and related_search are ignored.
     results = [
-        {"title": item.get("title", ""), "url": item["url"], "snippet": item.get("snippet", "")}
-        for item in resp.json()["data"]
-        if item.get("t") == 0
+        {"title": clean_html(item.get("title", "")), "url": item["url"], "snippet": clean_html(item.get("snippet") or "")}
+        for item in resp.json()["data"]["search"][:SEARCH_LIMIT]
     ]
     cache_put(conn, key, results)
     return results

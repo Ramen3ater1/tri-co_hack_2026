@@ -50,7 +50,7 @@ Dependencies: `fastapi` + `uvicorn` (web server), `python-multipart` (PDF upload
 - **readings** + **reading_pages**: the uploaded PDF's path, and each page's extracted text (for search and AI context).
 - **charter**: one row holding the rules text, the permissible-sources description and the toggles.
 - **sources**: the **course source library**. Every web page the AI used, plus any the professor added by hand.
-- **web_cache**: search results and fetched pages, keyed by query or URL. It's demo insurance: once a question has been asked, it replays without the network. `seed.py --reset` keeps this table.
+- **web_cache**: search results and fetched pages (keyed by query or URL), and the parsed replies of the JSON LLM calls (keyed by a hash of the exact prompt). It's demo insurance and speed: once a question has been asked, it replays the same gate verdict, search and sources in about 6 s instead of about 35 s. `seed.py --reset` keeps this table.
 
 ### Full-text search (FTS5)
 
@@ -92,10 +92,11 @@ The points worth knowing:
 - **Peers come first and need no AI.** The peer layer only searches `note`s (including replies), not other questions or AI answers, and boosts notes on the same page.
 - **Two kinds of "no".** A toggle that's off blocks a layer *in code*, before any model call (`ai.toggle_blocks`). The **gate** (`ai.gate`) is an LLM call that reads the charter's rules text and can deny a layer citing a rule number; `ai.rule_label` turns "2" into "Rule 2: AI may point us to sources…". Either way the layer is added to `blocked`, and the request still succeeds.
 - **The AI can't invent quotes.** When it picks "the sentence that answers the question" from a source, `ai.pick_sentences` checks that the sentence really appears in the page text and drops it otherwise. Kept sentences become text-fragment links (`url#:~:text=…`), which make the browser scroll to and highlight that sentence.
-- **Sites that refuse us don't break the answer.** Britannica and The Atlantic answer our fetcher with 403. The filter returns up to 5 candidates, and `ask.web_layer` fetches them in order until 3 open; any that won't load are listed in `skipped_sources` as "Couldn't open this page".
+- **Sites that refuse us don't break the answer.** Britannica and The Atlantic answer our fetcher with 403, and JSTOR serves a landing page with no article text. So the filter keeps up to 8 candidates out of 15 search results, `ask.web_layer` reads up to 5 that open, and only pages where the AI finds a real answering sentence become sources (at most 3). Everything else is listed in `skipped_sources` with a `why`: `not_permitted` (shown, not linked), or `unreachable` / `no_answer` (linked, so the student can read it themselves).
+- **If the web gives nothing usable, the library is the fallback**, the same as when AI is off.
 - **The library grows by itself.** Every source the AI uses is saved to `sources`. Later questions, including ones where AI is off or denied, find it with plain full-text search.
 - **No ungrounded answers.** The explanation is only written if there are sources to cite, and it's cut to `max_explanation_words` in code even if the model runs long.
-- A full AI answer is **four LLM calls** (gate, filter, pick sentences, explain) plus a search and up to three page fetches. It's one slow request (expect 10–20 s), not a stream.
+- A full AI answer is **four LLM calls** (gate, filter, pick sentences, explain) plus a search and up to five page fetches, all in one request (not a stream). Measured with the real services: **about 35 s the first time** a question is asked and **about 6 s on replay**, when only the explanation is written fresh. So rehearse the demo question once before presenting.
 
 ## Privacy, by construction
 
@@ -139,9 +140,10 @@ curl -H 'X-User-Id: 3' -H 'Content-Type: application/json' \
   localhost:8000/api/readings/1/ask
 ```
 
-## Known gaps (as of 01:35 Sat)
+## Known gaps (as of 02:25 Sat)
 
-- **The AI path has only run against a faked LLM and Kagi**, because there are no API keys yet. The real model's JSON output and the real Kagi response format still need checking.
-- **The gate may over-deny the demo question.** "What did it *mean* in 1903?" contains the word the rule-text demo relies on ("what does Du Bois *mean*…"). Test it with the real model.
+- **The real gate passes the demo questions** (each tried three times, same verdict every time): "what did it mean in 1903?" and "where did the term come from?" are allowed. "What does Du Bois *mean* by…" has its **explanation** denied under rule 2, but **finding sources** stays allowed, since rule 2 says AI may point us to sources.
+- **The seed charter keeps out modern journal articles.** Its permissible-sources text only lists encyclopedias, university and museum sites, and primary sources, so the filter (correctly) drops journal articles. Add "peer-reviewed scholarship" to the text if we want them.
+- A first-time question takes about 35 s, mostly fetching pages one after another. Fetching them in parallel would cut that if needed.
 - If an AI call fails, the question has already been saved, so it shows in the margin without an answer.
 - Not built yet: `annotate_before_peers` (stretch) and the step-by-step "Checking the charter…" status (one response for now).

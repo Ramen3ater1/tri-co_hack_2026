@@ -82,7 +82,7 @@ One table covers notes, questions, AI answers and replies:
 3. **Pass 1, the gate** (only if `ai_enabled`): toggles are checked in code first; any layer whose toggle is off is blocked without asking the model. If any AI layer is still possible, one LLM call (`GATE_PROMPT`, §7) reads the charter text, the quote and the question, and returns per layer `allowed` + the `rule` it relied on + a one-line `reason`, plus a web `search_query` to use if source finding is allowed. A denied layer is blocked with that rule quoted to the student.
 4. **Pass 2, source layer:**
    - **No AI** (`ai_find_sources` off or denied): FTS5 over the course source library, which holds every source the AI has found before. Top 3. This is how the class gets less dependent on AI over time.
-   - **AI** (allowed): search the web with `search_query` (8 results) → one LLM call filters the results' titles, URLs and snippets against the charter's **permissible sources** description, keeping up to 5 candidates (best first) and giving a short reason for each one dropped → fetch those pages until 3 open (sites that refuse, like Britannica and The Atlantic with a 403, go into `skipped_sources` as "Couldn't open this page") and extract the main text (`trafilatura`) → the LLM **quotes the exact sentence** in each that answers the question → link out with a text fragment (`url#:~:text=<sentence>`), so the browser jumps to and highlights that sentence. Each used source is saved to `sources` (`found_by = 'ai'`) with its extracted text, so it's searchable from then on.
+   - **AI** (allowed): search the web with `search_query` (15 results) → one LLM call filters the results' titles, URLs and snippets against the charter's **permissible sources** description, keeping up to 8 candidates (best first) and giving a short reason for each one dropped → fetch them in order until 5 open (sites that refuse, like Britannica and The Atlantic with a 403, go into `skipped_sources`) and extract the main text (`trafilatura`) → the LLM **quotes the exact sentence** in each that answers the question; up to 3 pages with a real sentence become the sources, and pages with none (e.g. JSTOR's landing pages) go into `skipped_sources` → link out with a text fragment (`url#:~:text=<sentence>`), so the browser jumps to and highlights that sentence. Each used source is saved to `sources` (`found_by = 'ai'`) with its extracted text, so it's searchable from then on. If the web gives no usable source, the layer falls back to the course library, as in no-AI mode.
 5. **Pass 2, AI explanation layer** (allowed): the LLM writes at most `max_explanation_words` words from the sources above, citing them as `[1]`, `[2]`. Saved as an annotation (`kind = ai_answer`, author = the "Dialectic AI" user, `parent_id` = the question), so it shows in the margin and takes replies.
 6. Returns all three layers, a `blocked` list (each with the toggle or charter rule that blocked it) and a `skipped_sources` list, so the UI can explain itself.
 
@@ -97,7 +97,7 @@ The AI's web search is filtered against this description (§3.5). Every source i
 - is visible on a **Sources** tab (title, link, who/what found it, which question it answered);
 - lets the professor **add** a source by URL (the server fetches and extracts its text) or **remove** one. That's the whole curation UI.
 
-**Demo safety:** the live web is the most fragile part of the demo. Seed the library with the sources the demo question will find, cache search results and fetched pages by URL in the DB, and run the demo question once before presenting.
+**Demo safety:** the live web is the most fragile part of the demo. Seed the library with the sources the demo question will find, cache search results and fetched pages by URL in the DB, and run the demo question once before presenting. The JSON LLM calls (gate, filter, sentence picking) are cached by their exact prompt too, so the rehearsed question replays the same verdict, query and sources in about 6 s instead of about 35 s; only the explanation is written fresh. Editing the charter changes the prompt, so the gate runs again.
 
 ### 3.7 Class charter
 
@@ -152,7 +152,7 @@ At upload, each reading is split into **sections** by its headings: the PDF's ou
 
 - **Backend:** Python 3.12, managed with **uv** (`app/backend/pyproject.toml` + `uv.lock`), FastAPI, `sqlite3` from the standard library (no ORM), `pypdf` for PDF text, `httpx` for the LLM and search calls, `trafilatura` to extract a web page's main text. `uvicorn` to serve.
 - **Web search:** **Kagi Search API** (preview, ~$12 per 1,000 queries, billed to a Kagi account; a day of building and the demo is a dollar or two). Chosen for the privacy story alongside DigitalOcean inference, and for results with little SEO spam, which helps keep study-guide sites out. All of it lives in one function, `search(query) -> [{title, url, snippet}]` in `search.py`, so swapping providers is a small change.
-  - Call (**v1, tested 02:00 Sat with our key**): `POST https://kagi.com/api/v1/search` with JSON body `{"query": "<query>"}` and header `Authorization: Bearer $KAGI_API_KEY` (`Bot` also works). Results are in `data.search`, a list of `{url, title, snippet, time, props}` (about 30; take the first 8). Ignore `data.video`, `data.infobox` and `data.related_search`. Snippets contain HTML (`<strong>`, `&#39;`): strip tags and unescape before showing or sending them on.
+  - Call (**v1, tested 02:00 Sat with our key**): `POST https://kagi.com/api/v1/search` with JSON body `{"query": "<query>"}` and header `Authorization: Bearer $KAGI_API_KEY` (`Bot` also works). Results are in `data.search`, a list of `{url, title, snippet, time, props}` (about 30; take the first 15). Ignore `data.video`, `data.infobox` and `data.related_search`. Snippets contain HTML (`<strong>`, `&#39;`): strip tags and unescape before showing or sending them on.
   - **The legacy v0 API (`GET /api/v0/search`, `data[]` with `t == 0`) returns 401 with new keys.** Don't use it.
   - Fallback if Kagi misbehaves on the day: Brave Search API, same function signature.
 - **Frontend:** React + Vite, `react-router`, `react-pdf`. Plain CSS. No state library.
@@ -321,7 +321,10 @@ All routes are under `/api`; all except `/users` need `X-User-Id`. Professor-onl
   "peer": [{"annotation_id": 7, "author": "Ana", "cohort": "Fall 2026", "page": 3, "quote": "...", "body": "..."}],
   "sources": [{"source_id": 2, "title": "...", "url": "...#:~:text=...", "quote": "..."}],
   "ai_answer": {"annotation_id": 42, "body": "... [1] ..."},
-  "skipped_sources": [{"url": "https://www.sparknotes.com/...", "reason": "Study-guide sites aren't permitted"}],
+  "skipped_sources": [
+    {"url": "https://www.sparknotes.com/...", "title": "...", "why": "not_permitted", "reason": "Study-guide sites aren't permitted"},
+    {"url": "https://www.theatlantic.com/...", "title": "...", "why": "unreachable", "reason": "Couldn't open this page"}
+  ],
   "blocked": [
     {"layer": "ai_answer", "by": "toggle", "label": "AI may write explanations — off"},
     {"layer": "sources_ai", "by": "rule", "label": "Rule 2: AI may not interpret the text for us", "reason": "The question asks what the passage means."}
@@ -330,6 +333,8 @@ All routes are under `/api`; all except `/users` need `X-User-Id`. Professor-onl
 ```
 
 `ai_answer` is `null` when blocked or when no sources matched (no ungrounded answers).
+
+`skipped_sources[].why` is `not_permitted` (the charter rules it out: show it, but **don't link it**), `unreachable` (permitted, but we couldn't open or read it) or `no_answer` (permitted and read, but nothing in it answered the question). **Link the last two** so the student can read them themselves.
 
 `POST /ask` (hotkey) returns the same shape plus `"located": {"reading_id": 1, "reading_title": "...", "page": 3, "section": "Of Our Spiritual Strivings", "reader_url": "/readings/1?page=3&annotation=41"}`. Annotations gain `"section"` (title or `null`) and `"via"` (`"web"` | `"hotkey"`).
 
@@ -357,7 +362,7 @@ Other response shapes:
 
 ## 7. AI calls (`ai.py`)
 
-One function, `chat(system, user) -> str`, using `httpx` against the DO endpoint, `temperature=0.2`, with a 30 s timeout and no retries (fail loudly). The prompts are constants at the top of `ai.py`. Calls that return JSON ask for JSON only and are parsed with `json.loads`; a parse failure is a loud error.
+One function, `chat(system, user) -> str`, using `httpx` against the DO endpoint, `temperature=0.2`, with a 30 s timeout and no retries (fail loudly). The prompts are constants at the top of `ai.py`. Calls that return JSON ask for JSON only and are parsed with `json.loads`; a parse failure is a loud error. Their parsed replies are cached in `web_cache` by the exact prompt (§3.6).
 
 **What gets sent (privacy rule, enforced by building the payload in one place):** charter text, permissible-sources description, the highlighted `quote`, the `question`, the reading title, and source titles/snippets/text. **Never** user names, IDs, cohorts or other students' annotations. Kagi gets only the gate's `search_query`. From the hotkey, the server only ever receives recognised text (Vision runs on the Mac), never a screenshot.
 
