@@ -86,3 +86,53 @@ def quote_rects(pdf_path, page, quote):
             }
             for x0, top, x1, bottom in lines.values()
         ]
+
+
+def find_page_from_lines(conn, text, course_id):
+    """The Mac overlay sends a few OCR'd lines from the screen (one per line, not contiguous).
+    Each line votes for the page it's found on; the page with most votes wins. None if no line is found."""
+    votes = {}
+    for line in text.splitlines():
+        if len(squash(line)) < 12:  # short OCR lines match too many pages
+            continue
+        found = find_page(conn, line, course_id)
+        if found is not None:
+            votes[found] = votes.get(found, 0) + 1
+    if not votes:
+        return None
+    return max(votes, key=votes.get)
+
+
+COLUMN_GAP = 18  # points; a wider gap between words on one line means a new column
+
+
+def page_lines(pdf_path, page):
+    """Every text line on `page` (1-based) with its box as page fractions (top-left origin).
+    Two-column pages give two lines per row, like the screen OCR sees them."""
+    with pdfplumber.open(pdf_path) as pdf:
+        p = pdf.pages[page - 1]
+        rows = {}
+        for word in p.extract_words():
+            rows.setdefault(round(word["top"]), []).append(word)
+        lines = []
+        for top in sorted(rows):
+            words = sorted(rows[top], key=lambda w: w["x0"])
+            run = [words[0]]
+            for word in words[1:]:
+                if word["x0"] - run[-1]["x1"] > COLUMN_GAP:
+                    lines.append(run)
+                    run = []
+                run.append(word)
+            lines.append(run)
+        return [
+            {
+                "text": " ".join(w["text"] for w in run),
+                "rect": {
+                    "x": round(run[0]["x0"] / p.width, 4),
+                    "y": round(min(w["top"] for w in run) / p.height, 4),
+                    "w": round((run[-1]["x1"] - run[0]["x0"]) / p.width, 4),
+                    "h": round((max(w["bottom"] for w in run) - min(w["top"] for w in run)) / p.height, 4),
+                },
+            }
+            for run in lines
+        ]

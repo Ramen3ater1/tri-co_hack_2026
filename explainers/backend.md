@@ -183,6 +183,7 @@ Then:
 
 - **`POST /ask`** (and `/ask/stream`) runs exactly the same `ask.answer_steps()` as the web reader with `via="hotkey"`, so the question and AI answer show up in the web reader's margin. It adds `located` (reading, page, section and a `reader_url` that opens the web reader at the question); the stream sends it as its own event right after the question is saved.
 - **`POST /note`** saves a plain note at the located place (`via="hotkey"`) and returns it with a `reader_url`.
+- **`POST /locate`** is for the Mac highlight overlay: it gets a few lines the Mac read off the screen (not one passage), so `locate.find_page_from_lines` lets each line vote for its page. It returns that page's lines with their boxes (`locate.page_lines`, split at wide gaps so two-column pages match how the screen reads), and the Mac fits them to the screen and draws the class's highlights there. Before this route existed the Mac used a stub pinned to the old Du Bois reading 1, page 2, which stopped working when the philosophy seed replaced it.
 
 ## Sections
 

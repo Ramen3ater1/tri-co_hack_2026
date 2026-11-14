@@ -428,6 +428,7 @@ All routes are under `/api`; all except `/users` and `/spend` need `X-User-Id`. 
 | POST | `/ask` | all | Hotkey ask (§3.9): `{quote, question}` plus an optional `source_app` (the app the text came from, e.g. `"Notability"`); the server locates the reading, page, section and rects, then runs the same three layers. 404 if the quote isn't in a course reading |
 | POST | `/note` | all | Hotkey note (⌥⇧N, §3.9): `{quote, body, share_with_future}` plus an optional `source_app`; locates like `/ask`, saves a `note` with `via: "hotkey"`, returns the annotation plus `reader_url`. 404 if the quote isn't in a course reading |
 | POST | `/ask/stream` | all | Hotkey ask, step by step (still a plain 404 if the quote isn't found) |
+| POST | `/locate` | all | Mac overlay (§3.9): `{text}`, a few lines read off the screen, one per line. Each line votes for the course page it's on; returns `{located: {reading_id, reading_title, page, section: null, reader_url}, lines: [{text, rect}]}` with every line on that page (two-column pages split per column) as page fractions, for fitting to the screen. 404 if no line is in a course reading |
 | GET | `/charter` | all | Text, toggles, comments (each with its `status`) |
 | PUT | `/charter` | prof | Update text and/or toggles |
 | POST | `/charter/comments` | all | Student proposal/comment |

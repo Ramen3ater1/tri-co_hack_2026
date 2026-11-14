@@ -542,6 +542,30 @@ def hotkey_steps(conn, reading, user, page, rects, req, device_id):
         yield event
 
 
+class LocateRequest(BaseModel):
+    text: str  # a few lines read off the screen, one per line
+
+
+@app.post("/api/locate")
+def locate_page(req: LocateRequest, user=Depends(current_user), conn=Depends(get_conn)):
+    """The Mac overlay: which course reading and page is on screen, and that page's line boxes to fit to it."""
+    found = locate.find_page_from_lines(conn, req.text, user["course_id"])
+    if found is None:
+        raise HTTPException(404, "This page isn't in a course reading.")
+    reading_id, page = found
+    reading = dict(get_reading_or_404(conn, reading_id, user))
+    return {
+        "located": {
+            "reading_id": reading["id"],
+            "reading_title": reading["title"],
+            "page": page,
+            "section": None,
+            "reader_url": f"/readings/{reading['id']}?page={page}",
+        },
+        "lines": locate.page_lines(reading["pdf_path"], page),
+    }
+
+
 @app.post("/api/ask")
 def hotkey_ask(req: HotkeyAskRequest, user=Depends(current_user), conn=Depends(get_conn),
                x_device_id: str | None = Header(None)):
