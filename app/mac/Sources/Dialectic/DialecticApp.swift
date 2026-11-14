@@ -125,10 +125,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func rebuildMenu() {
         guard statusItem != nil else { return }  // a dialectic:// URL can arrive before launch finishes
-        let menu = NSMenu()
         let current = users.first(where: { $0.id == currentUserId() })
         statusItem.button?.title = current.map { " \($0.name)" } ?? ""
+        statusItem.menu = makeMenu(forMenuBar: false)
+        // The same menu as the app's own "Dialectic" menu, for while the reader window is open.
+        NSApp.mainMenu?.items.first?.submenu = makeMenu(forMenuBar: true)
+        reader.signIn(as: current, users: users)  // reloads the reader only if the user changed
+    }
 
+    /// The Dialectic menu: the status-bar icon's menu, and (forMenuBar) the app menu with Close Window.
+    func makeMenu(forMenuBar: Bool) -> NSMenu {
+        let menu = NSMenu(title: "Dialectic")
         menu.addItem(withTitle: "Open Dialectic", action: #selector(openReader), keyEquivalent: "o")
         menu.addItem(.separator())
         menu.addItem(withTitle: "Ask about selection (\(HOTKEY_ASK_LABEL))", action: #selector(askHotKey), keyEquivalent: "")
@@ -164,11 +171,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let serverItem = menu.addItem(withTitle: "Server", action: nil, keyEquivalent: "")
         menu.setSubmenu(serverMenu, for: serverItem)
         menu.addItem(withTitle: "Report a problem…", action: #selector(reportProblem), keyEquivalent: "")
+        for item in menu.items { item.target = self }
         menu.addItem(.separator())
+        if forMenuBar {
+            menu.addItem(withTitle: "Close Window", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        }
         menu.addItem(withTitle: "Quit Dialectic", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
-        for item in menu.items where item.action != #selector(NSApplication.terminate(_:)) { item.target = self }
-        statusItem.menu = menu
-        reader.signIn(as: current, users: users)  // reloads the reader only if the user changed
+        return menu
     }
 
     @objc func pickUser(_ sender: NSMenuItem) { setUser(sender.tag) }

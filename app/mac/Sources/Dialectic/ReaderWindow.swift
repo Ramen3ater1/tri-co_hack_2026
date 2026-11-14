@@ -203,10 +203,7 @@ func jsString(_ text: String) -> String {
 func installMainMenu() {
     let main = NSMenu()
     let appItem = NSMenuItem()
-    let appMenu = NSMenu()
-    appMenu.addItem(withTitle: "Close Window", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
-    appMenu.addItem(withTitle: "Quit Dialectic", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
-    appItem.submenu = appMenu
+    appItem.submenu = NSMenu()  // filled by AppDelegate.rebuildMenu: the same items as the status-bar menu
     main.addItem(appItem)
     let editItem = NSMenuItem()
     let edit = NSMenu(title: "Edit")
