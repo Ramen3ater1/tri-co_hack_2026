@@ -94,6 +94,7 @@ ssh root@IP "cp /tmp/Caddyfile /etc/caddy/ && cp /tmp/dialectic@.service /etc/sy
 
 Both hostnames are proxied by Cloudflare (orange cloud). Cloudflare serves the public certificate; Caddy accepts both plain HTTP and HTTPS with its own internal certificate, so it works with Cloudflare SSL mode **Flexible** or **Full**.
 
+- **`yaggy.dev` is in Full (strict)**, so `dialectic.yaggy.dev` has its own **Configuration Rule** (Rules → Configuration Rules, "dialectic full ssl": hostname equals `dialectic.yaggy.dev` → SSL **Full**). Delete the rule when the droplet goes. `dialectic.space` needs nothing.
 - **Error 526** means the zone is in **Full (strict)**, which rejects Caddy's internal certificate. Either add a Cloudflare **Configuration Rule** for that hostname setting SSL to **Full**, or switch the record to **DNS only** (grey cloud) and replace that host's block in the Caddyfile with a plain `dialectic.yaggy.dev { reverse_proxy 127.0.0.1:8000 }` so Caddy gets a real Let's Encrypt certificate.
 - The Ask streams its answer (server-sent events); it was checked through Cloudflare and arrives stage by stage. Cloudflare cuts requests at 100 s; a fresh Ask takes 20–35 s.
 
