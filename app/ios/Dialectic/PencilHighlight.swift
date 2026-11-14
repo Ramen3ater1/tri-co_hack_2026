@@ -24,6 +24,16 @@ let PENCIL_SELECT_JS = """
 })
 """
 
+/// A clear layer over the reader that only Apple Pencil touches land on (fingers fall through to the page).
+/// The web view's own Pencil gestures sit on its inner views and won the stroke on some drags, so the
+/// Pencil's touches never reach them now.
+final class PencilOnlyView: UIView {
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        guard bounds.contains(point), let touches = event?.allTouches, !touches.isEmpty else { return false }
+        return touches.allSatisfy { $0.type == .pencil }
+    }
+}
+
 @MainActor
 final class PencilHighlighter: NSObject, UIGestureRecognizerDelegate {
     private weak var webView: WKWebView?
@@ -39,7 +49,11 @@ final class PencilHighlighter: NSObject, UIGestureRecognizerDelegate {
         let pan = UIPanGestureRecognizer(target: self, action: #selector(pan(_:)))
         pan.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.pencil.rawValue)]
         pan.delegate = self
-        webView.addGestureRecognizer(pan)
+        let catcher = PencilOnlyView(frame: webView.bounds)
+        catcher.backgroundColor = .clear
+        catcher.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        catcher.addGestureRecognizer(pan)
+        webView.addSubview(catcher)
         // The Pencil highlights; only fingers scroll the page.
         webView.scrollView.panGestureRecognizer.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.direct.rawValue)]
         stroke.strokeColor = PENCIL_STROKE_COLOR.cgColor
@@ -47,7 +61,7 @@ final class PencilHighlighter: NSObject, UIGestureRecognizerDelegate {
         stroke.lineWidth = PENCIL_STROKE_WIDTH
         stroke.lineCap = .round
         stroke.lineJoin = .round
-        webView.layer.addSublayer(stroke)
+        catcher.layer.addSublayer(stroke)
     }
 
     func gestureRecognizer(_ g: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool { false }
