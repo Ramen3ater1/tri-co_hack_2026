@@ -1,6 +1,6 @@
 # How the backend works
 
-A high-level tour of `app/backend/`, last brought up to date Saturday 05:00. `SPEC.md` says *what* we're building and §6 is the API contract; this explains *how the code is arranged* so you can find your way around and change it. If the code and this file disagree, the code wins: fix this file.
+A high-level tour of `app/backend/`, last brought up to date Saturday 05:40. `SPEC.md` says *what* we're building and §6 is the API contract; this explains *how the code is arranged* so you can find your way around and change it. If the code and this file disagree, the code wins: fix this file.
 
 ## The shape of it
 
@@ -14,6 +14,7 @@ browser / Mac app ──HTTP──▶ main.py (routes) ──▶ db.py (SQLite +
                                │
                                └─ /ask ──▶ ask.py ──▶ ai.py ─────▶ DigitalOcean LLM
                                                   └▶ search.py ─▶ Kagi search, web pages
+                                         (every paid call goes through spend.py first)
 ```
 
 In production the same process also serves the built React app (`app/frontend/dist`), so the whole site is one port behind Caddy.
@@ -22,14 +23,15 @@ In production the same process also serves the built React app (`app/frontend/di
 
 | File | Lines | What it's for |
 | --- | --- | --- |
-| `main.py` | ~680 | Every HTTP route, plus small helpers that turn database rows into JSON. Start reading here. |
-| `ask.py` | ~350 | The `/ask` flow: the three answer layers and the charter checks, in order, as a stream of progress events. |
-| `ai.py` | ~350 | Everything that talks to the LLM: the four prompts and each call's effort (constants at the top), `chat()`, and the charter toggle checks. |
-| `db.py` | ~290 | The schema (all `CREATE TABLE`s), `connect()`, the **visibility rule**, the **engagement lock**, `insert_annotation()`, and `fts_query()`, which turns free text into a search query. |
+| `main.py` | ~700 | Every HTTP route, plus small helpers that turn database rows into JSON. Start reading here. |
+| `ask.py` | ~365 | The `/ask` flow: the three answer layers and the charter checks, in order, as a stream of progress events. |
+| `ai.py` | ~365 | Everything that talks to the LLM: the four prompts, each call's effort and the model's prices (constants at the top), `chat()`, and the charter toggle checks. |
+| `db.py` | ~310 | The schema (all `CREATE TABLE`s), `connect()`, the **visibility rule**, the **engagement lock**, `insert_annotation()`, and `fts_query()`, which turns free text into a search query. |
+| `spend.py` | ~100 | Spending limits (SPEC §9.1): the per-device limit, the budgets, `AI_OFF`, and recording what each paid call cost. |
 | `sections.py` | ~120 | Splits a reading into sections by its headings at upload, and finds which section a highlight is in. |
-| `search.py` | ~115 | Kagi web search and fetching pages' main text (several at once), all cached in the database. |
+| `search.py` | ~120 | Kagi web search and fetching pages' main text (several at once), all cached in the database. |
 | `locate.py` | ~85 | For the Mac hotkey: finds which reading and page a copied passage is from, and its highlight boxes in the PDF. |
-| `seed.py` | ~145 | DEMO data: users, course, charter, and the past-student annotations. |
+| `seed.py` | ~160 | DEMO data: users, course, charter, and the past-student annotations. |
 | `seed/souls-of-black-folk-ch1.pdf` | | The demo reading (Gutenberg #408, Ch. 1, printed with Chrome). |
 | `pyproject.toml`, `uv.lock` | | Dependencies, managed with uv. |
 
@@ -49,6 +51,7 @@ All under `/api`, all in `main.py`. The exact request and response shapes are in
 | Charter | `GET`/`PUT /charter`, `POST /charter/comments`, `GET /charter/gaps`, `POST /charter/gaps/dismiss` |
 | Sources | `GET /sources`, `POST /sources` and `DELETE /sources/{id}` (professor) |
 | Search | `GET /search?q=` |
+| Spending | `GET /spend` (totals against this copy's budgets; no `X-User-Id` needed, so it opens on a phone) |
 
 ## How a request flows
 
@@ -58,7 +61,8 @@ All under `/api`, all in `main.py`. The exact request and response shapes are in
    - `current_user()` looks up the user from the header: 401 if unknown.
    - `professor()` is `current_user()` plus a 403 for students. A route that takes `user=Depends(professor)` is professor-only, and that's the whole permission system. "Only the author" checks (delete, change sharing) are an `if` in the route.
 3. The route runs its SQL, calls `conn.commit()` if it wrote anything, and returns a dict, which FastAPI sends as JSON.
-4. If anything raises, the `show_errors` handler returns a 500 with the **real error message** in `detail` (for example "DO_INFERENCE_KEY must be set"), so the frontend can show it instead of a vague failure.
+4. The Ask routes also read an optional **`X-Device-Id`** header (a random id the web and Mac apps keep), for the per-device spending limit.
+5. If anything raises, the `show_errors` handler returns a 500 with the **real error message** in `detail` (for example "DO_INFERENCE_KEY must be set"), so the frontend can show it instead of a vague failure.
 
 ## The data, in plain words
 
@@ -74,7 +78,10 @@ All under `/api`, all in `main.py`. The exact request and response shapes are in
 - **charter**: one row holding the rules text, the permissible-sources description and the toggles. **charter_comments**: students' proposals.
 - **sources**: the **course source library**. Every web page the AI used, plus any the professor added by hand.
 - **charter_gaps**: search results the source filter skipped because the charter doesn't mention their kind (URL, title, kind; never who asked), for the charter page's gaps list.
+- **spend**: one row per paid call that wasn't served from the cache: when, which service (`ai` or `search`), tokens or searches, the cost in USD, the device and the Ask it was for. `seed.py --reset` keeps it, so reseeding never resets a budget.
 - **web_cache**: search results and fetched pages (keyed by query or URL), and the parsed replies of the JSON LLM calls (keyed by a hash of the exact prompt). It's demo insurance and speed: once a question has been asked, it replays the same gate verdict, search and sources much faster. `seed.py --reset` keeps this table.
+
+The database runs in **WAL mode** with a 5-second **busy timeout** (`db.connect()`), so many people can read while someone writes, and two writers wait for each other instead of failing with "database is locked". It means the database has two side files, `dialectic.db-wal` and `-shm`; `seed.py --reset` deletes them with it. Each connection is opened with `check_same_thread=False`, because FastAPI may open a request's connection on one thread and close it on another (pages that load several things at once hit this); each request still has its own connection.
 
 There are **no migrations**: `CREATE TABLE IF NOT EXISTS` runs only when `seed.py --reset` builds a fresh database. After a schema change, everyone runs `uv run seed.py --reset` (it keeps `web_cache`).
 
@@ -132,7 +139,7 @@ flowchart TD
 The points worth knowing:
 
 - **Peers come first and need no AI.** The peer layer only searches `note`s (including replies), not other questions or AI answers, and boosts notes in the same section (same page for a reading uploaded before sections existed).
-- **A failed AI step doesn't sink the answer.** If the gate, the web layer or the explanation throws (the AI service or Kagi down, or a bug), `ask.ai_error_block` logs the traceback and adds a `blocked` entry with `by: "error"` and the real message, the sources fall back to the library, and the rest still arrives. Failures outside the AI steps still fail the request: a 500, or a last `error` line on a stream.
+- **A failed or refused AI step doesn't sink the answer.** If the gate, the web layer or the explanation throws, `ask.failed_block` turns it into a `blocked` entry: `by: "limit"` with the notice as its `label` if a spending limit refused it (below), otherwise `by: "error"` with the real message (the AI service or Kagi down, or a bug; the traceback is logged). The sources fall back to the library, and the rest still arrives. Failures outside the AI steps still fail the request: a 500, or a last `error` line on a stream.
 - **Partial refusals are normal.** The gate judges each layer on its own, so "What does Du Bois *mean* by…" gets sources (rule 2 lets AI point to sources) but no explanation (rule 2 forbids interpreting). The answer then contains only the allowed layers, and `blocked` says which part was refused and why. A layer counts as allowed only if the gate says exactly `true`; anything else denies it.
 - **Two kinds of "no"** from the charter. A toggle that's off blocks a layer *in code*, before any model call (`ai.toggle_blocks`). The **gate** (`ai.gate`) is an LLM call that reads the charter's rules text and can deny a layer citing a rule number; `ai.rule_label` turns "2" into "Rule 2: AI may point us to sources…". Either way the layer is added to `blocked`, and the request still succeeds.
 - **The source filter is a simple decision per result.** `ai.filter_sources` asks the model to sort every search result into `keep` (with a usefulness rating), `ruled_out` (the charter explicitly excludes this kind of source), `not_covered` (the charter doesn't mention it) or `off_topic` (including copies of the reading itself), plus a short label like "study-guide sites". The student-facing text is built from that label in code: "Your charter rules out study-guide sites" vs "Your charter doesn't mention journal articles". The second invites the class to amend the charter: `ask.log_charter_gaps` saves those results to `charter_gaps`, and `GET /charter/gaps` groups them by kind for the charter page (`ideas/01-charter-gaps.md`). Changing the permissible-sources text clears the list.
@@ -144,6 +151,16 @@ The points worth knowing:
 - **The explanation is context only.** It doesn't end with a question or suggest what to ask next (students write their own questions). The model is asked for 20 words fewer than the charter's limit, and if it still runs long, `ai.cut_to_words` cuts it short.
 - **Speed.** A full AI answer is **four LLM calls** (gate, filter, pick sentences, explain) plus a search and the page fetches. By default the model "thinks" in 700–1,300 hidden tokens before every answer, which is most of the time. Each call's effort is a one-word constant at the top of `ai.py` (`GATE_EFFORT`, `FILTER_EFFORT`, `PICK_EFFORT`, `EXPLAIN_EFFORT`): `None` is full reasoning, `"low"` skips it. Only the sentence pick runs at low: its mistakes are caught (a misquoted sentence fails the substring check) or cheap (a missed one drops one source). The filter went back to full effort because at low it sometimes dropped allowed sources, a mistake nothing catches. The filter and sentence pick also use a **JSON schema** the API forces the reply into (without one, at low effort the model sometimes writes prose after its JSON). Measured: **about 22–25 s the first time** a question is asked (classmates' answers in under a second, sources around 15–18 s, the explanation last) and **about 7–8 s on replay**. So rehearse the demo questions once before presenting.
 - **One retry, for one thing.** An **empty reply** from the model is asked again once (`EMPTY_REPLY_RETRIES` in `ai.py`); nothing else is retried.
+
+## Spending limits (`spend.py`, SPEC §9.1)
+
+The AI (DigitalOcean, prepaid credit) and web search (Kagi, $0.012 a search) cost money, and anyone with the URL can ask. So every **paid** call goes through a `spend.Meter`, one per Ask, which `ask.answer_steps` creates right after saving the question and passes down to `ai.chat_once()` and `search.search()`:
+
+- **Before** the call, `meter.check(service)` raises `spend.LimitReached` (the notice is its message) if `AI_OFF=1`, if this device has started `DEVICE_ASKS_PER_HOUR` paid Asks in the last hour (`0` = no limit), or if the service's total has reached `AI_BUDGET_USD` / `SEARCH_BUDGET_USD` (that one is the subclass `BudgetExceeded`).
+- **After** the call, `meter.record()` writes a `spend` row and commits it at once: the model's cost comes from the reply's `usage` token counts × `LLM_USD_PER_MTOK_IN` / `LLM_USD_PER_MTOK_OUT` (top of `ai.py`), a search costs `KAGI_USD_PER_SEARCH` (top of `search.py`).
+- **Cached calls never reach the meter**: they're answered from `web_cache` before `chat_once` or `search` is called. So a rehearsed question replays free even when the budget is gone or AI is off; only its explanation (never cached) is refused.
+- **The device limit counts Asks, not calls**: distinct `question_id`s with spend from that `X-Device-Id` in the last hour. An Ask that has already paid once is allowed to finish. A request without the header counts as one shared device, `unknown`. It's not by IP address: at the venue everyone shares one.
+- The settings are read from the environment on every check, so a missing one shows up as an `error` notice naming the variable to copy from `.env.example`, rather than quietly meaning "no limit". Changing one needs a restart of that copy's service (the `.env` is read at start).
 
 ## The Mac hotkey: `/api/ask` and `/api/note`
 
@@ -165,7 +182,7 @@ At upload, `sections.add_sections` takes the PDF's bookmarks if it has any, othe
 
 ## Privacy, by construction
 
-The functions in `ai.py` only take **strings**: charter text, the quote, the question, the reading title and source text. No route passes them a user, an id or another student's annotation, so none of that can leak into a prompt. Kagi receives only the gate's `search_query`, and fetched sites see a generic user agent. Locked annotations leave the server as positions and a count only, and `charter_gaps` stores sources, never who asked.
+The functions in `ai.py` only take **strings**: charter text, the quote, the question, the reading title and source text. No route passes them a user, an id or another student's annotation, so none of that can leak into a prompt. Kagi receives only the gate's `search_query`, and fetched sites see a generic user agent. The spending meter is passed along with the AI calls but never goes into a prompt, and `GET /spend` shows totals only, nothing per device. Locked annotations leave the server as positions and a count only, and `charter_gaps` stores sources, never who asked.
 
 ## DEMO shortcuts (on purpose)
 
@@ -179,6 +196,9 @@ The functions in `ai.py` only take **strings**: charter text, the quote, the que
 | To change… | Edit |
 | --- | --- |
 | What the AI is told (gate, filter, sentence, explanation) | The `*_PROMPT` constants at the top of `ai.py` |
+| What the AI and search cost | `LLM_USD_PER_MTOK_IN`, `LLM_USD_PER_MTOK_OUT` in `ai.py`; `KAGI_USD_PER_SEARCH` in `search.py` |
+| Budgets, the per-device limit, the emergency stop | `AI_BUDGET_USD`, `SEARCH_BUDGET_USD`, `DEVICE_ASKS_PER_HOUR`, `AI_OFF` in that copy's `.env` (then restart it) |
+| The limit notices students see | `AI_OFF_NOTICE`, `DEVICE_LIMIT_NOTICE`, `BUDGET_NOTICE` in `spend.py` |
 | How hard each AI call thinks | `GATE_EFFORT`, `FILTER_EFFORT`, `PICK_EFFORT`, `EXPLAIN_EFFORT` in `ai.py` |
 | The wording of "blocked by toggle" notices | `TOGGLE_LABELS` in `ai.py` |
 | The Ask panel's progress lines, the "something went wrong" label | `STAGE_LABELS`, `AI_ERROR_LABEL` in `ask.py` |
@@ -199,6 +219,8 @@ uv run seed.py --reset --with-reading
 uv run --env-file ../../.env uvicorn main:app --reload --port 8000
 ```
 
+Your `.env` needs the four spending settings from `.env.example` (`AI_BUDGET_USD`, `SEARCH_BUDGET_USD`, `DEVICE_ASKS_PER_HOUR`, `AI_OFF`), or every AI step shows an error notice saying which one is missing. `curl localhost:8000/api/spend` shows what's been spent so far.
+
 Then try it in another terminal (user 1 is Prof. Rivera, 2 is Ana, 3 is Ben, 4 is Sam), or open <http://localhost:8000/docs> for FastAPI's clickable list of every route:
 
 ```sh
@@ -210,7 +232,7 @@ curl -N -H 'X-User-Id: 2' -H 'Content-Type: application/json' \
   localhost:8000/api/ask/stream
 ```
 
-## Known gaps (as of 05:00 Sat)
+## Known gaps (as of 05:40 Sat)
 
 - **The real gate passes the demo questions** (each tried three times, same verdict every time): "what did it mean in 1903?", "where did the term come from?" and the hotkey question are allowed; "what does Du Bois *mean* by…" is partly refused, as intended.
 - **The cache replays bad luck too.** A question's gate verdict, filter and sentences are cached by their exact prompt. If a question's first run was unlucky (e.g. every good page refused us), it stays that way until its `llm:` rows are deleted from `web_cache`. Clearing them means the gate writes a new search query. Checking the rehearsed answers is an open item in `TODO.md`.
@@ -219,4 +241,5 @@ curl -N -H 'X-User-Id: 2' -H 'Content-Type: application/json' \
 - **A quote that runs across a page break** isn't found by the hotkey routes, and on the web gets the section of its first page.
 - **The Mac app doesn't say which app the text came from** ("from Notability"): `TODO.md`, owner josoup.
 - **`main.py` is past the ~400 lines** at which SPEC §4 says to split it. Left alone until after the demo, so nobody's edits collide.
-- **No UI yet** for anything: `app/frontend/` doesn't exist. Everything above is built and tested server side only.
+- **Budgets can overshoot by one Ask.** The check is "has the total reached the budget?" before each call, so the calls of Asks already running when it's reached still go through: a few cents, not dollars.
+- **The device limit is per device id**, which a student can reset by clearing browser storage. It's for fairness; the budget is the real cap.

@@ -326,6 +326,16 @@ CREATE TABLE charter_gaps (        -- results skipped as not_covered by the char
   dismissed INTEGER NOT NULL DEFAULT 0
 );
 
+CREATE TABLE spend (               -- every paid call not served from the cache (§9.1); kept by seed.py --reset
+  id INTEGER PRIMARY KEY,
+  at TEXT NOT NULL,
+  service TEXT NOT NULL CHECK (service IN ('ai','search')),
+  units INTEGER NOT NULL,          -- tokens (in + out) for 'ai', searches for 'search'
+  usd REAL NOT NULL,
+  device_id TEXT NOT NULL,         -- X-Device-Id, or 'unknown'
+  question_id INTEGER              -- the Ask it was for (the device limit counts distinct Asks)
+);
+
 CREATE TABLE web_cache (           -- DEMO safety: replay search results and fetched pages
   key TEXT PRIMARY KEY,            -- 'search:<query>' or 'page:<url>'
   value TEXT NOT NULL,
@@ -346,7 +356,7 @@ Insert/delete triggers on `annotations` and `sources` keep their FTS tables curr
 
 ## 6. API
 
-All routes are under `/api`; all except `/users` need `X-User-Id`. Professor-only routes return 403 for students.
+All routes are under `/api`; all except `/users` and `/spend` need `X-User-Id`. The Ask routes also read an optional `X-Device-Id` (§9.1). Professor-only routes return 403 for students.
 
 | Method | Path | Who | Purpose |
 | --- | --- | --- | --- |
@@ -374,6 +384,7 @@ All routes are under `/api`; all except `/users` need `X-User-Id`. Professor-onl
 | GET | `/sources` | all | The course source library |
 | POST · DELETE | `/sources`, `/sources/{id}` | prof | Add by URL (fetched + extracted) / remove |
 | GET | `/search?q=` | all | FTS over visible annotations + reading text |
+| GET | `/spend` | anyone | Spending against this copy's budgets (§9.1), no `X-User-Id` needed: `{"ai": {"usd", "calls", "budget_usd"}, "search": {...}, "ai_off", "device_asks_per_hour"}` |
 
 `/ask` response:
 
@@ -398,7 +409,7 @@ All routes are under `/api`; all except `/users` need `X-User-Id`. Professor-onl
 
 `ai_answer` is `null` when blocked or when no sources matched (no ungrounded answers).
 
-`blocked[].by` is `toggle` (a charter toggle is off), `rule` (the gate denied it; `reason` explains why), `no_sources` (allowed, but nothing to ground an explanation in) or `error` (the step failed; `reason` is the real error message, so show it).
+`blocked[].by` is `toggle` (a charter toggle is off), `rule` (the gate denied it; `reason` explains why), `no_sources` (allowed, but nothing to ground an explanation in), `limit` (a spending limit, §9.1: `label` is the whole notice, no `reason`, no charter link) or `error` (the step failed; `reason` is the real error message, so show it).
 
 `skipped_sources[].why` is `not_permitted` (the charter rules it out: show it, but **don't link it**), `not_covered` (the charter doesn't mention this kind of source: show it, don't link it; the class can amend the charter, see `ideas/01-charter-gaps.md`), `unreachable` (permitted, but we couldn't open or read it) or `no_answer` (permitted and read, but nothing in it answered the question). **Link the last two** so the student can read them themselves.
 
@@ -582,7 +593,7 @@ Cached answers (`web_cache`) cost nothing. Two layers of protection:
 - **Not by IP address:** at the venue everyone shares the wifi's public IP, so an IP limit would block the whole room at once.
 - Clearing browser storage gets round it. That's fine: it's for fairness, and layer 2 is the real cap.
 
-**2. Global budget (true excess, both copies).** Every paid call is recorded **at the point of spending**: in `ai.chat_once()` (DigitalOcean) and `search.search()` (Kagi), only when the call isn't served from the cache. A `spend` table holds `(at, service, units, usd, device_id)`.
+**2. Global budget (true excess, both copies).** Every paid call is recorded **at the point of spending**: in `ai.chat_once()` (DigitalOcean) and `search.search()` (Kagi), only when the call isn't served from the cache. A `spend` table holds `(at, service, units, usd, device_id, question_id)`; `question_id` is the Ask the call was for, so the per-device limit counts distinct paid Asks. The checks and the notices live in `spend.py`; every Ask passes one `spend.Meter` down to each paid call. Missing settings in `.env` are an error (shown as an `error` notice), not a silent "no limit".
 - **DigitalOcean cost** = the response's `usage` tokens × `LLM_USD_PER_MTOK_IN` / `LLM_USD_PER_MTOK_OUT` (constants at the top of `ai.py`: Claude Sonnet 5.5 on DigitalOcean is **$2.00 per million input tokens** and **$10.00 per million output tokens**).
 - **Kagi cost** = `KAGI_USD_PER_SEARCH = 0.012` per search.
 - **Before each paid call,** if that service's total has reached its budget (`AI_BUDGET_USD`, `SEARCH_BUDGET_USD` in `.env`), raise `BudgetExceeded`. The Ask turns this into blocked AI layers with *"This copy of Dialectic has used up its AI budget. Classmates' answers and the course library still work."* Nothing crashes, and the demo's peer layer keeps working.

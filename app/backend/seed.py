@@ -106,19 +106,32 @@ def add_demo_sources(conn):
 
 
 def reset(with_reading, with_sources):
-    # Keep web_cache across resets (SPEC §9), so the demo replays cached web results.
+    # Keep web_cache across resets (SPEC §9), so the demo replays cached web results,
+    # and spend (SPEC §9.1), so reseeding never resets a budget.
     cache = []
+    spent = []
     if db.DB_PATH.exists():
         old = db.connect()
         cache = old.execute("SELECT key, value, created_at FROM web_cache").fetchall()
+        has_spend = old.execute("SELECT 1 FROM sqlite_master WHERE name = 'spend'").fetchone()
+        if has_spend:  # databases from before the spend table don't have one
+            spent = old.execute("SELECT at, service, units, usd, device_id FROM spend").fetchall()
         old.close()
         db.DB_PATH.unlink()
+    # WAL mode keeps two side files; a stale one would be replayed into the new database.
+    for suffix in ("-wal", "-shm"):
+        side_file = db.DB_PATH.with_name(db.DB_PATH.name + suffix)
+        if side_file.exists():
+            side_file.unlink()
     if UPLOADS_DIR.exists():
         shutil.rmtree(UPLOADS_DIR)
 
     conn = db.connect()
     db.init_schema(conn)
     conn.executemany("INSERT INTO web_cache VALUES (?, ?, ?)", [tuple(r) for r in cache])
+    # question_id isn't kept: the questions are gone. The device-hour count restarts; budgets don't.
+    conn.executemany("INSERT INTO spend (at, service, units, usd, device_id) VALUES (?, ?, ?, ?, ?)",
+                     [tuple(r) for r in spent])
     conn.executemany("INSERT INTO users (name, role, cohort) VALUES (?, ?, ?)", USERS)
     conn.execute("INSERT INTO course (title, current_cohort) VALUES (?, ?)", (COURSE_TITLE, CURRENT_COHORT))
     conn.execute(
@@ -131,7 +144,7 @@ def reset(with_reading, with_sources):
         add_demo_sources(conn)
     conn.commit()
     conn.close()
-    print(f"Seeded {db.DB_PATH} (kept {len(cache)} web_cache rows)")
+    print(f"Seeded {db.DB_PATH} (kept {len(cache)} web_cache rows and {len(spent)} spend rows)")
 
 
 if __name__ == "__main__":

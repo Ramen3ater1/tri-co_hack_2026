@@ -15,6 +15,7 @@ import trafilatura
 import db
 
 KAGI_URL = "https://kagi.com/api/v1/search"  # v1; the legacy v0 GET returns 401 with new keys
+KAGI_USD_PER_SEARCH = 0.012  # what one search costs (SPEC §9.1)
 SEARCH_LIMIT = 15  # of ~30 Kagi returns; extra candidates because some good sites refuse our fetcher
 FETCH_TIMEOUT_S = 15
 MAX_EXCERPT_CHARS = 20_000
@@ -40,8 +41,9 @@ def clean_html(text):
     return html_lib.unescape(re.sub(r"<[^>]+>", "", text)).strip()
 
 
-def search(conn, query):
-    """Web search. Returns [{title, url, snippet}]. Only `query` leaves the server."""
+def search(conn, meter, query):
+    """Web search. Returns [{title, url, snippet}]. Only `query` leaves the server.
+    An uncached search is paid: check the spending limits first, record it after (SPEC §9.1)."""
     key = f"search:{query}"
     cached = cache_get(conn, key)
     if cached is not None:
@@ -49,6 +51,7 @@ def search(conn, query):
     api_key = os.environ.get("KAGI_API_KEY")
     if not api_key:
         raise RuntimeError("KAGI_API_KEY is not set (put it in .env), or turn off 'AI may find sources' in the charter")
+    meter.check("search")
     resp = httpx.post(
         KAGI_URL,
         json={"query": query},
@@ -56,6 +59,7 @@ def search(conn, query):
         timeout=FETCH_TIMEOUT_S,
     )
     resp.raise_for_status()
+    meter.record("search", 1, KAGI_USD_PER_SEARCH)
     # data.search holds the web results (about 30); video, infobox and related_search are ignored.
     results = [
         {"title": clean_html(item.get("title", "")), "url": item["url"], "snippet": clean_html(item.get("snippet") or "")}

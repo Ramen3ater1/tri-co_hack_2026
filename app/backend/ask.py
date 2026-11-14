@@ -14,6 +14,7 @@ import ai
 import db
 import search
 import sections
+import spend
 
 PEER_LIMIT = 5
 LIBRARY_LIMIT = 3
@@ -95,14 +96,14 @@ def text_fragment_url(url, sentence):
     return f"{url.split('#')[0]}#:~:text={directive}"
 
 
-def verify_library_sources(conn, question, quote, sources):
+def verify_library_sources(conn, meter, question, quote, sources):
     """Library sources only carry a keyword snippet. Before an explanation may cite them, find a
     real answering sentence in each (as for web sources) and link to it. Sources without one stay
     in the list for the student, but the explanation won't use them."""
     unverified = [s for s in sources if not s["verified"]]
     if not unverified:
         return
-    sentences = ai.pick_sentences(conn, question, quote, [{"title": s["title"], "text": s["text"]} for s in unverified])
+    sentences = ai.pick_sentences(conn, meter, question, quote, [{"title": s["title"], "text": s["text"]} for s in unverified])
     for index, source in enumerate(unverified):
         sentence = sentences.get(index)
         if sentence:
@@ -146,15 +147,15 @@ def log_charter_gaps(conn, results, skipped):
         )
 
 
-def web_layer(conn, charter, reading_title, question_id, quote, question, search_query):
+def web_layer(conn, meter, charter, reading_title, question_id, quote, question, search_query):
     """AI sources: web search -> charter filter -> fetch -> pick the answering sentence -> save to library.
 
     Returns (sources, skipped_sources).
     """
-    results = search.search(conn, search_query)
+    results = search.search(conn, meter, search_query)
     if not results:
         return [], []
-    verdict = ai.filter_sources(conn, charter["permissible_sources"], reading_title, question, results)
+    verdict = ai.filter_sources(conn, meter, charter["permissible_sources"], reading_title, question, results)
     skipped = [skipped_entry(results[s["index"]], s["why"], s["reason"]) for s in verdict["skipped"]]
     log_charter_gaps(conn, results, verdict["skipped"])
 
@@ -180,7 +181,7 @@ def web_layer(conn, charter, reading_title, question_id, quote, question, search
         return [], skipped
 
     # A page only counts as a source if the AI finds a real sentence in it that answers the question.
-    sentences = ai.pick_sentences(conn, question, quote, fetched)
+    sentences = ai.pick_sentences(conn, meter, question, quote, fetched)
     sources = []
     for index, source in enumerate(fetched):
         sentence = sentences.get(index)
@@ -209,6 +210,14 @@ def rule_block(charter, layer, decision):
     }
 
 
+def failed_block(layer, error):
+    """A `blocked` entry for an AI layer that raised: a spending limit (SPEC §9.1: "by": "limit",
+    the notice as the label, no reason) or a real failure (see ai_error_block)."""
+    if isinstance(error, spend.LimitReached):
+        return {"layer": layer, "by": "limit", "label": str(error)}
+    return ai_error_block(layer, error)
+
+
 def ai_error_block(layer, error):
     """A `blocked` entry for an AI layer that failed (the AI service or Kagi down, a bug).
     The panel shows the real message; the rest of the answer still arrives."""
@@ -220,12 +229,13 @@ def status(stage):
     return {"event": "status", "stage": stage, "label": STAGE_LABELS[stage]}
 
 
-def answer_steps(conn, reading, user, page, quote, rects, question, via="web"):
+def answer_steps(conn, reading, user, page, quote, rects, question, via="web", device_id=None):
     """Run the whole /ask flow, yielding progress events as it goes (SPEC §3.5, §6).
 
     Events, in this order: question, status/peer, status/blocked..., status/sources,
     status/ai_answer, then done with the full response. A `blocked` event can come after the
     charter check, after sources and after the explanation. via: 'web' or 'hotkey'.
+    device_id: the X-Device-Id header, for the per-device spending limit (SPEC §9.1).
     """
     charter = conn.execute("SELECT * FROM charter").fetchone()
     ai_user_id = conn.execute("SELECT id FROM users WHERE role = 'ai'").fetchone()["id"]
@@ -238,6 +248,8 @@ def answer_steps(conn, reading, user, page, quote, rects, question, via="web"):
     )
     conn.commit()
     yield {"event": "question", "question_id": question_id, "section": section["title"] if section else None}
+    # Every paid call in this Ask goes through the meter: limits checked before, cost recorded after.
+    meter = spend.Meter(conn, device_id, question_id)
 
     # 2. Peer layer: always on, no AI.
     yield status("peer")
@@ -253,13 +265,13 @@ def answer_steps(conn, reading, user, page, quote, rects, question, via="web"):
     if can_find_sources or can_explain:
         yield status("charter")
         try:
-            verdict = ai.gate(conn, charter["text_md"], reading["title"], quote, question)
+            verdict = ai.gate(conn, meter, charter["text_md"], reading["title"], quote, question)
         except Exception as e:
             verdict = None
             if can_find_sources:
-                blocked.append(ai_error_block("sources_ai", e))
+                blocked.append(failed_block("sources_ai", e))
             if can_explain:
-                blocked.append(ai_error_block("ai_answer", e))
+                blocked.append(failed_block("ai_answer", e))
             can_find_sources = can_explain = False
         if verdict is not None:
             # Each layer is judged on its own, so a request can be partly allowed (e.g. sources yes,
@@ -280,9 +292,9 @@ def answer_steps(conn, reading, user, page, quote, rects, question, via="web"):
     sources = []
     if can_find_sources:
         try:
-            sources, skipped_sources = web_layer(conn, charter, reading["title"], question_id, quote, question, search_query)
+            sources, skipped_sources = web_layer(conn, meter, charter, reading["title"], question_id, quote, question, search_query)
         except Exception as e:
-            error = ai_error_block("sources_ai", e)
+            error = failed_block("sources_ai", e)
             blocked.append(error)
             yield {"event": "blocked", "blocked": [error]}
     if not sources:
@@ -296,10 +308,10 @@ def answer_steps(conn, reading, user, page, quote, rects, question, via="web"):
     if can_explain:
         yield status("ai_answer")
         try:
-            ai_answer = explain_layer(conn, charter, reading, ai_user_id, page, quote, question, question_id, sources, via)
+            ai_answer = explain_layer(conn, meter, charter, reading, ai_user_id, page, quote, question, question_id, sources, via)
         except Exception as e:
             ai_answer = None
-            error = ai_error_block("ai_answer", e)
+            error = failed_block("ai_answer", e)
             blocked.append(error)
             yield {"event": "blocked", "blocked": [error]}
         if ai_answer is None and not any(b["layer"] == "ai_answer" for b in blocked):
@@ -323,15 +335,15 @@ def answer_steps(conn, reading, user, page, quote, rects, question, via="web"):
     yield {"event": "done", "result": result}
 
 
-def explain_layer(conn, charter, reading, ai_user_id, page, quote, question, question_id, sources, via):
+def explain_layer(conn, meter, charter, reading, ai_user_id, page, quote, question, question_id, sources, via):
     """Write the explanation from the sources with a verified sentence and save it as the AI's
     reply to the question. Returns {annotation_id, body}, or None if no source is verified."""
-    verify_library_sources(conn, question, quote, sources)
+    verify_library_sources(conn, meter, question, quote, sources)
     grounded = [s for s in sources if s["verified"]]
     if not grounded:
         return None
     body = ai.explain(
-        charter["text_md"], reading["title"], quote, question,
+        meter, charter["text_md"], reading["title"], quote, question,
         [{"title": s["title"], "text": s["text"], "sentence": s["quote"]} for s in grounded],
         charter["max_explanation_words"],
     )
@@ -347,8 +359,8 @@ def public_sources(sources):
     return [{k: v for k, v in s.items() if k not in ("text", "verified")} for s in sources]
 
 
-def answer(conn, reading, user, page, quote, rects, question, via="web"):
+def answer(conn, reading, user, page, quote, rects, question, via="web", device_id=None):
     """The whole /ask flow in one go: the `done` event's response (SPEC §6)."""
-    for event in answer_steps(conn, reading, user, page, quote, rects, question, via):
+    for event in answer_steps(conn, reading, user, page, quote, rects, question, via, device_id):
         if event["event"] == "done":
             return event["result"]

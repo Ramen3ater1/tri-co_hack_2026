@@ -2,7 +2,8 @@
 
 Privacy rule: the functions here take only text (charter, quote, question, reading title,
 source text). They never receive a user, an id or anyone else's annotation, so nothing
-personal can end up in a prompt.
+personal can end up in a prompt. (The `meter` they pass along is spend.Meter: it checks the
+spending limits and records costs in the database; nothing from it goes into a prompt.)
 """
 import hashlib
 import json
@@ -12,6 +13,9 @@ import re
 import httpx
 
 TEMPERATURE = 0.2
+# What the model costs (SPEC §9.1): Claude Sonnet 5.5 on DigitalOcean, USD per million tokens.
+LLM_USD_PER_MTOK_IN = 2.00
+LLM_USD_PER_MTOK_OUT = 10.00
 TIMEOUT_S = 30
 EMPTY_REPLY_RETRIES = 1  # see chat()
 CONTEXT_CHARS = 1500  # the explanation sees this much text either side of each verified sentence
@@ -153,21 +157,23 @@ Reply with the explanation text only."""
 
 # ---------- the one LLM call ----------
 
-def chat(system, user, effort=None, schema=None):
+def chat(system, user, meter, effort=None, schema=None):
     """One chat completion. effort: None (the model's default) or a reasoning_effort like "low".
     schema: a JSON schema the reply must follow (structured output).
 
     The model very occasionally replies with nothing at all (about 1 in 20 structured calls on
     Saturday), so an empty reply is retried once. Nothing else is retried: errors raise."""
     for attempt in range(1 + EMPTY_REPLY_RETRIES):
-        text = chat_once(system, user, effort, schema)
+        text = chat_once(system, user, meter, effort, schema)
         if text:
             return text
         print(f"empty reply from the model (attempt {attempt + 1}), asking again")
     raise RuntimeError(f"The model returned an empty reply {1 + EMPTY_REPLY_RETRIES} times")
 
 
-def chat_once(system, user, effort, schema):
+def chat_once(system, user, meter, effort, schema):
+    """One paid model call: check the spending limits first (raises spend.LimitReached),
+    then record its cost from the reply's token counts."""
     url = os.environ.get("DO_INFERENCE_URL")
     key = os.environ.get("DO_INFERENCE_KEY")
     model = os.environ.get("DO_MODEL")
@@ -176,6 +182,7 @@ def chat_once(system, user, effort, schema):
             "DO_INFERENCE_URL, DO_INFERENCE_KEY and DO_MODEL must be set (put them in .env), "
             "or turn off 'AI enabled' in the charter"
         )
+    meter.check("ai")
     resp = httpx.post(
         f"{url.rstrip('/')}/chat/completions",
         headers={"Authorization": f"Bearer {key}"},
@@ -190,10 +197,14 @@ def chat_once(system, user, effort, schema):
         timeout=TIMEOUT_S,
     )
     resp.raise_for_status()
-    return (resp.json()["choices"][0]["message"]["content"] or "").strip()
+    data = resp.json()
+    tokens_in, tokens_out = data["usage"]["prompt_tokens"], data["usage"]["completion_tokens"]
+    meter.record("ai", tokens_in + tokens_out,
+                 (tokens_in * LLM_USD_PER_MTOK_IN + tokens_out * LLM_USD_PER_MTOK_OUT) / 1_000_000)
+    return (data["choices"][0]["message"]["content"] or "").strip()
 
 
-def chat_json(conn, prompt, effort=None, schema=None):
+def chat_json(conn, meter, prompt, effort=None, schema=None):
     """Ask for JSON and parse it. A reply that isn't JSON raises (fail loudly, SPEC §7).
 
     Cached in web_cache by the exact prompt (DEMO safety and speed): the same question replays
@@ -204,7 +215,7 @@ def chat_json(conn, prompt, effort=None, schema=None):
     row = conn.execute("SELECT value FROM web_cache WHERE key = ?", (key,)).fetchone()
     if row:
         return json.loads(row["value"])
-    text = chat("You reply with JSON only, no prose.", prompt, effort=effort, schema=schema)
+    text = chat("You reply with JSON only, no prose.", prompt, meter, effort=effort, schema=schema)
     # Models often wrap JSON in a ```json fence; that's formatting, not an error.
     fenced = re.match(r"^```(?:json)?\s*(.*?)\s*```$", text, re.DOTALL)
     if fenced:
@@ -245,8 +256,8 @@ def toggle_blocks(charter):
 
 # ---------- pass 1: the gate ----------
 
-def gate(conn, charter_text, reading_title, quote, question):
-    return chat_json(conn, GATE_PROMPT.format(
+def gate(conn, meter, charter_text, reading_title, quote, question):
+    return chat_json(conn, meter, GATE_PROMPT.format(
         charter=charter_text, reading_title=reading_title, quote=quote, question=question,
     ), effort=GATE_EFFORT)
 
@@ -264,7 +275,7 @@ def rule_label(charter_text, rule):
 
 # ---------- pass 2: sources and explanation ----------
 
-def filter_sources(conn, permissible_sources, reading_title, question, results):
+def filter_sources(conn, meter, permissible_sources, reading_title, question, results):
     """A simple decision per search result: keep / ruled_out / not_covered / off_topic.
 
     results: [{title, url, snippet}]. Returns, with 0-based indexes:
@@ -275,7 +286,7 @@ def filter_sources(conn, permissible_sources, reading_title, question, results):
     numbered = "\n\n".join(
         f"[{n}] {r['title']}\nURL: {r['url']}\n{r['snippet']}" for n, r in enumerate(results, start=1)
     )
-    reply = chat_json(conn, FILTER_SOURCES_PROMPT.format(
+    reply = chat_json(conn, meter, FILTER_SOURCES_PROMPT.format(
         permissible_sources=permissible_sources, reading_title=reading_title, question=question, results=numbered,
     ), effort=FILTER_EFFORT, schema=filter_schema(len(results)))
     keep, skipped = [], []
@@ -298,12 +309,12 @@ def normalize_space(text):
     return re.sub(r"\s+", " ", text).strip()
 
 
-def pick_sentences(conn, question, quote, sources):
+def pick_sentences(conn, meter, question, quote, sources):
     """sources: [{title, text}]. Returns {index: sentence}, keeping only sentences really in the source."""
     numbered = "\n\n".join(
         f"[{n}] {s['title']}\n{s['text'][:6000]}" for n, s in enumerate(sources, start=1)
     )
-    reply = chat_json(conn, PICK_SENTENCE_PROMPT.format(question=question, quote=quote, sources=numbered),
+    reply = chat_json(conn, meter, PICK_SENTENCE_PROMPT.format(question=question, quote=quote, sources=numbered),
                       effort=PICK_EFFORT, schema=PICK_SCHEMA)
     picked = {}
     for item in reply["sentences"]:
@@ -326,7 +337,7 @@ def around_sentence(text, sentence):
     return flat[max(0, at - CONTEXT_CHARS): at + len(sentence) + CONTEXT_CHARS]
 
 
-def explain(charter_text, reading_title, quote, question, sources, max_words):
+def explain(meter, charter_text, reading_title, quote, question, sources, max_words):
     """sources: [{title, text, sentence}], cited as [1], [2] in this order. Each source is shown to
     the model as the text around its verified sentence, so the answer is grounded in what we checked.
     Returns the explanation, at most max_words."""
@@ -338,7 +349,7 @@ def explain(charter_text, reading_title, quote, question, sources, max_words):
     text = chat("You are a careful teaching assistant.", EXPLAIN_PROMPT.format(
         charter=charter_text, reading_title=reading_title, quote=quote, question=question,
         max_words=target, sources=numbered,
-    ), effort=EXPLAIN_EFFORT)
+    ), meter, effort=EXPLAIN_EFFORT)
     return cut_to_words(text, max_words)
 
 

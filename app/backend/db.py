@@ -108,6 +108,18 @@ CREATE TABLE IF NOT EXISTS charter_gaps (
   dismissed INTEGER NOT NULL DEFAULT 0
 );
 
+-- Every paid call that wasn't served from the cache (SPEC §9.1). Kept by seed.py --reset,
+-- so reseeding never resets a budget.
+CREATE TABLE IF NOT EXISTS spend (
+  id INTEGER PRIMARY KEY,
+  at TEXT NOT NULL,
+  service TEXT NOT NULL CHECK (service IN ('ai','search')),
+  units INTEGER NOT NULL,      -- tokens (in + out) for 'ai', searches for 'search'
+  usd REAL NOT NULL,
+  device_id TEXT NOT NULL,     -- X-Device-Id, or 'unknown'
+  question_id INTEGER          -- the Ask it was for: the per-device limit counts distinct Asks
+);
+
 CREATE TABLE IF NOT EXISTS web_cache (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,
@@ -156,6 +168,10 @@ def connect():
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
+    # Many people writing at once (SPEC §9): WAL lets reads continue during a write, and
+    # busy_timeout makes a writer wait up to 5 s for another instead of failing "database is locked".
+    conn.execute("PRAGMA journal_mode = WAL")
+    conn.execute("PRAGMA busy_timeout = 5000")
     return conn
 
 

@@ -21,6 +21,7 @@ import locate
 import search
 import sections
 import seed
+import spend
 
 UPLOADS_DIR = Path(__file__).parent / "uploads"
 FRONTEND_DIST = Path(__file__).parent.parent / "frontend" / "dist"
@@ -366,9 +367,10 @@ class AskRequest(BaseModel):
 
 
 @app.post("/api/readings/{reading_id}/ask")
-def ask_question(reading_id: int, req: AskRequest, user=Depends(current_user), conn=Depends(get_conn)):
+def ask_question(reading_id: int, req: AskRequest, user=Depends(current_user), conn=Depends(get_conn),
+                 x_device_id: str | None = Header(None)):
     reading = get_reading_or_404(conn, reading_id)
-    return ask.answer(conn, reading, user, req.page, req.quote, req.rects, req.question)
+    return ask.answer(conn, reading, user, req.page, req.quote, req.rects, req.question, device_id=x_device_id)
 
 
 def stream_events(events):
@@ -388,7 +390,8 @@ def stream_events(events):
 
 
 @app.post("/api/readings/{reading_id}/ask/stream")
-def ask_question_stream(reading_id: int, req: AskRequest, user=Depends(current_user), conn=Depends(get_conn)):
+def ask_question_stream(reading_id: int, req: AskRequest, user=Depends(current_user), conn=Depends(get_conn),
+                        x_device_id: str | None = Header(None)):
     """The same answer as /ask, sent step by step so the Ask panel can show its stages."""
     reading = dict(get_reading_or_404(conn, reading_id))
 
@@ -396,7 +399,8 @@ def ask_question_stream(reading_id: int, req: AskRequest, user=Depends(current_u
         # Its own connection: the stream runs after this route returns, in another thread.
         stream_conn = db.connect()
         try:
-            yield from ask.answer_steps(stream_conn, reading, user, req.page, req.quote, req.rects, req.question)
+            yield from ask.answer_steps(stream_conn, reading, user, req.page, req.quote, req.rects, req.question,
+                                        device_id=x_device_id)
         finally:
             stream_conn.close()
     return stream_events(events)
@@ -428,10 +432,11 @@ def located_json(reading, page, question_event):
     }
 
 
-def hotkey_steps(conn, reading, user, page, rects, req):
+def hotkey_steps(conn, reading, user, page, rects, req, device_id):
     """answer_steps with a `located` event right after the question is saved, and `located` in the result."""
     located = None
-    for event in ask.answer_steps(conn, reading, user, page, req.quote, rects, req.question, via="hotkey"):
+    for event in ask.answer_steps(conn, reading, user, page, req.quote, rects, req.question, via="hotkey",
+                                  device_id=device_id):
         if event["event"] == "question":
             located = located_json(reading, page, event)
             yield event
@@ -443,23 +448,25 @@ def hotkey_steps(conn, reading, user, page, rects, req):
 
 
 @app.post("/api/ask")
-def hotkey_ask(req: HotkeyAskRequest, user=Depends(current_user), conn=Depends(get_conn)):
+def hotkey_ask(req: HotkeyAskRequest, user=Depends(current_user), conn=Depends(get_conn),
+               x_device_id: str | None = Header(None)):
     """The Mac hotkey (SPEC §3.9), all at once."""
     reading, page, rects = locate_quote(conn, req.quote)
-    for event in hotkey_steps(conn, reading, user, page, rects, req):
+    for event in hotkey_steps(conn, reading, user, page, rects, req, x_device_id):
         if event["event"] == "done":
             return event["result"]
 
 
 @app.post("/api/ask/stream")
-def hotkey_ask_stream(req: HotkeyAskRequest, user=Depends(current_user), conn=Depends(get_conn)):
+def hotkey_ask_stream(req: HotkeyAskRequest, user=Depends(current_user), conn=Depends(get_conn),
+                      x_device_id: str | None = Header(None)):
     """The Mac hotkey, step by step. Locating happens first, so a passage in no reading is still a plain 404."""
     reading, page, rects = locate_quote(conn, req.quote)
 
     def events():
         stream_conn = db.connect()
         try:
-            yield from hotkey_steps(stream_conn, reading, user, page, rects, req)
+            yield from hotkey_steps(stream_conn, reading, user, page, rects, req, x_device_id)
         finally:
             stream_conn.close()
     return stream_events(events)
@@ -616,6 +623,15 @@ def delete_source(source_id: int, user=Depends(professor), conn=Depends(get_conn
     conn.execute("DELETE FROM sources WHERE id = ?", (source_id,))
     conn.commit()
     return list_sources(user, conn)
+
+
+# ---------- routes: spending (SPEC §9.1) ----------
+
+@app.get("/api/spend")
+def spending(conn=Depends(get_conn)):
+    """Each paid service's total against this copy's budget. Read-only, nothing per device, and no
+    X-User-Id needed, so it can be checked from a phone browser."""
+    return spend.totals(conn)
 
 
 # ---------- routes: repository search ----------
