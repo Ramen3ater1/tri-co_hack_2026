@@ -9,6 +9,8 @@ import ErrorNotice from '../components/ErrorNotice.jsx';
 // change (they're hard limits, and demo step 4 flips one live); the two texts save
 // with "Save charter".
 
+const GAPS_SHOWN = 5; // the most-skipped kinds; the rest sit behind "Show N more"
+
 // The switches, in the order shown, with their one-line help.
 const SWITCHES = [
   { key: 'ai_enabled', label: 'AI enabled', help: 'Off means no AI calls at all.', student: null },
@@ -145,6 +147,8 @@ function Proposals({ comments, professor, onPost, onAnswer, onUse, using, draft,
 }
 
 function Gaps({ gaps, professor, onAdd, onDismiss, onPropose, added }) {
+  const [showAll, setShowAll] = useState(false);
+  const shown = showAll ? gaps : gaps.slice(0, GAPS_SHOWN);
   return (
     <section className="card charter-block">
       <div>
@@ -153,7 +157,7 @@ function Gaps({ gaps, professor, onAdd, onDismiss, onPropose, added }) {
       </div>
       {gaps.length === 0 && <span className="muted">Nothing skipped in the last 7 days.</span>}
       <div>
-        {gaps.map((gap) => (
+        {shown.map((gap) => (
           <div key={gap.kind} className="gap-row">
             <span className="count-pill">{gap.count}</span>
             <span className="what">
@@ -180,6 +184,11 @@ function Gaps({ gaps, professor, onAdd, onDismiss, onPropose, added }) {
           </div>
         ))}
       </div>
+      {gaps.length > shown.length && (
+        <button type="button" className="btn small" style={{ alignSelf: 'flex-start' }} onClick={() => setShowAll(true)}>
+          Show {gaps.length - shown.length} more
+        </button>
+      )}
     </section>
   );
 }
@@ -197,6 +206,7 @@ export default function Charter() {
   const [charter, setCharter] = useState(null);
   const [gaps, setGaps] = useState([]);
   const [rules, setRules] = useState('');
+  const [editingRules, setEditingRules] = useState(false); // professor: the rules show as a list until Edit
   const [sources, setSources] = useState('');
   const [added, setAdded] = useState({}); // gap kinds whose sentence was added, unsaved
   const [using, setUsing] = useState({}); // proposal ids added to the text, marked 'added' on save
@@ -229,6 +239,7 @@ export default function Charter() {
       setAdded({});
       setUsing({});
       setSaved('Charter saved.');
+      setEditingRules(false);
       // New source text clears the gaps list on the server (it was judged against the old text).
       if (sourcesChanged) setGaps(await get('/charter/gaps'));
     } catch (e) {
@@ -314,7 +325,15 @@ export default function Charter() {
           <div className="charter-grid">
             <div className="charter-main">
               <section className="card charter-block">
-                {professor ? (
+                {professor && !editingRules && rules === charter.text_md ? (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h2>Rules</h2>
+                      <button type="button" className="btn small" onClick={() => setEditingRules(true)}>Edit rules</button>
+                    </div>
+                    <Rules text={charter.text_md} />
+                  </>
+                ) : professor ? (
                   <>
                     <label htmlFor="rules"><h2>Rules <span className="muted small" style={{ fontWeight: 400 }}>· Markdown</span></h2></label>
                     <textarea id="rules" className={`textarea${rules !== charter.text_md ? ' changed' : ''}`} rows={7} value={rules} onChange={(e) => setRules(e.target.value)} />

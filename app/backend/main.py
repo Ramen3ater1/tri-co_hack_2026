@@ -234,6 +234,8 @@ def list_users(conn=Depends(get_conn)):
 def course(user=Depends(current_user), conn=Depends(get_conn)):
     """Each reading carries what its card shows: file name, pages, and how many notes and
     questions you can see on it (top level only; locked ones count too, they're there)."""
+    # By title, so "Week 1 · …", "Week 2 · …" read in order whatever order they were uploaded in.
+    # TODO(edge): "Week 10" sorts before "Week 2".
     readings = conn.execute(
         f"""SELECT r.id, r.title, r.pdf_path, r.created_at, r.status, r.error,
                    (SELECT COUNT(*) FROM reading_pages p WHERE p.reading_id = r.id) AS page_count,
@@ -241,7 +243,7 @@ def course(user=Depends(current_user), conn=Depends(get_conn)):
                      WHERE a.reading_id = r.id AND a.parent_id IS NULL AND a.kind = 'note' AND {db.VISIBLE_SQL}) AS note_count,
                    (SELECT COUNT(*) FROM annotations a JOIN users u ON u.id = a.user_id
                      WHERE a.reading_id = r.id AND a.kind = 'question' AND {db.VISIBLE_SQL}) AS question_count
-            FROM readings r WHERE r.course_id = :course_id ORDER BY r.id""",
+            FROM readings r WHERE r.course_id = :course_id ORDER BY r.title, r.id""",
         {"course_id": user["course_id"], **db.visibility_params(conn, user)},
     ).fetchall()
     cards = []

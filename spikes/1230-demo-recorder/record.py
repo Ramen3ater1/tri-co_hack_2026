@@ -428,17 +428,16 @@ def shot2(take, base, ben, reading_id):
     """The charter as the professor sees it: rules (dwell on rule 2), sources, switches, then the proposals."""
     page = take.page
     page.goto(f"{base}/charter")
-    page.locator("#rules").wait_for()
+    rule2 = page.locator("ol.rules li").nth(1)
+    rule2.wait_for()
     take.pause(1)
     take.beat("charter page: start of the shot", start=True)
     take.pause(1.2)
-    # Rule 2 is the textarea's second and third lines.
-    rules = page.locator("#rules").bounding_box()
-    line = page.locator("#rules").evaluate("(el) => parseFloat(getComputedStyle(el).lineHeight)")
-    y2 = rules["y"] + 8 + line * 2
-    take.glide(rules["x"] + 40, y2)
+    box = rule2.bounding_box()  # two lines: trace along the first, then the second
+    take.glide(box["x"] + 10, box["y"] + box["height"] * 0.25)
     take.pause(0.4)
-    take.glide(rules["x"] + rules["width"] * 0.8, y2 + line * 0.6, curve=0.03)  # trace along rule 2
+    take.glide(box["x"] + box["width"] * 0.9, box["y"] + box["height"] * 0.25, curve=0.02)
+    take.glide(box["x"] + box["width"] * 0.5, box["y"] + box["height"] * 0.75, curve=0.02)
     take.beat("rule 2: 'It may not interpret the text for us' (zoom here)")
     take.pause(2.5)
     take.glide_to(page.locator("#sources"))
