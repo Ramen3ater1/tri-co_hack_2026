@@ -85,7 +85,7 @@ States:
 | S10 | Toggle off | `blocked` with `by: "toggle"`: amber notice in the AI slot, "Your class charter doesn't allow AI explanations." + the `label` + link to the charter. |
 | S11 | Partly refused by a rule | `by: "rule"`: amber notice quoting the rule (`label`, e.g. "RULE 2" + text) and the `reason`. Other layers still show. |
 | not drawn | `by: "no_sources"` | Same amber notice, `label` only. |
-| not drawn | `by: "error"` / stream `error` | Same notice in red-ish (`#FBE4DE` / `#A1402A`), showing the real message. Keep what's already shown (SPEC: fail loudly). |
+| S20 | `by: "error"` / stream `error` | Red notice with the real message, see S20 below. Keep what's already shown (SPEC: fail loudly). |
 
 Use the plain `/ask` first if streaming isn't built yet (SPEC §8 #8 fallback: one spinner).
 
@@ -97,11 +97,13 @@ Poll `GET /readings/:id/annotations` every `POLL_MS = 5000` while `document.visi
 
 Drawn for josoup's Swift app (§3.9), not built in React; the same display rules apply. S16: captured text on `--quote`, "Found in <reading> · p. N" once located, question box, ⌥⇧D shown in the header, and "the PDF never leaves your Mac". S17: the same answer sections, AI collapsed, **Open in reader** (`SERVER_URL + located.reader_url`).
 
-## Not drawn yet
+## Edge states (S18–S21)
 
-- Charter gaps section on the charter page (§3.7, `GET /charter/gaps`, `ideas/01-charter-gaps.md`).
-- Past-student opt-out (`PUT /me/sharing`, `PATCH /annotations/{id}`): a per-card "Shared with future classes" toggle exists in S05; a global switch would go in a user menu.
-- Empty states (no readings, no annotations on a page, no search results) and the 404 "This passage isn't in a course reading" in the Mac panel.
+- **S18 · Charter gaps** (`Charter` page, below "Sources we trust"; `GET /charter/gaps`, `POST /charter/gaps/dismiss`): one row per kind, most frequent first: count pill, kind, one example (title · site). Professor buttons: **Allow** / **Rule out** append one plain sentence to the sources-we-trust text (shown highlighted, "1 unsaved change"); nothing applies until **Save charter** (`PUT /charter`). **Dismiss** hides that kind for everyone. Students see the same list with one **Propose allowing** button that opens a proposal with that sentence filled in (`POST /charter/comments`). Empty list: one line, "Nothing skipped in the last 7 days" (or hide the section).
+- **S19 · Sharing with future classes** (`PUT /me/sharing`, `PATCH /annotations/{id}`): a user menu from the avatar in the nav header with a **Share my notes with future classes** switch ("Applies to all N notes and questions you've written"), then a confirmation line with the `updated` count. Also **Switch user** (→ `/login`) and **Use on Mac**. The per-note checkbox lives on your own margin cards.
+- **S20 · A failed step** (`blocked` with `by: "error"`): red notice (`#FBE4DE` / `#7A2E1C`) in that layer's slot with the real error in monospace; for sources it says the library was used instead, and the library results follow. The rest of the card is unchanged. If the whole request fails (500, or a stream `error` line): keep what's shown, a red "Couldn't answer this question" with the message, and **Ask again**.
+- **S21 · Empty states**: course with no readings (professor gets the upload button), margin with nothing on this page ("Select some text to write the first one or ask a question"), search with no results (mentions locked notes aren't searched), empty source library, no charter gaps, and the Mac panel's 404 "This passage isn't in a course reading."
+- `by: "no_sources"` is still not drawn: use the S10 amber notice with the `label` only.
 
 ## Build order (follows SPEC §8)
 
@@ -109,4 +111,5 @@ Drawn for josoup's Swift app (§3.9), not built in React; the same display rules
 2. `Reader` with `PdfPage`, `HighlightLayer`, `Margin`, `Composer`, lock cards, polling (S03–S05). **Demo steps 1–2.**
 3. `AskPanel` + answer card on plain `/ask`, AI collapsed (S06, S08, S09). **Demo step 3.**
 4. Blocked notices (S10, S11) and the `Charter` page (S12, S13). **Demo step 4.**
-5. Streaming states (S07), then `Sources`, `Search` (S14, S15).
+5. Streaming states (S07) and errors (S20), then `Sources`, `Search` (S14, S15) and empty states (S21).
+6. Sharing menu (S19), then charter gaps (S18).
