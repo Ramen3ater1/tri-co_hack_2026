@@ -74,6 +74,6 @@ Teammates report problems from the dev copy (`https://dev.dialectic.space`, whic
    **Duplicates:** keep the earliest issue, add the `duplicate` label to the later one, comment `Duplicate of #<n>` with anything it adds, and close it (`gh issue close <n> --reason "not planned"`).
 3. **Claim before working:** comment "Working on this" on the issue and add a `starting:` line to `LOG.md` as usual (*Working alongside other people's agents*).
 4. **Fix on `main`** with `Fixes #<n>` in the commit message; the issue closes when it's pushed. If you decide not to fix it, comment why and close it.
-5. **Show it:** after pushing fixes, update the dev copy (`ssh root@<droplet-ip> 'bash -s -- dev' < deploy/update.sh`, if you have access; see `DEPLOY.md`) so the reporter can check. Fixes reach the judges' and public copies only when a person promotes `main` to `stable`.
+5. **Show it:** the dev copy deploys `main` by itself within about two minutes of a push (`DEPLOY.md`). Check `https://dialectic-dev.yaggy.dev/version.txt` shows your commit, then comment on the issue so the reporter can check. Fixes reach the judges' and public copies only when a person promotes `main` to `stable`.
 
 The repo is public, so issues are too: never paste keys, `.env` contents or the droplet's IP into one.

@@ -1,0 +1,6 @@
+[Unit]
+Description=Deploy the newest main to the Dialectic dev copy
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/dialectic-autodeploy-dev

@@ -16,6 +16,17 @@ How a request gets there: browser → **Cloudflare** (DNS for both domains is pr
 
 The `.env` files on the droplet hold the API keys and each copy's limits. They are never in git; `.env.example` lists the variables.
 
+## The dev copy deploys itself
+
+Every minute, a timer on the droplet (`dialectic-autodeploy.timer`) checks GitHub. When `main` has new commits, it updates the dev copy: `uv sync`, builds the frontend beside the live one and swaps it in, reseeds the dev database if `db.py` or `seed.py` changed (keeping `web_cache` and `spend`), restarts `dialectic@dev` and checks it answers. **Push to `main`, and about a minute later (plus ~30 s to build) it's on `https://dialectic-dev.yaggy.dev`.**
+
+- **Which commit is live:** `https://dialectic-dev.yaggy.dev/version.txt`.
+- **If a deploy fails** (a dependency or the build breaks), dev keeps running the previous version, and that commit isn't retried until the next push. See why: `ssh root@IP "journalctl -u dialectic-autodeploy -n 30 --no-pager -o cat"`.
+- **Pause it:** `ssh root@IP "systemctl stop dialectic-autodeploy.timer"` (`start` to resume).
+- **Change it:** the script is a fixed copy in `/usr/local/sbin/dialectic-autodeploy-dev`, not run from the checkout, so pushes can't change what runs as root. After editing `deploy/autodeploy-dev.sh` or its unit files: `scp deploy/autodeploy-dev.sh deploy/dialectic-autodeploy.* root@IP:/tmp/`, then `ssh root@IP "install -m 755 /tmp/autodeploy-dev.sh /usr/local/sbin/dialectic-autodeploy-dev && cp /tmp/dialectic-autodeploy.* /etc/systemd/system/ && systemctl daemon-reload"`.
+
+Only dev does this. The demo and sandbox copies change only when a person promotes `main` to `stable` and runs `update.sh`.
+
 ## Everyday tasks
 
 Run these from the repo root on your machine. `IP` stands for the droplet's IP.
