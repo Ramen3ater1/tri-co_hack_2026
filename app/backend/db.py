@@ -151,7 +151,9 @@ def now():
 
 
 def connect():
-    conn = sqlite3.connect(DB_PATH)
+    # FastAPI may open a request's connection (get_conn) on one worker thread and use or
+    # close it on another; each request still has its own connection, so that's safe.
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
