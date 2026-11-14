@@ -14,3 +14,9 @@ http://dialectic.space, https://dialectic.space {
 	tls internal
 	reverse_proxy 127.0.0.1:8001
 }
+
+# Dev copy: runs `main`, for teammates to try new work and report problems.
+http://dev.dialectic.space, https://dev.dialectic.space {
+	tls internal
+	reverse_proxy 127.0.0.1:8002
+}

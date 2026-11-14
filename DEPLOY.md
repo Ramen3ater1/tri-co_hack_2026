@@ -4,12 +4,13 @@ How the live copies are set up, and the commands for everything we do to them. T
 
 ## What's running
 
-One DigitalOcean droplet (2 GB, Ubuntu 24.04) just for the hackathon, separate from Owen's other server. Ask Owen for its IP; SSH is `ssh root@<droplet-ip>` with his key. It runs **two copies** of the app, each a checkout of the `stable` branch with its own database, uploads, `.env` and budget:
+One DigitalOcean droplet (2 GB, Ubuntu 24.04) just for the hackathon, separate from Owen's other server. Ask Owen for its IP; SSH is `ssh root@<droplet-ip>` with his key. It runs **three copies** of the app, each with its own database, uploads, `.env` and budget. Demo and sandbox run the `stable` branch; dev runs `main`:
 
 | Copy | URL | Who it's for | Checkout | Port | Service | Limits (`.env`) |
 | --- | --- | --- | --- | --- | --- | --- |
 | **demo** | `https://dialectic.yaggy.dev` | Judges, and us on stage | `/srv/dialectic-demo` | 8000 | `dialectic@demo` | AI $10, search $3, no device limit |
 | **sandbox** | `https://dialectic.space` | Participants (public link) | `/srv/dialectic-sandbox` | 8001 | `dialectic@sandbox` | AI $12, search $4, 10 paid Asks/device/hour |
+| **dev** | `https://dev.dialectic.space` | Teammates trying the newest work and reporting problems; may be briefly broken | `/srv/dialectic-dev` | 8002 | `dialectic@dev` | AI $3, search $1, no device limit |
 
 How a request gets there: browser → **Cloudflare** (DNS for both domains is proxied, and Cloudflare serves the public HTTPS certificate) → **Caddy** on the droplet (`/etc/caddy/Caddyfile`, from `deploy/Caddyfile`) → the copy's **uvicorn** process on `127.0.0.1:<port>`, run by systemd from `deploy/dialectic@.service` as the `dialectic` user. FastAPI serves both the API and the built frontend (`app/frontend/dist`).
 
@@ -30,7 +31,9 @@ ssh root@IP 'bash -s' < deploy/update.sh            # both copies
 ssh root@IP 'bash -s -- sandbox' < deploy/update.sh  # just one
 ```
 
-`update.sh` pulls `stable`, runs `uv sync`, rebuilds the frontend, restarts the service and prints `active` for each copy. It never touches the databases.
+To put the newest `main` on the dev copy (no promotion needed): `ssh root@IP 'bash -s -- dev' < deploy/update.sh`.
+
+`update.sh` pulls `stable` (or `main`, for dev), runs `uv sync`, rebuilds the frontend, restarts the service and prints `active` for each copy. It never touches the databases.
 
 ### Roll back
 
