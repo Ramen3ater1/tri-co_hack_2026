@@ -28,7 +28,7 @@ In production the same process also serves the built React app (`app/frontend/di
 | `ai.py` | ~365 | Everything that talks to the LLM: the four prompts, each call's effort and the model's prices (constants at the top), `chat()`, and the charter toggle checks. |
 | `db.py` | ~310 | The schema (all `CREATE TABLE`s), `connect()`, the **visibility rule**, the **engagement lock**, `insert_annotation()`, and `fts_query()`, which turns free text into a search query. |
 | `spend.py` | ~100 | Spending limits (SPEC §9.1): the per-device limit, the budgets, `AI_OFF`, and recording what each paid call cost. |
-| `ocr.py` | ~105 | OCRs every upload (SPEC §3.11): finds scanned pages, strips their old text layer with `pikepdf`, runs `ocrmypdf --skip-text`. Run in a background thread by `POST /readings`. |
+| `ocr.py` | ~105 | OCRs every upload (SPEC §3.11): finds scanned pages, strips their old text layer with `pikepdf`, runs `ocrmypdf --skip-text`. Run in a background thread by `POST /readings`. Also `box_text()`: the text inside a Select-area box (the PDF's text there, else Tesseract on that area). |
 | `sections.py` | ~120 | Splits a reading into sections by its headings at upload, and finds which section a highlight is in. |
 | `search.py` | ~120 | Kagi web search and fetching pages' main text (several at once), all cached in the database. |
 | `locate.py` | ~85 | For the Mac hotkey: finds which reading and page a copied passage is from, and its highlight boxes in the PDF. |
@@ -45,7 +45,7 @@ All under `/api`, all in `main.py`. The exact request and response shapes are in
 | Area | Routes |
 | --- | --- |
 | Who you are | `GET /users` (log-in list), `GET /course` (course, reading cards with page/note/question counts, you) |
-| Readings | `POST /readings` (professor upload), `GET /readings/{id}`, `GET /readings/{id}/pdf` |
+| Readings | `POST /readings` (professor upload), `GET /readings/{id}`, `GET /readings/{id}/pdf`, `POST /readings/{id}/box-text` (text in a Select-area box) |
 | Annotations | `GET`/`POST /readings/{id}/annotations`, `DELETE /annotations/{id}` (with its replies), `PATCH /annotations/{id}` and `PUT /me/sharing` (share with future classes or not) |
 | Asking | `POST /readings/{id}/ask` and `/ask/stream` (web reader), `POST /ask` and `/ask/stream` (Mac hotkey), `GET /questions/{id}/answer` (reopen an answer card) |
 | Mac notes | `POST /note` (a note from the hotkey: the server finds the reading and page) |

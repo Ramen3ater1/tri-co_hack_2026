@@ -57,6 +57,7 @@ One course, seeded (`HIST 214: Black Intellectual Traditions`, or similar). Show
 - **Locked annotations** (§3.4) appear in the margin as one placeholder per cluster, at their position: "**N notes near here.** Add a note or ask a question to see them." (A count of notes, not people: locked annotations carry no author.) No author or text. Their highlights aren't drawn.
 - Highlights from all visible annotations are drawn over the page as translucent boxes. Clicking one scrolls the margin to it.
 - Selecting text shows a small popover: **Annotate** | **Ask**.
+- **Select area (box selection), the fallback for unreadable scans and pictures.** A **Select area** button in the reader's header; then drag a box on the page (Esc cancels; one box per click). The box is the annotation's one `rect`. The server reads the text inside it (`POST /readings/{id}/box-text`: the PDF's own text there, else Tesseract on that area at 300 dpi) and the popover shows it as an editable **Passage in this box**, so a student can fix a misread or type the passage from a page OCR can't read. That passage is the `quote`. Notes work with an empty passage (a note about a picture); **Ask needs one** (peers, sources and the AI all work from the text), so it's disabled until there is one and the server returns 422 without it. `TODO(edge)`: touch screens (mouse only), boxes across two pages.
 - **Live updates.** While the tab is visible, the reader refetches `GET /readings/{id}/annotations` every **5 s** (`POLL_MS`, a constant at the top of the file), and again whenever the window gets focus. That's how a question asked from the Mac hotkey shows up in a classmate's margin without a reload. Polling, not websockets: one server, a handful of users. Server-sent events only if there's time at the end.
 
 **Anchoring (the risky part; see spike S1).** On selection we store:
@@ -64,7 +65,7 @@ One course, seeded (`HIST 214: Black Intellectual Traditions`, or similar). Show
 - `quote` (the selected text, exact),
 - `rects`: the selection's `getClientRects()` converted to **fractions of the page's width/height**, so they redraw correctly at any zoom.
 
-Redraw from `rects`; use `quote` for search, for the AI prompt and as a human-readable fallback. No fuzzy re-anchoring: PDFs don't change after upload.
+Redraw from `rects`; use `quote` for search, for the AI prompt and as a human-readable fallback. No fuzzy re-anchoring: PDFs don't change after upload. A box selection (above) stores one rect and the passage the student confirmed; its `quote` may be `""`.
 
 ### 3.4 Annotations
 
@@ -396,6 +397,7 @@ All routes are under `/api`; all except `/users` and `/spend` need `X-User-Id`. 
 | GET | `/readings/{id}/annotations` | all | Visible annotations (with replies), all pages. Locked ones (§3.4) as `{id, page, rects, locked: true, group, group_notes}` only |
 | GET | `/questions/{id}/answer` | all | A question's saved `/ask` response, to reopen its answer card. 404 if you can't see the question in full, or it was asked before answers were saved |
 | POST | `/readings/{id}/annotations` | all | Create note or reply |
+| POST | `/readings/{id}/box-text` | all | `{"page", "rect"}` → `{"text"}`: the text inside a box drawn with Select area (§3.3); `""` if none |
 | DELETE | `/annotations/{id}` | author | Delete own annotation (and its replies) |
 | PATCH | `/annotations/{id}` | author | `{share_with_future}`: opt one annotation in or out; returns it |
 | PUT | `/me/sharing` | all | `{share_with_future}` for everything you've written (past-student opt-out); returns `{updated, share_with_future}` |
@@ -487,7 +489,7 @@ Other response shapes:
 - `GET /search?q=`: `{"annotations": [{"annotation_id", "reading_id", "reading_title", "page", "kind", "via", "author_id", "author", "cohort", "badge", "snippet"}], "pages": [{"reading_id", "reading_title", "page", "snippet"}]}`. Snippets mark hits as `[[word]]`: render as text, never as HTML (annotation bodies are user input).
 - **Errors:** `{"detail": "..."}` with 401 (unknown user), 403 (not allowed), 404, 422 (bad input) or 500. A 500's `detail` is the real error (e.g. a missing API key), so show it.
 
-`badge` is `"Professor"`, `"AI"`, a past cohort's name, or `null` for current classmates. Full annotations carry `"locked": false`; locked ones (§3.4) are only `{"id", "page", "rects", "locked": true}` plus their group (above), with no replies. `POST /readings/{id}/annotations` takes `{"page", "quote", "rects", "body", "share_with_future"}` for a note, or `{"parent_id", "body"}` for a reply (page comes from the parent). `rects` are page fractions, top-left origin.
+`badge` is `"Professor"`, `"AI"`, a past cohort's name, or `null` for current classmates. Full annotations carry `"locked": false`; locked ones (§3.4) are only `{"id", "page", "rects", "locked": true}` plus their group (above), with no replies. `POST /readings/{id}/annotations` takes `{"page", "quote", "rects", "body", "share_with_future"}` for a note (`quote` may be empty for a box selection, §3.3; the ask routes need a non-empty one), or `{"parent_id", "body"}` for a reply (page comes from the parent). `rects` are page fractions, top-left origin.
 
 ---
 
@@ -529,7 +531,7 @@ When time runs short, **cut from the bottom up.** A slipped checkpoint is never 
 7. **Mac hotkey app** (independent track, §3.9), copying the selection only, plus the server's `POST /api/ask` route.
 8. **Staged Ask panel** ("Checking the charter… / Finding sources…"). Fallback: one spinner.
 
-   **Also Should: OCR at upload** (§3.11), so professors can upload real scans. Not on the demo path: the seed PDF is already OCR'd.
+   **Also Should: OCR at upload** (§3.11), so professors can upload real scans. Not on the demo path: the seed PDF is already OCR'd. With it, **Select area** (box selection, §3.3) for pages OCR can't read and for pictures.
 
 **Could**
 

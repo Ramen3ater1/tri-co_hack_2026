@@ -22,6 +22,7 @@ const MIN_SCALE = 0.6;
 const MAX_SCALE = 2.4;
 const POPOVER_WIDTH = 440;
 const ANSWER_WIDTH = 560;
+const MIN_BOX = 0.01;           // a drag smaller than this (page fraction) is a click, not a box
 
 // Every annotation and reply, flattened, so a card can be found by id.
 function flatten(annotations) {
@@ -41,6 +42,10 @@ export default function Reader() {
   const [activeId, setActiveId] = useState(Number(params.get('annotation')) || null);
   const [selection, setSelection] = useState(null); // {page, quote, rects}
   const [tab, setTab] = useState('annotate');
+  // Box selection (SPEC §3.3): for pictures and scans whose text won't select. One box per click
+  // of "Select area"; draftBox is the box being dragged: {page, startX, startY, rect}.
+  const [boxMode, setBoxMode] = useState(false);
+  const [draftBox, setDraftBox] = useState(null);
   const [answer, setAnswer] = useState(null);       // the open answer card, see AskPanel.jsx
 
   const columnRef = useRef(null);
@@ -112,10 +117,78 @@ export default function Reader() {
     setTimeout(() => cardRefs.current[annotationId]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 0);
   }
 
+  // ---------- drawing a box ----------
+
+  // Page fractions of a mouse event on a .pdf-page, kept inside the page.
+  function pagePoint(event, pageEl) {
+    const box = pageEl.querySelector('.react-pdf__Page').getBoundingClientRect();
+    const clamp = (v) => Math.min(Math.max(v, 0), 1);
+    return { x: clamp((event.clientX - box.left) / box.width), y: clamp((event.clientY - box.top) / box.height) };
+  }
+
+  function onMouseDown(event) {
+    if (!boxMode || event.target.closest('.page-overlay')) return;
+    const pageEl = event.target.closest('.pdf-page');
+    if (!pageEl) return;
+    event.preventDefault(); // no text selection while dragging
+    const { x, y } = pagePoint(event, pageEl);
+    setDraftBox({ page: Number(pageEl.dataset.page), startX: x, startY: y, rect: { x, y, w: 0, h: 0 } });
+  }
+
+  // The box from where the drag started to where the mouse is now.
+  function boxTo(event) {
+    const { x, y } = pagePoint(event, pageRefs.current[draftBox.page]);
+    return {
+      x: Math.min(x, draftBox.startX), y: Math.min(y, draftBox.startY),
+      w: Math.abs(x - draftBox.startX), h: Math.abs(y - draftBox.startY),
+    };
+  }
+
+  function onMouseMove(event) {
+    if (draftBox) setDraftBox({ ...draftBox, rect: boxTo(event) });
+  }
+
+  async function finishBox(page, rect) {
+    setDraftBox(null);
+    const round = (v) => Math.round(v * 10000) / 10000;
+    const rects = [{ x: round(rect.x), y: round(rect.y), w: round(rect.w), h: round(rect.h) }];
+    setBoxMode(false);
+    setSelection({ page, rects, quote: '', box: true, readingBox: true });
+    setTab('annotate');
+    setCurrentPage(page);
+    try {
+      const { text } = await post(`/readings/${id}/box-text`, { page, rect: rects[0] });
+      // Only fill in the box it was for: the student may have drawn another one meanwhile.
+      setSelection((s) => (s && s.rects === rects ? { ...s, quote: s.quote || text, readingBox: false } : s));
+    } catch (e) {
+      setSelection((s) => (s && s.rects === rects ? { ...s, readingBox: false } : s));
+      setError(e);
+    }
+  }
+
+  // Esc cancels "Select area".
+  useEffect(() => {
+    if (!boxMode) return undefined;
+    function onKey(event) {
+      if (event.key === 'Escape') { setBoxMode(false); setDraftBox(null); }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [boxMode]);
+
   // ---------- selecting text, clicking highlights ----------
 
   function onMouseUp(event) {
     if (event.target.closest('.page-overlay')) return; // typing in a popover or card
+    if (draftBox) {
+      // From the mouse-up itself: the last mouse move may not have re-rendered yet.
+      const rect = boxTo(event);
+      if (rect.w >= MIN_BOX && rect.h >= MIN_BOX) {
+        finishBox(draftBox.page, rect);
+        return;
+      }
+      setDraftBox(null); // too small to be a box: treat it as a click
+    }
     const browserSelection = window.getSelection();
     const pageEl = event.target.closest('.pdf-page');
 
@@ -256,6 +329,15 @@ export default function Reader() {
           <span>{Math.round(scale * 100)}%</span>
           <button type="button" aria-label="Zoom in" onClick={() => setScale((s) => Math.min(MAX_SCALE, s + ZOOM_STEP))}>+</button>
         </div>
+        <button
+          type="button"
+          className={`box-tool${boxMode ? ' on' : ''}`}
+          aria-pressed={boxMode}
+          title="For pictures, or pages where the text won't select: drag a box around the part you mean (Esc cancels)"
+          onClick={() => { setBoxMode(!boxMode); setDraftBox(null); }}
+        >
+          {boxMode ? 'Drag a box…' : 'Select area'}
+        </button>
         <Link to="/charter" className="charter-pill">Class charter</Link>
         <UserMenu showName={false} />
       </header>
@@ -263,7 +345,14 @@ export default function Reader() {
       {error && <div style={{ padding: '12px 28px 0' }}><ErrorNotice error={error} /></div>}
 
       <div className="reader-body">
-        <div className="pdf-column" ref={columnRef} onScroll={onScroll} onMouseUp={onMouseUp}>
+        <div
+          className={`pdf-column${boxMode ? ' box-mode' : ''}`}
+          ref={columnRef}
+          onScroll={onScroll}
+          onMouseDown={onMouseDown}
+          onMouseMove={onMouseMove}
+          onMouseUp={onMouseUp}
+        >
           <Document
             file={file}
             onLoadSuccess={(pdf) => setPageCount(pdf.numPages)}
@@ -278,13 +367,26 @@ export default function Reader() {
                 scale={scale}
                 annotations={fullAnnotations.filter((a) => a.page === n)}
                 activeId={activeId}
-                pendingRects={selection?.page === n ? selection.rects : answer?.page === n && !answer.questionId ? answer.rects : null}
+                pendingRects={
+                  draftBox?.page === n ? [draftBox.rect]
+                    : selection?.page === n ? selection.rects
+                      : answer?.page === n && !answer.questionId ? answer.rects : null
+                }
                 pageRef={(el) => { pageRefs.current[n] = el; }}
                 onRendered={() => onPageRendered(n)}
               >
                 {selection?.page === n && (
                   <div className="page-overlay" style={overlayStyle(selection.rects, POPOVER_WIDTH)}>
-                    <Composer key={selection.quote} selection={selection} tab={tab} onTab={setTab} onSaveNote={saveNote} onAsk={ask} />
+                    <Composer
+                      // A box's quote changes as it's read and edited; don't reset the composer for that.
+                      key={selection.box ? `box-${selection.rects[0].x}-${selection.rects[0].y}` : selection.quote}
+                      selection={selection}
+                      tab={tab}
+                      onTab={setTab}
+                      onSaveNote={saveNote}
+                      onAsk={ask}
+                      onQuoteChange={(quote) => setSelection((s) => ({ ...s, quote }))}
+                    />
                   </div>
                 )}
                 {!selection && answer?.page === n && (

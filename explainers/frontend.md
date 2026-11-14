@@ -86,12 +86,13 @@ The approach comes from spike S1 (`spikes/0306-pdf-selection/`), rebuilt here; `
 
 ### Selecting text and clicking highlights
 
-All mouse handling is one function, `onMouseUp` on the PDF column:
+Mouse handling is `onMouseUp` on the PDF column (plus `onMouseDown`/`onMouseMove` while drawing a box):
 
 - **Text selected:** `rangeToRects(range, pageEl)` turns the browser's selection into page-fraction boxes, merged to one box per line. The reader stores `{page, quote, rects}` as `selection`, which opens the `Composer` popover under it and draws the pending selection.
 - **A plain click:** converts the click to page fractions and checks each unlocked annotation's boxes with `hits()`. A hit rings that highlight and scrolls the margin to its card. A miss closes the popover.
 - Clicks inside a popover or card (`.page-overlay`) are ignored, so typing doesn't close it.
 - `TODO(edge)`: a selection across two pages keeps only the first page's boxes.
+- **Select area (a box, SPEC §3.3):** the header's **Select area** button sets `boxMode` (the column gets `.box-mode`: crosshair cursor, text layer ignores the mouse). Dragging keeps `draftBox` and draws it as the pending selection; on mouse-up (`finishBox`) the box becomes `selection` with `box: true` and an empty quote, the mode switches off, and `POST /readings/{id}/box-text` fills the quote. The final box is computed from the mouse-up event itself, because the last mouse move may not have re-rendered yet. `Composer` shows the quote as an editable **Passage in this box**; Ask stays disabled while it's empty. Esc cancels.
 
 ### The margin and the engagement lock
 

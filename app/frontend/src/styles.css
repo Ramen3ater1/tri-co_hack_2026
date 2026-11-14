@@ -185,6 +185,12 @@ mark { background: var(--quote); color: inherit; border-radius: 3px; padding: 0 
 .highlight { position: absolute; border-radius: 2px; }
 .highlight.active { box-shadow: 0 0 0 2px var(--focus); }
 .highlight.pending { background: rgba(43, 91, 181, .28); }
+/* "Select area" (SPEC §3.3): drag a box instead of selecting text. */
+.box-tool { font-size: 14px; padding: 8px 12px; border-radius: 999px; border: 1px solid var(--line); background: #FFF; color: var(--ink); cursor: pointer; }
+.box-tool.on { background: var(--accent-soft); border-color: var(--focus); }
+.box-mode .pdf-page { cursor: crosshair; }
+.box-mode .textLayer { pointer-events: none; }
+.box-passage { display: flex; flex-direction: column; gap: 6px; }
 
 /* Popovers and the answer card are placed inside the page, under the passage. */
 .page-overlay { position: absolute; z-index: 10; font-family: var(--sans); text-align: left; }

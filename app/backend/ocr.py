@@ -9,6 +9,7 @@ Slow (4–6 s a page on the droplet), so main.py runs it in a background thread.
 """
 import shutil
 import subprocess
+import tempfile
 
 import pdfplumber
 import pikepdf
@@ -16,6 +17,7 @@ import pikepdf
 SCAN_COVERAGE = 0.8  # a page whose images cover at least this share of its area is a scan
 OCR_LANGUAGE = "eng"
 OCRMYPDF_ARGS = ["--skip-text", "--output-type", "pdf", "-l", OCR_LANGUAGE]
+BOX_OCR_DPI = 300  # box selections (SPEC §3.3) are rendered this sharp before Tesseract reads them
 # TODO(edge): photo uploads (img2pdf + --rotate-pages --deskew), the §3.11 stretch.
 
 
@@ -105,3 +107,32 @@ def ocr_in_place(pdf_path):
         raise RuntimeError(f"ocrmypdf failed (exit {result.returncode}): {last_lines}")
     ocred.replace(pdf_path)
     return f"{pdf_path}: OCR'd {len(scans)} scanned + {len(textless)} textless pages"
+
+
+def box_text(pdf_path, page_number, rect):
+    """The text inside a box drawn on a page (SPEC §3.3 box selection): the PDF's own text there
+    if it has any, else Tesseract on that area. "" if neither finds anything.
+
+    `rect` is page fractions, top-left origin, like every highlight box.
+    """
+    with pdfplumber.open(pdf_path) as pdf:
+        page = pdf.pages[page_number - 1]
+        bbox = (
+            max(rect["x"], 0) * page.width,
+            max(rect["y"], 0) * page.height,
+            min(rect["x"] + rect["w"], 1) * page.width,
+            min(rect["y"] + rect["h"], 1) * page.height,
+        )
+        area = page.crop(bbox)
+        text = " ".join((area.extract_text() or "").split())
+        if text:
+            return text
+        if shutil.which("tesseract") is None:
+            print("WARNING: tesseract isn't installed, so a box selection got no text", flush=True)
+            return ""
+        with tempfile.TemporaryDirectory() as tmp:
+            image_path = f"{tmp}/box.png"
+            area.to_image(resolution=BOX_OCR_DPI).save(image_path)
+            result = subprocess.run(["tesseract", image_path, "-", "-l", OCR_LANGUAGE],
+                                    capture_output=True, text=True, check=True)
+    return " ".join(result.stdout.split())

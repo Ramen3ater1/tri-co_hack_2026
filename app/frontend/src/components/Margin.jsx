@@ -165,7 +165,7 @@ export default function Margin({ page, annotations, activeId, selection, cardRef
         <h2 className="section-label">Margin · p. {page}</h2>
       </div>
       {items.length === 0 && (
-        <div className="empty" style={{ fontSize: 13 }}>No notes on this page yet. Select some text to write the first one or ask a question.</div>
+        <div className="empty" style={{ fontSize: 13 }}>No notes on this page yet. Select some text (or use Select area) to write the first one or ask a question.</div>
       )}
       {items.map((item) =>
         item.kind === 'lock' ? (

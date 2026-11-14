@@ -88,6 +88,13 @@ def get_ready_reading(conn, reading_id):
     return reading
 
 
+def require_quote(quote):
+    """Asking needs the passage's text: peers, sources and the AI all work from it. A box over an
+    unreadable scan has none until the student types it in (SPEC §3.3)."""
+    if not quote.strip():
+        raise HTTPException(422, "Type the passage you're asking about: this box has no readable text.")
+
+
 def create_reading(conn, title, pdf_path, uploaded_by, status="ready"):
     """Insert a reading. With status 'ready' (seed.py), also extract its pages and sections now."""
     cur = conn.execute(
@@ -323,9 +330,10 @@ def create_annotation(reading_id: int, new: NewAnnotation, user=Depends(current_
         page, quote, rects_json = parent["page"], None, None
         section_id = parent["section_id"]  # replies copy the parent's section
     else:
-        if new.page is None or not new.quote or not new.rects:
-            raise HTTPException(422, "A new note needs page, quote and rects")
-        page, quote, rects_json = new.page, new.quote, json.dumps(new.rects)
+        # The quote may be empty: a box drawn over a picture or an unreadable scan (SPEC §3.3).
+        if new.page is None or not new.rects:
+            raise HTTPException(422, "A new note needs page and rects")
+        page, quote, rects_json = new.page, new.quote or "", json.dumps(new.rects)
         section = sections.section_for(conn, reading_id, page, quote)
         section_id = section["id"] if section else None
     annotation_id = db.insert_annotation(
@@ -334,6 +342,18 @@ def create_annotation(reading_id: int, new: NewAnnotation, user=Depends(current_
     )
     conn.commit()
     return load_annotation(conn, annotation_id)
+
+
+class BoxRequest(BaseModel):
+    page: int
+    rect: dict  # {x, y, w, h}, page fractions
+
+
+@app.post("/api/readings/{reading_id}/box-text")
+def box_text(reading_id: int, box: BoxRequest, user=Depends(current_user), conn=Depends(get_conn)):
+    """The text inside a box drawn on the page (SPEC §3.3), to prefill the passage it's about."""
+    reading = get_ready_reading(conn, reading_id)
+    return {"text": ocr.box_text(reading["pdf_path"], box.page, box.rect)}
 
 
 @app.get("/api/questions/{question_id}/answer")
@@ -415,6 +435,7 @@ class AskRequest(BaseModel):
 def ask_question(reading_id: int, req: AskRequest, user=Depends(current_user), conn=Depends(get_conn),
                  x_device_id: str | None = Header(None)):
     reading = get_ready_reading(conn, reading_id)
+    require_quote(req.quote)
     return ask.answer(conn, reading, user, req.page, req.quote, req.rects, req.question, device_id=x_device_id)
 
 
@@ -439,6 +460,7 @@ def ask_question_stream(reading_id: int, req: AskRequest, user=Depends(current_u
                         x_device_id: str | None = Header(None)):
     """The same answer as /ask, sent step by step so the Ask panel can show its stages."""
     reading = dict(get_ready_reading(conn, reading_id))
+    require_quote(req.quote)
 
     def events():
         # Its own connection: the stream runs after this route returns, in another thread.
