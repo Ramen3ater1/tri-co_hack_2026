@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S1 spike · PDF selection boxes</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  :root { --bg: #F7F5F0; --ink: #22201C; --muted: #5F5A50; --line: #ECE8DF; --blue: #2B5BB5; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Inter, system-ui, sans-serif; color: var(--ink); background: var(--bg); }
+
+  header { position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid var(--line); }
+  header strong { font-size: 17px; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .spacer { flex: 1; }
+  .btn { font: inherit; font-size: 13px; border: 1px solid #E2DCCF; background: #fff; color: var(--ink); border-radius: 10px; padding: 7px 12px; cursor: pointer; min-height: 34px; }
+  .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 500; }
+  .btn.on { background: #EEF3FB; border-color: #8DB5E8; }
+
+  .layout { display: flex; gap: 28px; padding: 24px; align-items: flex-start; }
+  #pages { flex: 1; min-width: 0; overflow-x: auto; padding: 0 0 8px 48px; display: flex; flex-direction: column; align-items: safe center; gap: 20px; }
+  .page { position: relative; background: #fff; border-radius: 3px; box-shadow: 0 1px 2px rgba(40,30,10,.08), 0 8px 24px rgba(40,30,10,.06); }
+  .page canvas { display: block; }
+  .pnum { position: absolute; right: calc(100% + 12px); top: 4px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+  /* Highlight boxes sit under the text layer so the text stays selectable. */
+  /* The blend goes on the layer: z-index makes it its own stacking context, so a blend on each box would only mix with the empty layer. */
+  .hl-layer { position: absolute; inset: 0; z-index: 1; pointer-events: none; mix-blend-mode: multiply; }
+  .hl { position: absolute; border-radius: 3px; }
+  .hl.flash { animation: flash 1.4s ease; }
+  @keyframes flash { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 25% { box-shadow: 0 0 0 3px var(--blue); } }
+  body.boxes .hl { outline: 1.5px dashed rgba(34,32,28,.7); outline-offset: 0; }
+
+  /* Minimal pdf.js text layer: invisible text positioned over the canvas. */
+  .textLayer { position: absolute; inset: 0; overflow: hidden; line-height: 1; z-index: 2; text-size-adjust: none; forced-color-adjust: none; }
+  .textLayer span, .textLayer br { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; }
+  .textLayer ::selection { background: rgba(43,91,181,.28); }
+
+  aside { width: 360px; flex: none; position: sticky; top: 84px; max-height: calc(100vh - 108px); overflow: auto; display: flex; flex-direction: column; gap: 10px; padding-bottom: 24px; }
+  h2 { margin: 6px 0 2px; font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+  .card { background: #fff; border-radius: 12px; padding: 12px 14px; box-shadow: 0 1px 2px rgba(40,30,10,.06); font-size: 13px; line-height: 1.45; display: flex; gap: 10px; cursor: pointer; border: 0; text-align: left; font-family: inherit; color: inherit; width: 100%; }
+  .card:hover { box-shadow: 0 0 0 2px #E2DCCF; }
+  .card.active { box-shadow: 0 0 0 2px var(--blue); }
+  .avatar { flex: none; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; }
+  .chip { display: inline-block; border-radius: 5px; padding: 0 6px; margin: 3px 0; font-family: Georgia, serif; font-size: 13px; }
+  .kind { font-size: 11px; color: var(--muted); }
+  pre { margin: 0; background: #22201C; color: #F3EFE6; border-radius: 12px; padding: 12px; font-size: 11px; line-height: 1.5; overflow: auto; max-height: 300px; white-space: pre-wrap; }
+
+  #pop { position: absolute; z-index: 30; display: none; width: 400px; background: #fff; border-radius: 14px; padding: 10px; font-size: 14px; box-shadow: 0 2px 4px rgba(40,30,10,.06), 0 18px 48px rgba(40,30,10,.2); }
+  #pop .row { display: flex; gap: 6px; align-items: center; }
+  #pop textarea { width: 100%; margin: 8px 0; font: inherit; font-size: 14px; line-height: 1.45; border: 1px solid #8DB5E8; border-radius: 10px; padding: 8px 10px; resize: vertical; }
+  #pop .quote { font-family: Georgia, serif; font-size: 13px; background: #D3E6FA; border-radius: 5px; padding: 1px 6px; }
+  #status { font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <strong>Dialectic</strong>
+  <span class="muted">S1 spike · live PDF, text selection → page-fraction boxes</span>
+  <span class="spacer"></span>
+  <span id="status">Loading PDF…</span>
+  <button class="btn" id="zoomOut" aria-label="Zoom out">−</button>
+  <span id="zoomLabel" class="muted" style="min-width: 44px; text-align: center">130%</span>
+  <button class="btn" id="zoomIn" aria-label="Zoom in">+</button>
+  <button class="btn" id="toggleBoxes">Show boxes</button>
+  <button class="btn" id="clearMine">Clear my notes</button>
+</header>
+
+<div class="layout">
+  <main id="pages"></main>
+  <aside>
+    <h2>Last selection (what gets stored)</h2>
+    <pre id="lastSel">Select some text on a page.</pre>
+    <h2>Margin</h2>
+    <div id="list" style="display: flex; flex-direction: column; gap: 8px"></div>
+  </aside>
+</div>
+
+<div id="pop" role="dialog" aria-label="Annotate or ask"></div>
+
+<script>
+// ---- Tunables ------------------------------------------------------------
+const PDF_URL = '../../app/backend/seed/souls-of-black-folk-ch1.pdf';
+const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const READING_ID = 1;
+const START_SCALE = 1.3;
+const STORAGE_KEY = 'dialectic-s1-annotations';
+
+const PEOPLE = {
+  rivera: { name: 'Prof. Rivera', initial: 'R', bg: '#CFEFD9', fg: '#1E4D2E' },
+  ana:    { name: 'Ana',          initial: 'A', bg: '#FFDCCB', fg: '#6B2E14' },
+  sam:    { name: 'Sam · Spring 2026', initial: 'S', bg: '#E4DBF7', fg: '#3D2A6B' },
+  you:    { name: 'You (Ben)',    initial: 'B', bg: '#D3E6FA', fg: '#1F3E66' },
+};
+
+// DEMO: seeded notes. They're anchored by searching for their quote once the
+// PDF's text layer exists, then stored as page-fraction rects like any other.
+const SEED = [
+  { who: 'rivera', kind: 'note', quote: 'born with a veil, and gifted with second-sight', body: 'A folk belief about children born with a caul. Keep track of the veil image.' },
+  { who: 'ana',    kind: 'note', quote: "always looking at one's self through the eyes of others", body: "He's describing seeing yourself two ways at once: how you are, and how others insist you are." },
+  { who: 'sam',    kind: 'note', quote: 'two warring ideals in one dark body', body: 'Compare with the veil earlier: same idea, different image.' },
+];
+
+// ---- State ---------------------------------------------------------------
+pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+let pdf = null;
+let scale = START_SCALE;
+let pageEls = [];          // 1-based: pageEls[n] is the page's div
+let annotations = [];      // { id, who, kind, page, quote, rects, body }
+let pending = null;        // the current selection's anchor, while the popover is open
+let nextId = 1;
+
+const $ = (id) => document.getElementById(id);
+
+// ---- Rendering pages -----------------------------------------------------
+// Text layers are built first for every page, so selecting and highlighting
+// work right away; canvases paint in parallel. Resolves once the text layers
+// exist, with { painted } for the canvas paint.
+async function renderPages() {
+  const root = $('pages');
+  root.replaceChildren();
+  pageEls = [];
+  const ratio = window.devicePixelRatio || 1;
+  const paints = [];
+
+  for (let n = 1; n <= pdf.numPages; n++) {
+    const page = await pdf.getPage(n);
+    const viewport = page.getViewport({ scale });
+
+    const el = document.createElement('div');
+    el.className = 'page';
+    el.dataset.page = n;
+    el.style.width = viewport.width + 'px';
+    el.style.height = viewport.height + 'px';
+
+    const num = document.createElement('span');
+    num.className = 'pnum';
+    num.textContent = 'p. ' + n;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.floor(viewport.width * ratio);
+    canvas.height = Math.floor(viewport.height * ratio);
+    canvas.style.width = viewport.width + 'px';
+    canvas.style.height = viewport.height + 'px';
+
+    const hlLayer = document.createElement('div');
+    hlLayer.className = 'hl-layer';
+
+    const textLayer = document.createElement('div');
+    textLayer.className = 'textLayer';
+    textLayer.style.setProperty('--scale-factor', scale);
+
+    el.append(num, canvas, hlLayer, textLayer);
+    root.append(el);
+    pageEls[n] = el;
+
+    const textContent = await page.getTextContent();
+    await pdfjsLib.renderTextLayer({ textContentSource: textContent, container: textLayer, viewport, textDivs: [] }).promise;
+    paints.push(page.render({
+      canvasContext: canvas.getContext('2d'),
+      viewport,
+      transform: ratio !== 1 ? [ratio, 0, 0, ratio, 0, 0] : null,
+    }).promise);
+  }
+  return { painted: Promise.all(paints) };
+}
+
+// Boxes are stored as fractions of the page, so drawing them with % positions
+// puts them in the right place at any zoom without recomputing anything.
+function drawHighlights() {
+  pageEls.forEach((el, n) => {
+    if (!el) return;
+    const layer = el.querySelector('.hl-layer');
+    layer.replaceChildren();
+    for (const a of annotations.filter((a) => a.page === n)) {
+      for (const r of a.rects) {
+        const box = document.createElement('div');
+        box.className = 'hl';
+        box.dataset.id = a.id;
+        box.style.left = r.x * 100 + '%';
+        box.style.top = r.y * 100 + '%';
+        box.style.width = r.w * 100 + '%';
+        box.style.height = r.h * 100 + '%';
+        box.style.background = PEOPLE[a.who].bg;
+        layer.append(box);
+      }
+    }
+  });
+}
+
+// ---- Anchoring -----------------------------------------------------------
+// A DOM range over the text layer → { x, y, w, h } fractions of the page,
+// merged so each line of the selection is one box.
+function rangeToRects(range, pageEl) {
+  const page = pageEl.getBoundingClientRect();
+  const raw = [...range.getClientRects()]
+    .filter((r) => r.width > 0.5 && r.height > 0.5)
+    .map((r) => ({
+      x: (r.left - page.left) / page.width,
+      y: (r.top - page.top) / page.height,
+      w: r.width / page.width,
+      h: r.height / page.height,
+    }))
+    .filter((r) => r.x < 1 && r.y < 1 && r.x + r.w > 0 && r.y + r.h > 0); // TODO(edge): selections across pages keep only the first page
+
+  raw.sort((a, b) => a.y - b.y || a.x - b.x);
+  const lines = [];
+  for (const r of raw) {
+    const line = lines.find((l) => Math.abs((l.y + l.h / 2) - (r.y + r.h / 2)) < l.h * 0.5);
+    if (!line) { lines.push({ ...r }); continue; }
+    const right = Math.max(line.x + line.w, r.x + r.w);
+    const bottom = Math.max(line.y + line.h, r.y + r.h);
+    line.x = Math.min(line.x, r.x);
+    line.y = Math.min(line.y, r.y);
+    line.w = right - line.x;
+    line.h = bottom - line.y;
+  }
+  const round = (v) => Math.round(v * 10000) / 10000;
+  return lines.map((r) => ({ x: round(r.x), y: round(r.y), w: round(r.w), h: round(r.h) }));
+}
+
+// Compare letters and digits only, so curly quotes, dashes and line breaks in
+// the PDF's text don't stop a seed quote from matching.
+const norm = (ch) => (/[a-z0-9]/i.test(ch) ? ch.toLowerCase() : '');
+
+function findQuoteRange(pageEl, quote) {
+  const walker = document.createTreeWalker(pageEl.querySelector('.textLayer'), NodeFilter.SHOW_TEXT);
+  let haystack = '';
+  const map = []; // map[i] = [textNode, offset] for haystack[i]
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const text = node.nodeValue;
+    for (let i = 0; i < text.length; i++) {
+      const c = norm(text[i]);
+      if (c) { haystack += c; map.push([node, i]); }
+    }
+  }
+  const needle = [...quote].map(norm).join('');
+  const at = haystack.indexOf(needle);
+  if (at < 0) return null;
+  const [startNode, startOffset] = map[at];
+  const [endNode, endOffset] = map[at + needle.length - 1];
+  const range = document.createRange();
+  range.setStart(startNode, startOffset);
+  range.setEnd(endNode, endOffset + 1);
+  return range;
+}
+
+function anchorSeeds() {
+  for (const seed of SEED) {
+    let placed = false;
+    for (let n = 1; n < pageEls.length && !placed; n++) {
+      const range = findQuoteRange(pageEls[n], seed.quote);
+      if (!range) continue;
+      annotations.push({ id: nextId++, ...seed, page: n, rects: rangeToRects(range, pageEls[n]) });
+      placed = true;
+    }
+    if (!placed) console.error('Seed quote not found in the PDF:', seed.quote);
+  }
+}
+
+// ---- Selection popover ---------------------------------------------------
+function readSelection() {
+  const sel = window.getSelection();
+  if (!sel.rangeCount || sel.isCollapsed) return null;
+  const range = sel.getRangeAt(0);
+  const pageEl = range.startContainer.parentElement?.closest('.page');
+  if (!pageEl) return null;
+  const quote = sel.toString().replace(/\s+/g, ' ').trim();
+  if (!quote) return null;
+  const rects = rangeToRects(range, pageEl);
+  const all = range.getClientRects();
+  const last = all[all.length - 1];
+  return { page: Number(pageEl.dataset.page), quote, rects, anchorRect: last };
+}
+
+function showPopover(mode) {
+  const pop = $('pop');
+  pop.replaceChildren();
+
+  const head = document.createElement('div');
+  head.className = 'row';
+  const quote = document.createElement('span');
+  quote.className = 'quote';
+  quote.textContent = pending.quote.length > 60 ? pending.quote.slice(0, 57) + '…' : pending.quote;
+  head.append(quote);
+  pop.append(head);
+
+  if (mode === 'choose') {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.style.marginTop = '8px';
+    row.append(button('Annotate', () => showPopover('note')), button('Ask', () => showPopover('ask'), true));
+    pop.append(row);
+  } else {
+    const box = document.createElement('textarea');
+    box.rows = 3;
+    box.placeholder = mode === 'ask' ? 'Your question for the class…' : 'Your note…';
+    const row = document.createElement('div');
+    row.className = 'row';
+    const hint = document.createElement('span');
+    hint.className = 'muted';
+    hint.style.flex = '1';
+    hint.textContent = mode === 'ask' ? 'Visible to the class. Classmates answer first.' : 'Shared with the class.';
+    row.append(hint, button(mode === 'ask' ? 'Ask' : 'Save', () => save(mode, box.value.trim()), true));
+    pop.append(box, row);
+    setTimeout(() => box.focus(), 0);
+  }
+
+  const r = pending.anchorRect;
+  const left = Math.min(r.left + window.scrollX - 20, window.scrollX + document.documentElement.clientWidth - 420);
+  pop.style.left = Math.max(8, left) + 'px';
+  pop.style.top = r.bottom + window.scrollY + 10 + 'px';
+  pop.style.display = 'block';
+}
+
+function hidePopover() {
+  $('pop').style.display = 'none';
+  pending = null;
+}
+
+function button(label, onClick, primary) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'btn' + (primary ? ' primary' : '');
+  b.textContent = label;
+  b.addEventListener('click', onClick);
+  return b;
+}
+
+function save(mode, body) {
+  if (!body) return; // TODO(edge): empty notes are just ignored
+  const a = { id: nextId++, who: 'you', kind: mode === 'ask' ? 'question' : 'note', page: pending.page, quote: pending.quote, rects: pending.rects, body };
+  annotations.push(a);
+  storeMine();
+  if (mode === 'ask') {
+    // Spike: no backend call. This is the body the reader would send.
+    const payload = { page: a.page, quote: a.quote, rects: a.rects, question: a.body };
+    $('lastSel').textContent = 'POST /api/readings/' + READING_ID + '/ask\n' + JSON.stringify(payload, null, 2);
+  }
+  window.getSelection().removeAllRanges();
+  hidePopover();
+  drawHighlights();
+  renderList();
+  focusAnnotation(a.id);
+}
+
+// ---- Margin list ---------------------------------------------------------
+function renderList() {
+  const list = $('list');
+  list.replaceChildren();
+  const sorted = [...annotations].sort((a, b) => a.page - b.page || a.rects[0].y - b.rects[0].y);
+  for (const a of sorted) {
+    const p = PEOPLE[a.who];
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'card';
+    card.dataset.id = a.id;
+
+    const av = document.createElement('span');
+    av.className = 'avatar';
+    av.style.background = p.bg;
+    av.style.color = p.fg;
+    av.textContent = p.initial;
+
+    const text = document.createElement('span');
+    const name = document.createElement('strong');
+    name.textContent = p.name;
+    const kind = document.createElement('span');
+    kind.className = 'kind';
+    kind.textContent = ' · p. ' + a.page + (a.kind === 'question' ? ' · question' : '');
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.style.background = p.bg;
+    chip.textContent = '“' + (a.quote.length > 48 ? a.quote.slice(0, 45) + '…' : a.quote) + '”';
+    const body = document.createElement('span');
+    body.textContent = a.body;
+    text.append(name, kind, document.createElement('br'), chip, document.createElement('br'), body);
+
+    card.append(av, text);
+    card.addEventListener('click', () => focusAnnotation(a.id, true));
+    list.append(card);
+  }
+}
+
+function focusAnnotation(id, scrollPage) {
+  document.querySelectorAll('.card').forEach((c) => c.classList.toggle('active', c.dataset.id == id));
+  document.querySelector('.card.active')?.scrollIntoView({ block: 'nearest' });
+  const boxes = document.querySelectorAll('.hl[data-id="' + id + '"]');
+  if (scrollPage && boxes[0]) boxes[0].scrollIntoView({ block: 'center', behavior: 'smooth' });
+  boxes.forEach((b) => { b.classList.remove('flash'); void b.offsetWidth; b.classList.add('flash'); });
+  const a = annotations.find((x) => x.id == id);
+  if (a && !$('lastSel').textContent.startsWith('POST')) {
+    $('lastSel').textContent = JSON.stringify({ page: a.page, quote: a.quote, rects: a.rects }, null, 2);
+  }
+}
+
+// ---- Storage (spike only: the real app saves to the API) -----------------
+function storeMine() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(annotations.filter((a) => a.who === 'you')));
+}
+function loadMine() {
+  const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  for (const a of saved) annotations.push({ ...a, id: nextId++ });
+}
+
+// ---- Events --------------------------------------------------------------
+$('pages').addEventListener('mouseup', () => {
+  setTimeout(() => {
+    const sel = readSelection();
+    if (!sel) return;
+    pending = sel;
+    $('lastSel').textContent = JSON.stringify({ page: sel.page, quote: sel.quote, rects: sel.rects }, null, 2);
+    showPopover('choose');
+  }, 0);
+});
+
+// Clicking a highlight (no selection) opens its note in the margin.
+$('pages').addEventListener('click', (e) => {
+  if (!window.getSelection().isCollapsed) return;
+  const pageEl = e.target.closest('.page');
+  if (!pageEl) return;
+  const b = pageEl.getBoundingClientRect();
+  const fx = (e.clientX - b.left) / b.width;
+  const fy = (e.clientY - b.top) / b.height;
+  const n = Number(pageEl.dataset.page);
+  const hit = annotations.find((a) => a.page === n && a.rects.some((r) => fx >= r.x && fx <= r.x + r.w && fy >= r.y && fy <= r.y + r.h));
+  if (hit) focusAnnotation(hit.id);
+});
+
+document.addEventListener('mousedown', (e) => {
+  if ($('pop').style.display === 'block' && !$('pop').contains(e.target)) hidePopover();
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hidePopover(); });
+
+async function setZoom(next) {
+  scale = Math.round(next * 10) / 10;
+  $('zoomLabel').textContent = Math.round(scale * 100) + '%';
+  hidePopover();
+  await renderPages();
+  drawHighlights(); // same stored fractions, new page size, nothing recomputed
+}
+$('zoomIn').addEventListener('click', () => setZoom(Math.min(scale + 0.2, 3)));
+$('zoomOut').addEventListener('click', () => setZoom(Math.max(scale - 0.2, 0.6)));
+$('toggleBoxes').addEventListener('click', (e) => {
+  document.body.classList.toggle('boxes');
+  e.target.classList.toggle('on');
+});
+$('clearMine').addEventListener('click', () => {
+  annotations = annotations.filter((a) => a.who !== 'you');
+  storeMine();
+  drawHighlights();
+  renderList();
+});
+
+// ---- Start ---------------------------------------------------------------
+(async function start() {
+  pdf = await pdfjsLib.getDocument(PDF_URL).promise;
+  const { painted } = await renderPages();
+  anchorSeeds();
+  loadMine();
+  drawHighlights();
+  renderList();
+  $('status').textContent = 'Painting pages…';
+  await painted;
+  $('status').textContent = pdf.numPages + ' pages';
+})();
+</script>
+</body>
+</html>
