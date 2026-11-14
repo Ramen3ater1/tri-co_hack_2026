@@ -45,3 +45,12 @@ Several people, each with their own Claude sessions, share one `main`. Keep it s
 4. **The API in `SPEC.md` §6 is the contract.** If you change a route or a response shape, update `SPEC.md` in the same commit and log it.
 5. **Push small and often, straight to `main`.** Only push code that runs (the app still starts); half-done work stays local.
 6. **Worktrees** (above) are only for your own parallel sessions on one machine: merge the branch into `main` and push within the hour, then delete it.
+
+## Editing the spec
+
+`SPEC.md` is the only copy of the spec: no Google Doc or other mirror. Teammates who'd rather not write Markdown ask their Claude session for changes in plain English ("add that students can vote on charter rules"). When you get such a request:
+
+1. Pull first, then find every section the change touches, not just the obvious one. A feature change usually also touches the demo path (§2), the data model (§5), the API (§6) and the build order (§8).
+2. Make the edit in the spec's existing style. Don't reformat or reword sections you weren't asked about.
+3. If the change conflicts with something already in the spec, or would move a checkpoint in §8, say so and ask before writing it.
+4. Show the person a short summary of what changed (in plain language, not a diff), then log it in `LOG.md`, commit and push.
