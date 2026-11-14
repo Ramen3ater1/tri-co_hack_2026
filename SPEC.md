@@ -14,7 +14,7 @@ Dialectic is a collaborative reading platform for college courses (e.g. Haverfor
 | **Friction** | AI never writes your answer for you. It finds sources, or it posts a short explanation that is **public, labelled and open to replies**, never a private shortcut. |
 | **Charter governs AI** | Two passes. **Pass 1 (gate):** the charter's toggles are checked in code, then an LLM call asks "does the charter allow this request?" and answers per layer, naming the rule. **Pass 2:** only allowed layers make the real query. |
 | **Sources the class trusts** | The charter describes **permissible sources** in plain language ("scholarly work and primary sources from the period; no study-guide sites"). The AI searches the web, keeps only results that fit that description, and every source it uses is saved to the course library, so the library grows without anyone curating it by hand. |
-| **Privacy** | The AI provider gets only the highlighted passage, the question, the charter text and source excerpts. The search API gets only a generated search query. **No names, IDs or other annotations' authors** go to either. Students can delete their annotations and choose whether future classes may see them. |
+| **Privacy** | The AI provider gets only the highlighted passage, the question, the charter text and source excerpts. Kagi (search) gets only a generated search query. **No names, IDs or other annotations' authors** go to either. Students can delete their annotations and choose whether future classes may see them. |
 
 ---
 
@@ -127,7 +127,9 @@ A search page (`/search?q=`) over all visible annotations **and** the reading te
 ## 4. Stack and layout
 
 - **Backend:** Python 3.12, FastAPI, `sqlite3` from the standard library (no ORM), `pypdf` for PDF text, `httpx` for the LLM and search calls, `trafilatura` to extract a web page's main text. `uvicorn` to serve.
-- **Web search:** one search API with a free key (Brave Search, Tavily or Exa: whichever we can get a key for fastest), called from `search.py`. Key in `.env`.
+- **Web search:** **Kagi Search API** (preview, ~$12 per 1,000 queries, billed to a Kagi account; a day of building and the demo is a dollar or two). Chosen for the privacy story alongside DigitalOcean inference, and for results with little SEO spam, which helps keep study-guide sites out. All of it lives in one function, `search(query) -> [{title, url, snippet}]` in `search.py`, so swapping providers is a small change.
+  - Call (check the current docs at help.kagi.com when building; the API is in preview): `GET https://kagi.com/api/v0/search?q=<query>&limit=8` with header `Authorization: Bot $KAGI_API_KEY`. Results are the items in `data` with `t == 0` (`url`, `title`, `snippet`); `t == 1` items are related searches, ignore them.
+  - Fallback if Kagi misbehaves on the day: Brave Search API, same function signature.
 - **Frontend:** React + Vite, `react-router`, `react-pdf`. Plain CSS. No state library.
 - **PWA:** a `manifest.webmanifest` and icon, nothing more.
 - **LLM:** DigitalOcean serverless inference, which is OpenAI-compatible (`POST {DO_INFERENCE_URL}/chat/completions`). Model name in `.env`.
@@ -149,7 +151,7 @@ app/
       pages/         # Login, Course, Reader, Charter, Search
       components/    # PdfPage, HighlightLayer, Margin, AskPanel, Composer
     public/manifest.webmanifest
-.env.example         # DO_INFERENCE_URL, DO_INFERENCE_KEY, DO_MODEL, SEARCH_API_KEY
+.env.example         # DO_INFERENCE_URL, DO_INFERENCE_KEY, DO_MODEL, KAGI_API_KEY
 ```
 
 In production FastAPI serves the built frontend (`frontend/dist`) as static files, so it's **one process on one port**.
@@ -296,7 +298,7 @@ All routes are under `/api`; all except `/users` need `X-User-Id`. Professor-onl
 
 One function, `chat(system, user) -> str`, using `httpx` against the DO endpoint, `temperature=0.2`, with a 30 s timeout and no retries (fail loudly). The prompts are constants at the top of `ai.py`. Calls that return JSON ask for JSON only and are parsed with `json.loads`; a parse failure is a loud error.
 
-**What gets sent (privacy rule, enforced by building the payload in one place):** charter text, permissible-sources description, the highlighted `quote`, the `question`, the reading title, and source titles/snippets/text. **Never** user names, IDs, cohorts or other students' annotations. The search API gets only the gate's `search_query`.
+**What gets sent (privacy rule, enforced by building the payload in one place):** charter text, permissible-sources description, the highlighted `quote`, the `question`, the reading title, and source titles/snippets/text. **Never** user names, IDs, cohorts or other students' annotations. Kagi gets only the gate's `search_query`.
 
 A full AI answer is four calls: gate → filter results → pick sentences → explain. That's slow-ish (expect 10–20 s); the Ask panel shows the peer layer immediately and the AI layers with a "Checking the charter… / Finding sources… / Writing…" status as they arrive (stretch: if this is fiddly, one spinner and one response is fine).
 
@@ -318,7 +320,7 @@ Checkpoints are the times things must work by. If a checkpoint slips by more tha
 | 01:30 | **S1 spike:** `react-pdf` + text-layer selection → page-fraction rects → redraw boxes | In `spikes/`, timeboxed to 1 h. **Fallback if it fights us:** render each page's extracted text as HTML paragraphs and annotate whole paragraphs (store `page` + paragraph index). |
 | 02:30 | Backend skeleton: schema, seed, `/users`, `/course`, `/readings` upload + PDF serve | |
 | 04:00 | Reader: PDF + highlights + margin + create/delete note + replies | **Demo steps 1–2 work.** |
-| 06:00 | `/ask` peer + library layers (no AI) + Ask panel UI | Get the search API key in parallel. |
+| 06:00 | `/ask` peer + library layers (no AI) + Ask panel UI | Get the Kagi API key in parallel. |
 | 08:00 | `ai.py` + `search.py`: gate, web search, filter, fetch, pick sentence, explanation as annotation, web cache | **Demo step 3 works.** If web search fights us, fall back to seeded library + LLM sentence picking, and keep the gate. |
 | 09:00 | Charter page: view, prof edit (rules, permissible sources, toggles); blocked notices in the Ask panel | **Demo step 4 works.** |
 | 10:30 | Deploy to droplet on the domain; run the full demo there | Deploy early so the last hours aren't spent on it. |
@@ -367,7 +369,7 @@ Write the seed so `seed.py --reset` gives the exact starting state of demo step 
 
 1. **Co-creation of the charter:** is "students comment, professor edits" enough for the MVP, or should students be able to propose an edit that the professor accepts with one click?
 2. **AI explanation visibility:** the spec makes every AI explanation public, as in the vision. Should the asker be able to discard it before it's posted?
-3. **Search API:** Brave, Tavily or Exa? This is a new external service (it receives only the generated query). Pick on which gives a working key fastest.
+3. ~~**Search API**~~ **Decided:** Kagi (Brave as fallback). Set a budget alert or check usage on the Kagi billing page before the demo.
 4. **Past students:** the spec fakes them with a seeded cohort. OK for the demo?
 5. **Model:** which model on DO serverless inference? It must return reliable JSON for the gate, filter and sentence picking. Test the gate on the step-4 questions early: a gate that wrongly allows "what does it mean" breaks the demo's best moment.
 6. **Domain:** `dialectic.space` or a subdomain of an existing domain? Decide by 08:00 so DNS can propagate.

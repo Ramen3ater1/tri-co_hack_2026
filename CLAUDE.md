@@ -1,0 +1,36 @@
+# Tri-Co Hackathon
+
+Team hackathon project. Submission deadline: **Saturday 2026-11-14, 16:00**. Things move fast and get thrown away; these rules keep the repo readable at hour 20.
+
+## Layout
+
+| Path | Holds | Rule |
+| --- | --- | --- |
+| `LOG.md` | Timestamped decisions, pivots, dead ends | Append only, newest at the bottom. Never rewrite old entries. |
+| `ideas/` | One file per idea, draft or plan: `NN-short-name.md` | Don't rewrite a superseded idea; write a new numbered file and note in it what it replaces. |
+| `spikes/` | Throwaway experiments, one dir each: `spikes/HHMM-what/` | Never imported by `app/`. When a spike works, rebuild the good part properly in `app/`. |
+| `app/` | The thing we demo | Only working code that's meant to ship. |
+| `demo/` | Pitch, demo script, screenshots, submission text | |
+
+## Code style: hackathon mode
+
+We're building an MVP for a demo, not production software. Optimise for speed and for code a teammate can read and change by hand.
+
+- **Happy path first.** Build the simplest thing that makes the demo work end to end. No abstractions, base classes, plugin systems or config layers until something is actually repeated three times.
+- **Skip edge cases the demo won't hit.** No exhaustive validation, retries or fallbacks. Leave a one-line `TODO(edge): …` comment instead of handling it.
+- **Fail loudly.** Let errors crash or print clearly; don't swallow exceptions or add silent defaults that hide bugs. A visible error is fixable in a minute; a silent one breaks the live demo.
+- **Readable over clever.** Plain names, short functions, flat control flow, no one-liner tricks. Comment only the *why* when it isn't obvious.
+- **Easy to edit by hand.** Put tunables, prompt text, copy and URLs as named constants at the top of the file (or one `config` file), not buried in logic. Hardcoding demo data is fine; mark it `DEMO:`.
+- **Boring stack, few dependencies.** Prefer well-known libraries and what's already in the repo; ask before adding a new framework or service.
+- **No ceremony.** No test suites, CI, linters, Docker or type gymnastics unless asked. A quick test for one tricky core function is fine.
+- **Small, local changes.** Don't refactor or reformat code you weren't asked to touch: teammates are editing it too. Ask before a large restructure.
+- **Never cut corners on secrets** (keep them out of git) or on anything handling real people's data.
+
+## Rules for agents
+
+- **Log as you go.** After any decision, pivot, dead end or notable finding, append to `LOG.md`: `- HH:MM (Day) — what, and why. [who/session]`. One line where possible. "Tried X, didn't work because Y" is worth logging.
+- **Experiments go in `spikes/`**, never straight into `app/`. Say in the spike's README (one or two lines) what it tests and the result.
+- **Commit early and often**, small commits with plain messages. Don't rewrite shared history (no force-push, no rebase of pushed branches).
+- **Parallel sessions use git worktrees** (`git worktree add ../tri-co-hackathon-<task> -b <task>`) so they don't edit the same files at once.
+- **Keep secrets out of git**: API keys go in `.env` (gitignored); keep `.env.example` up to date with the variable names.
+- **Watch the clock.** Past Saturday 12:00, prefer finishing and polishing over new features; the demo path must work end to end by 15:00.

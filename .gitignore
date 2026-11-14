@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+CLAUDE.local.md
+node_modules/
+__pycache__/
+.venv/
+.DS_Store
+dist/
+build/
+
+# Dialectic (see SPEC.md)
+*.db
+app/backend/uploads/
