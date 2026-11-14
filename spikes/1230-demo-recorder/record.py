@@ -406,9 +406,63 @@ def shot5(take, base, ben, reading_id):
     take.beat("end of the shot")
 
 
-SHOTS = {"shot3": shot3, "shot4": shot4, "shot5": shot5}
+def shot1(take, base, ben, reading_id):
+    """The course home page as Ben: the seminar, its three readings, the charter card."""
+    page = take.page
+    page.goto(f"{base}/")
+    page.get_by_text(READING_PREFIX).first.wait_for()
+    take.pause(1)
+    take.beat("course home: start of the shot", start=True)
+    take.pause(1.5)
+    for row in page.locator(".reading-card").all()[:3]:
+        take.glide_to(row)
+        take.pause(1.2)
+    take.beat("readings")
+    take.glide_to(page.get_by_text("Class charter").first)
+    take.beat("charter card")
+    take.pause(3)
+    take.beat("end of the shot")
+
+
+def shot2(take, base, ben, reading_id):
+    """The charter as the professor sees it: rules (dwell on rule 2), sources, switches, then the proposals."""
+    page = take.page
+    page.goto(f"{base}/charter")
+    page.locator("#rules").wait_for()
+    take.pause(1)
+    take.beat("charter page: start of the shot", start=True)
+    take.pause(1.2)
+    # Rule 2 is the textarea's second and third lines.
+    rules = page.locator("#rules").bounding_box()
+    line = page.locator("#rules").evaluate("(el) => parseFloat(getComputedStyle(el).lineHeight)")
+    y2 = rules["y"] + 8 + line * 2
+    take.glide(rules["x"] + 40, y2)
+    take.pause(0.4)
+    take.glide(rules["x"] + rules["width"] * 0.8, y2 + line * 0.6, curve=0.03)  # trace along rule 2
+    take.beat("rule 2: 'It may not interpret the text for us' (zoom here)")
+    take.pause(2.5)
+    take.glide_to(page.locator("#sources"))
+    take.beat("sources we trust")
+    take.pause(2)
+    take.glide_to(page.get_by_text("Switches").first)
+    take.beat("switches")
+    take.pause(2)
+    added = page.get_by_text("Added to the charter").first
+    added.evaluate("(el) => el.scrollIntoView({behavior: 'smooth', block: 'center'})")
+    take.pause(1.2)
+    take.glide_to(added)
+    take.beat("Ana's proposal, added to the charter (rule 5)")
+    take.pause(3)
+    take.beat("end of the shot")
+
+
+SHOTS = {"shot1": shot1, "shot2": shot2, "shot3": shot3, "shot4": shot4, "shot5": shot5}
+# Who each shot is logged in as (default Ben).
+SHOT_USER = {"shot2": "Prof. Rivera"}
 # File names, matching demo/video-shot-list.md.
-LABELS = {"shot3": "shot 3 - Ben unlocks the notes",
+LABELS = {"shot1": "shot 1 - course home",
+          "shot2": "shot 2 - the class charter",
+          "shot3": "shot 3 - Ben unlocks the notes",
           "shot4": "shot 4 - Ben asks, classmates then sources then AI",
           "shot5": "shot 5"}  # shot 5 names itself 5A or 5B from what the copy answered
 
@@ -422,6 +476,9 @@ def record(name, base, headed, cursor):
     from playwright.sync_api import sync_playwright
     ben, reading_id = setup(base)
     reset_ben(base, ben, reading_id)
+    who = SHOT_USER.get(name)
+    viewer = ben if not who else [u for u in api(base, "GET", "/api/users", 1)
+                                  if u["name"] == who and u["course_title"] == SEMINAR][0]
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     raw_dir = Path(tempfile.mkdtemp(prefix="demo-take-"))
     with sync_playwright() as p:
@@ -432,7 +489,7 @@ def record(name, base, headed, cursor):
         if cursor:
             context.add_init_script(CURSOR_JS.replace('SMOOTHING', str(SMOOTHING)))
         # "Log in as Ben" the way the log-in page does: the user object in localStorage.
-        context.add_init_script(f"localStorage.setItem('dialectic_user', {json.dumps(json.dumps(ben))});")
+        context.add_init_script(f"localStorage.setItem('dialectic_user', {json.dumps(json.dumps(viewer))});")
         page = context.new_page()
         print(f"Recording {name} against {base}")
         take = Take(page)
