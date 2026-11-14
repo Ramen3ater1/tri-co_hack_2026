@@ -10,13 +10,11 @@ when the uploaded file is the demo PDF. See DEMO_PDF_NAME.
 """
 import argparse
 import json
-import re
 import shutil
 from pathlib import Path
 
-import pdfplumber
-
 import db
+import locate
 
 BACKEND_DIR = Path(__file__).parent
 UPLOADS_DIR = BACKEND_DIR / "uploads"
@@ -77,40 +75,9 @@ def user_id(conn, name):
     return conn.execute("SELECT id FROM users WHERE name = ?", (name,)).fetchone()["id"]
 
 
-def quote_rects(pdf_path, page, quote):
-    """Find `quote` on `page` (1-based) and return one rect per line, as page fractions.
-
-    Coordinates are top-left origin, matching what the frontend gets from getClientRects().
-    """
-    with pdfplumber.open(pdf_path) as pdf:
-        p = pdf.pages[page - 1]
-        # The quote may wrap across lines, so let any run of whitespace match.
-        pattern = r"\s+".join(re.escape(word) for word in quote.split())
-        matches = p.search(pattern, regex=True)
-        if not matches:
-            raise ValueError(f"Quote not found on page {page}: {quote!r}")
-        lines = {}
-        for ch in matches[0]["chars"]:
-            key = round(ch["top"])
-            box = lines.setdefault(key, [ch["x0"], ch["top"], ch["x1"], ch["bottom"]])
-            box[0] = min(box[0], ch["x0"])
-            box[1] = min(box[1], ch["top"])
-            box[2] = max(box[2], ch["x1"])
-            box[3] = max(box[3], ch["bottom"])
-        rects = []
-        for x0, top, x1, bottom in lines.values():
-            rects.append({
-                "x": round(x0 / p.width, 4),
-                "y": round(top / p.height, 4),
-                "w": round((x1 - x0) / p.width, 4),
-                "h": round((bottom - top) / p.height, 4),
-            })
-        return rects
-
-
 def add_demo_annotations(conn, reading_id, pdf_path):
     for author, page, quote, body in DEMO_ANNOTATIONS:
-        rects = quote_rects(pdf_path, page, quote)
+        rects = locate.quote_rects(pdf_path, page, quote)
         conn.execute(
             """INSERT INTO annotations (reading_id, user_id, kind, page, quote, rects_json, body, created_at)
                VALUES (?, ?, 'note', ?, ?, ?, ?, ?)""",

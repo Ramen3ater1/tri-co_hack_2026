@@ -56,6 +56,14 @@ CREATE TABLE IF NOT EXISTS reading_pages (
   PRIMARY KEY (reading_id, page)
 );
 
+CREATE TABLE IF NOT EXISTS reading_sections (
+  id INTEGER PRIMARY KEY,
+  reading_id INTEGER NOT NULL REFERENCES readings(id),
+  title TEXT NOT NULL,
+  start_page INTEGER NOT NULL,
+  ord INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS annotations (
   id INTEGER PRIMARY KEY,
   reading_id INTEGER NOT NULL REFERENCES readings(id),
@@ -63,6 +71,8 @@ CREATE TABLE IF NOT EXISTS annotations (
   parent_id INTEGER REFERENCES annotations(id),
   kind TEXT NOT NULL CHECK (kind IN ('note','question','ai_answer')),
   page INTEGER NOT NULL,
+  section_id INTEGER REFERENCES reading_sections(id),  -- null until sections are built (SPEC §3.10)
+  via TEXT NOT NULL DEFAULT 'web' CHECK (via IN ('web','hotkey')),
   quote TEXT,
   rects_json TEXT,
   body TEXT NOT NULL,
@@ -165,12 +175,13 @@ def visibility_params(conn, user):
 
 
 def insert_annotation(conn, reading_id, user_id, kind, page, quote, rects_json, body,
-                      parent_id=None, share_with_future=True, cited_source_ids=None):
+                      parent_id=None, share_with_future=True, cited_source_ids=None,
+                      section_id=None, via="web"):
     cur = conn.execute(
-        """INSERT INTO annotations (reading_id, user_id, parent_id, kind, page, quote, rects_json, body,
-                                    cited_source_ids, share_with_future, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        (reading_id, user_id, parent_id, kind, page, quote, rects_json, body,
+        """INSERT INTO annotations (reading_id, user_id, parent_id, kind, page, section_id, via, quote,
+                                    rects_json, body, cited_source_ids, share_with_future, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (reading_id, user_id, parent_id, kind, page, section_id, via, quote, rects_json, body,
          json.dumps(cited_source_ids) if cited_source_ids is not None else None,
          int(share_with_future), now()),
     )

@@ -16,6 +16,7 @@ from pydantic import BaseModel
 
 import ask
 import db
+import locate
 import search
 import seed
 
@@ -105,6 +106,8 @@ def annotation_json(row, current_cohort):
         "parent_id": row["parent_id"],
         "kind": row["kind"],
         "page": row["page"],
+        "section": row["section_title"],
+        "via": row["via"],
         "quote": row["quote"],
         "rects": json.loads(row["rects_json"]) if row["rects_json"] else None,
         "body": row["body"],
@@ -118,7 +121,8 @@ def annotation_json(row, current_cohort):
 
 def load_annotation(conn, annotation_id):
     row = conn.execute(
-        "SELECT a.*, u.name, u.role, u.cohort FROM annotations a JOIN users u ON u.id = a.user_id WHERE a.id = ?",
+        """SELECT a.*, u.name, u.role, u.cohort, s.title AS section_title FROM annotations a JOIN users u ON u.id = a.user_id
+           LEFT JOIN reading_sections s ON s.id = a.section_id WHERE a.id = ?""",
         (annotation_id,),
     ).fetchone()
     return annotation_json(row, get_course(conn)["current_cohort"])
@@ -173,7 +177,8 @@ def list_annotations(reading_id: int, user=Depends(current_user), conn=Depends(g
     """Visible top-level annotations, newest first, each with its visible replies (oldest first)."""
     get_reading_or_404(conn, reading_id)
     rows = conn.execute(
-        f"""SELECT a.*, u.name, u.role, u.cohort FROM annotations a JOIN users u ON u.id = a.user_id
+        f"""SELECT a.*, u.name, u.role, u.cohort, s.title AS section_title FROM annotations a JOIN users u ON u.id = a.user_id
+            LEFT JOIN reading_sections s ON s.id = a.section_id
             WHERE a.reading_id = :reading_id AND {db.VISIBLE_SQL}
             ORDER BY a.created_at, a.id""",
         {"reading_id": reading_id, **db.visibility_params(conn, user)},
@@ -216,13 +221,15 @@ def create_annotation(reading_id: int, new: NewAnnotation, user=Depends(current_
         if parent is None or parent["reading_id"] != reading_id:
             raise HTTPException(404, f"No annotation {new.parent_id} on this reading")
         page, quote, rects_json = parent["page"], None, None
+        section_id = parent["section_id"]  # replies copy the parent's section
     else:
         if new.page is None or not new.quote or not new.rects:
             raise HTTPException(422, "A new note needs page, quote and rects")
         page, quote, rects_json = new.page, new.quote, json.dumps(new.rects)
+        section_id = None  # TODO: look up the section once sections exist (SPEC §3.10)
     annotation_id = db.insert_annotation(
         conn, reading_id, user["id"], "note", page, quote, rects_json, new.body,
-        parent_id=new.parent_id, share_with_future=new.share_with_future,
+        parent_id=new.parent_id, share_with_future=new.share_with_future, section_id=section_id,
     )
     conn.commit()
     return load_annotation(conn, annotation_id)
@@ -265,6 +272,31 @@ class AskRequest(BaseModel):
 def ask_question(reading_id: int, req: AskRequest, user=Depends(current_user), conn=Depends(get_conn)):
     reading = get_reading_or_404(conn, reading_id)
     return ask.answer(conn, reading, user, req.page, req.quote, req.rects, req.question)
+
+
+class HotkeyAskRequest(BaseModel):
+    quote: str
+    question: str
+
+
+@app.post("/api/ask")
+def hotkey_ask(req: HotkeyAskRequest, user=Depends(current_user), conn=Depends(get_conn)):
+    """The Mac hotkey (SPEC §3.9): only the text, so find the reading, page and highlight first."""
+    found = locate.find_page(conn, req.quote)
+    if found is None:
+        raise HTTPException(404, "This passage isn't in a course reading.")
+    reading_id, page = found
+    reading = get_reading_or_404(conn, reading_id)
+    rects = locate.quote_rects(reading["pdf_path"], page, req.quote)
+    result = ask.answer(conn, reading, user, page, req.quote, rects, req.question, via="hotkey")
+    result["located"] = {
+        "reading_id": reading_id,
+        "reading_title": reading["title"],
+        "page": page,
+        "section": None,  # TODO: sections (SPEC §3.10)
+        "reader_url": f"/readings/{reading_id}?page={page}&annotation={result['question_id']}",
+    }
+    return result
 
 
 # ---------- routes: charter ----------

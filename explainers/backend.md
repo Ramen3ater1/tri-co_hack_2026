@@ -7,7 +7,7 @@ A high-level tour of `app/backend/`, written Saturday 01:35. `SPEC.md` says *wha
 The whole backend is **one Python process** (FastAPI, served by uvicorn) talking to **one SQLite file** (`app/backend/dialectic.db`). There's no ORM, no background workers and no cache server. Every request reads and writes the database directly with SQL, and the two outside services (the LLM and Kagi web search) are called with plain HTTP during the request.
 
 ```
-browser ──HTTP──▶ main.py (routes) ──▶ db.py (SQLite + full-text search)
+browser / Mac app ──HTTP──▶ main.py (routes) ──▶ db.py (SQLite + full-text search)
                      │
                      └─ /ask ──▶ ask.py ──▶ ai.py ─────▶ DigitalOcean LLM
                                          └▶ search.py ─▶ Kagi search, web pages
@@ -23,12 +23,13 @@ In production the same process also serves the built React app, so the whole sit
 | `db.py` | ~180 | The schema (all `CREATE TABLE`s), `connect()`, the **visibility rule**, `insert_annotation()`, and `fts_query()`, which turns free text into a search query. |
 | `ask.py` | ~200 | The `/ask` flow: the three answer layers and the charter checks, in order. |
 | `ai.py` | ~225 | Everything that talks to the LLM: the four prompts (constants at the top), `chat()`, and the charter toggle checks. |
+| `locate.py` | ~90 | For the Mac hotkey: finds which reading and page a copied passage is from, and its highlight boxes in the PDF. |
 | `search.py` | ~75 | Kagi web search and fetching a page's main text, both cached in the database. |
 | `seed.py` | ~155 | DEMO data: users, course, charter, and the past-student annotations. |
 | `seed/souls-of-black-folk-ch1.pdf` | | The demo reading (Gutenberg #408, Ch. 1, printed with Chrome). |
 | `pyproject.toml`, `uv.lock` | | Dependencies, managed with uv. |
 
-Dependencies: `fastapi` + `uvicorn` (web server), `python-multipart` (PDF upload), `pypdf` (page text), `pdfplumber` (character positions, seed only), `httpx` (HTTP calls), `trafilatura` (extract an article's text from a web page).
+Dependencies: `fastapi` + `uvicorn` (web server), `python-multipart` (PDF upload), `pypdf` (page text), `pdfplumber` (character positions, for highlight boxes), `httpx` (HTTP calls), `trafilatura` (extract an article's text from a web page).
 
 ## How a request flows
 
@@ -98,6 +99,16 @@ The points worth knowing:
 - **No ungrounded answers.** The explanation is only written if there are sources to cite, and it's cut to `max_explanation_words` in code even if the model runs long.
 - A full AI answer is **four LLM calls** (gate, filter, pick sentences, explain) plus a search and up to five page fetches, all in one request (not a stream). Measured with the real services: **about 35 s the first time** a question is asked and **about 6 s on replay**, when only the explanation is written fresh. So rehearse the demo question once before presenting.
 
+## The Mac hotkey: `POST /api/ask`
+
+The Mac app (§3.9, built separately in `app/mac/`) only knows the text the student selected and their question. The route in `main.py` does three things before running exactly the same `ask.answer()` as the web reader:
+
+1. **Find the page.** `locate.find_page` uses full-text search to shortlist pages, then checks which one really contains the quote. Text copied out of Preview or Notability never matches the PDF's text exactly (curly vs straight quotes, line breaks, dashes, "ﬁ" ligatures), so `locate.squash()` compares **letters and digits only**: `one’s self,—` and `one's self -` both become `onesself`. A passage that isn't in any reading gets a 404.
+2. **Find the highlight boxes.** `locate.quote_rects` does the same squashed matching over pdfplumber's per-character positions, then merges the characters into one box per line. The seed uses this too, for last year's annotations.
+3. **Run `/ask` with `via="hotkey"`**, so the question and AI answer are saved like any other annotation and show up in the web reader's margin, and return the same response plus `located` (reading, page and a `reader_url` that opens the web reader at the question).
+
+Annotations carry `via` (`web` or `hotkey`) and `section`. Sections (§3.10) aren't built yet, so `section` is always `null`.
+
 ## Privacy, by construction
 
 The functions in `ai.py` only take **strings**: charter text, the quote, the question, the reading title and source text. No route passes them a user, an id or another student's annotation, so none of that can leak into a prompt. Kagi receives only the gate's `search_query`, and fetched sites see a generic user agent.
@@ -145,5 +156,7 @@ curl -H 'X-User-Id: 3' -H 'Content-Type: application/json' \
 - **The real gate passes the demo questions** (each tried three times, same verdict every time): "what did it mean in 1903?" and "where did the term come from?" are allowed. "What does Du Bois *mean* by…" has its **explanation** denied under rule 2, but **finding sources** stays allowed, since rule 2 says AI may point us to sources.
 - **The seed charter keeps out modern journal articles.** Its permissible-sources text only lists encyclopedias, university and museum sites, and primary sources, so the filter (correctly) drops journal articles. Add "peer-reviewed scholarship" to the text if we want them.
 - A first-time question takes about 35 s, mostly fetching pages one after another. Fetching them in parallel would cut that if needed.
+- **The hotkey demo question needs to ask for context, not interpretation.** "*Why* does he use the image of a veil here?" gets its explanation refused under rule 2, which is correct but a refusal on stage. Also, Chapter 1 never says "the Veil" exactly: it has "a vast veil", "born with a veil" and "through a veil".
+- A quote that runs across a page break isn't found by the hotkey route.
 - If an AI call fails, the question has already been saved, so it shows in the margin without an answer.
 - Not built yet: `annotate_before_peers` (stretch) and the step-by-step "Checking the charter…" status (one response for now).

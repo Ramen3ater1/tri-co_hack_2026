@@ -160,14 +160,14 @@ def rule_block(charter, layer, decision):
     }
 
 
-def answer(conn, reading, user, page, quote, rects, question):
-    """Run the whole /ask flow and return the response dict (SPEC §6)."""
+def answer(conn, reading, user, page, quote, rects, question, via="web"):
+    """Run the whole /ask flow and return the response dict (SPEC §6). via: 'web' or 'hotkey'."""
     charter = conn.execute("SELECT * FROM charter").fetchone()
     ai_user_id = conn.execute("SELECT id FROM users WHERE role = 'ai'").fetchone()["id"]
 
     # 1. The question is a public annotation others can answer.
     question_id = db.insert_annotation(
-        conn, reading["id"], user["id"], "question", page, quote, json.dumps(rects), question,
+        conn, reading["id"], user["id"], "question", page, quote, json.dumps(rects), question, via=via,
     )
     conn.commit()
 
@@ -208,7 +208,7 @@ def answer(conn, reading, user, page, quote, rects, question):
         )
         answer_id = db.insert_annotation(
             conn, reading["id"], ai_user_id, "ai_answer", page, None, None, body,
-            parent_id=question_id, cited_source_ids=[s["source_id"] for s in sources],
+            parent_id=question_id, cited_source_ids=[s["source_id"] for s in sources], via=via,
         )
         ai_answer = {"annotation_id": answer_id, "body": body}
     conn.commit()
