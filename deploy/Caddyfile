@@ -2,22 +2,30 @@
 # Caddy accepts plain HTTP (Cloudflare SSL mode "Flexible") and HTTPS with its own
 # internal certificate (mode "Full"). Mode "Full (strict)" would need a Cloudflare origin cert.
 # Streaming responses (the Ask's server-sent events) are flushed through automatically.
+# lb_try_duration: while a copy restarts (dev restarts on every push to main), hold requests
+# and retry for up to 15 s instead of answering 502.
 
 # Demo copy: the judges and us on stage.
 http://dialectic.yaggy.dev, https://dialectic.yaggy.dev {
 	tls internal
-	reverse_proxy 127.0.0.1:8000
+	reverse_proxy 127.0.0.1:8000 {
+		lb_try_duration 15s
+	}
 }
 
 # Sandbox copy: the public link for participants.
 # Also on yaggy.dev: Swarthmore's campus DNS blocks the newly registered dialectic.space.
 http://dialectic.space, https://dialectic.space, http://dialectic-sandbox.yaggy.dev, https://dialectic-sandbox.yaggy.dev {
 	tls internal
-	reverse_proxy 127.0.0.1:8001
+	reverse_proxy 127.0.0.1:8001 {
+		lb_try_duration 15s
+	}
 }
 
 # Dev copy: runs `main`, for teammates to try new work and report problems.
 http://dev.dialectic.space, https://dev.dialectic.space, http://dialectic-dev.yaggy.dev, https://dialectic-dev.yaggy.dev {
 	tls internal
-	reverse_proxy 127.0.0.1:8002
+	reverse_proxy 127.0.0.1:8002 {
+		lb_try_duration 15s
+	}
 }
