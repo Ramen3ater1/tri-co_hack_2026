@@ -3,8 +3,11 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-swift build -c release
-BIN="$(swift build -c release --show-bin-path)/Dialectic"
+# Universal binary (Apple Silicon + Intel), so one download runs on every Mac, including
+# the Intel ones; a plain `swift build` only targets the chip it runs on.
+ARCHS=(--arch arm64 --arch x86_64)
+swift build -c release "${ARCHS[@]}"
+BIN="$(swift build -c release "${ARCHS[@]}" --show-bin-path)/Dialectic"
 
 APP=build/Dialectic.app
 rm -rf "$APP"
@@ -47,4 +50,5 @@ codesign --force --sign - "$APP"
 # Tell Launch Services about the dialectic:// scheme now, not on first launch.
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$APP"
 
+lipo -info "$APP/Contents/MacOS/Dialectic"
 echo "Built $(pwd)/$APP  (open it with: open $(pwd)/$APP)"
