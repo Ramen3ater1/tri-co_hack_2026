@@ -513,6 +513,7 @@ Checkpoints are the times things must work by. If one slips by more than 45 minu
 | 09:00 | Charter page: view, prof edit (rules, permissible sources, toggles); blocked notices in the Ask panel | **Demo step 4 works.** |
 | 09:00 | **Mac hotkey app (independent track, `app/mac/`):** hotkey → copy selection → floating panel → show the `/ask` response | Owner: josoup. Builds against the stub response, so it needs nothing from anyone else until the route exists. Start with a 1 h spike (hotkey + selection copy). Screenshot + Vision only once everything else works (#9). **Doesn't move other checkpoints.** |
 | 09:30 | **`POST /api/ask` (hotkey route):** locate the quote → reading, page, rects; reuse the three layers | Backend owner, after demo step 3 works. The Mac app swaps its stub for the real URL. |
+| 10:00 | **Spending limits + WAL** (§9.1, §9): backend: `X-Device-Id` limit, `spend` table + budgets, `BudgetExceeded` → blocked layers, `AI_OFF`, `GET /api/spend`, WAL in `db.connect()`. Frontend and Mac app: send `X-Device-Id` | Must be done before the sandbox URL is shared with anyone. |
 | 10:30 | Deploy the demo and sandbox copies to the new droplet; spending limits on; run the full demo there | Deploy early so the last hours aren't spent on it. |
 | 12:00 | Search page; charter comments | Stretch #1 |
 | 12:00+ | Polish only: copy, empty states, seed data quality, demo script in `demo/` | Per CLAUDE.md: no new features after noon. |
@@ -570,7 +571,7 @@ Anyone can log in as anyone (including the professor), so participants *will* ch
 ### 9.1 Spending limits
 
 Two outside services cost money:
-- **DigitalOcean inference:** ~$35 of prepaid credit with no auto-reload. When it runs out, AI calls fail. Development is already drawing on it, so check the balance before setting budgets.
+- **DigitalOcean inference:** prepaid credit with no auto-reload (**~$32 left at 04:00 Sat**). When it runs out, AI calls fail.
 - **Kagi:** $0.012 per search, invoiced monthly, with a $10 limit set in Kagi.
 
 Cached answers (`web_cache`) cost nothing. Two layers of protection:
@@ -582,10 +583,10 @@ Cached answers (`web_cache`) cost nothing. Two layers of protection:
 - Clearing browser storage gets round it. That's fine: it's for fairness, and layer 2 is the real cap.
 
 **2. Global budget (true excess, both copies).** Every paid call is recorded **at the point of spending**: in `ai.chat_once()` (DigitalOcean) and `search.search()` (Kagi), only when the call isn't served from the cache. A `spend` table holds `(at, service, units, usd, device_id)`.
-- **DigitalOcean cost** = the response's `usage` tokens × `LLM_USD_PER_MTOK_IN` / `LLM_USD_PER_MTOK_OUT` (constants at the top of `ai.py`; fill them in from DigitalOcean's pricing page for Claude Sonnet 5.5).
+- **DigitalOcean cost** = the response's `usage` tokens × `LLM_USD_PER_MTOK_IN` / `LLM_USD_PER_MTOK_OUT` (constants at the top of `ai.py`: Claude Sonnet 5.5 on DigitalOcean is **$2.00 per million input tokens** and **$10.00 per million output tokens**).
 - **Kagi cost** = `KAGI_USD_PER_SEARCH = 0.012` per search.
 - **Before each paid call,** if that service's total has reached its budget (`AI_BUDGET_USD`, `SEARCH_BUDGET_USD` in `.env`), raise `BudgetExceeded`. The Ask turns this into blocked AI layers with *"This copy of Dialectic has used up its AI budget. Classmates' answers and the course library still work."* Nothing crashes, and the demo's peer layer keeps working.
-- **Budgets** (adjust after checking the DigitalOcean balance): demo copy AI $10 and search $3; sandbox AI $12 and search $4. Together that leaves margin under the $35 credit and Kagi's $10 limit.
+- **Budgets:** demo copy AI $10 and search $3; sandbox AI $12 and search $4. That's $22 of the ~$32 DigitalOcean credit (leaving ~$10 for development and rehearsal) and $7 of Kagi's $10 limit.
 - The `spend` table **survives `seed.py --reset`** (like `web_cache`), so reseeding never resets a budget.
 - `GET /api/spend` returns each service's total against its budget, for a quick check from a phone. It's read-only and shows nothing per-device.
 
