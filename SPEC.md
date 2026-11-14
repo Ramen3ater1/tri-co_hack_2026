@@ -14,7 +14,8 @@ Dialectic is a collaborative reading platform for college courses (e.g. Haverfor
 | **Friction** | AI never writes your answer for you. It finds sources, or it posts a short explanation that is **public, labelled and open to replies**, never a private shortcut. |
 | **Charter governs AI** | Two passes. **Pass 1 (gate):** the charter's toggles are checked in code, then an LLM call asks "does the charter allow this request?" and answers per layer, naming the rule. **Pass 2:** only allowed layers make the real query. |
 | **Sources the class trusts** | The charter describes **permissible sources** in plain language ("scholarly work and primary sources from the period; no study-guide sites"). The AI searches the web, keeps only results that fit that description, and every source it uses is saved to the course library, so the library grows without anyone curating it by hand. |
-| **Privacy** | The AI provider gets only the highlighted passage, the question, the charter text and source excerpts. Kagi (search) gets only a generated search query. **No names, IDs or other annotations' authors** go to either. Students can delete their annotations and choose whether future classes may see them. |
+| **Stay in your text** | You never have to leave what you're reading. Wherever you read (Notability, Preview, a notes app, any PDF), you highlight or screenshot a passage and press the **Dialectic hotkey**. The Mac app reads your screen, works out which course reading and section it is, and answers from your peers, sources or an AI explanation (if the charter allows). **Everything is noted:** the question and the answer are saved as annotations in that section, exactly as if you'd asked in the web reader (§3.9). |
+| **Privacy** | The AI provider gets only the highlighted passage, the question, the charter text and source excerpts. Kagi (search) gets only a generated search query. **No names, IDs or other annotations' authors** go to either. The hotkey reads the screen **on your Mac** (macOS Vision); only the recognised text leaves it, never the screenshot. Students can delete their annotations and choose whether future classes may see them. |
 
 ---
 
@@ -28,6 +29,7 @@ Seed users: **Prof. Rivera** (professor), **Ana** and **Ben** (students), plus *
    1. **From your class:** matching peer, past-student and professor annotations (Ana's, Sam's), each linking to its place in the text.
    2. **Sources:** sources the AI found on the web that fit the charter's permissible-sources description, each linking out to the exact sentence that answers the question. A small note shows what was filtered out ("2 results skipped: study-guide sites aren't permitted").
    3. **AI explanation** (if allowed): a short summary citing the sources above, posted as a public annotation by "Dialectic AI" that Ana can reply to.
+   - **Same thing without leaving your text (hotkey):** Ana has the same chapter open in Notability (or Preview), not in Dialectic. She highlights a sentence about "the Veil", presses the hotkey and types her question. A floating panel shows the same three layers. Back in the web reader, Ben sees her question and its answer in the margin on that passage: it was noted.
 4. **The charter changes the answer.** Two versions; pick whichever lands better in rehearsal:
    - **Toggle:** Prof. Rivera turns off "AI may write explanations". Ben asks the same question and gets peer annotations and sources only, plus a notice: *"Your class charter doesn't allow AI explanations (AI may write explanations — off)."*
    - **Rule text (shows the gate):** the class adds the rule "AI may not interpret the text for us." Ben asks "What does Du Bois *mean* by double-consciousness?" and the gate refuses the AI layers, quoting that rule. He rephrases to "Where did the term come from?" and the gate allows it. Peer annotations show both times.
@@ -76,7 +78,7 @@ One table covers notes, questions, AI answers and replies:
 `POST /api/readings/{id}/ask` with `page`, `quote`, `rects`, `question`. The server:
 
 1. Saves the question as an annotation (`kind = question`), so it's public and answerable.
-2. **Peer layer (always on, no AI):** FTS5 search over visible **notes and replies** on this reading (not other questions or AI answers, which aren't answers from your class) using keywords from `quote + question`, boosted for annotations on the same page. Top 5.
+2. **Peer layer (always on, no AI):** FTS5 search over visible **notes and replies** on this reading (not other questions or AI answers, which aren't answers from your class) using keywords from `quote + question`, boosted for annotations in the same **section** (§3.10). Top 5.
 3. **Pass 1, the gate** (only if `ai_enabled`): toggles are checked in code first; any layer whose toggle is off is blocked without asking the model. If any AI layer is still possible, one LLM call (`GATE_PROMPT`, §7) reads the charter text, the quote and the question, and returns per layer `allowed` + the `rule` it relied on + a one-line `reason`, plus a web `search_query` to use if source finding is allowed. A denied layer is blocked with that rule quoted to the student.
 4. **Pass 2, source layer:**
    - **No AI** (`ai_find_sources` off or denied): FTS5 over the course source library, which holds every source the AI has found before. Top 3. This is how the class gets less dependent on AI over time.
@@ -122,6 +124,24 @@ One charter per course: Markdown rules text, a plain-language permissible-source
 
 A search page (`/search?q=`) over all visible annotations **and** the reading text, via FTS5. Each result shows the snippet (FTS5 `snippet()`), the reading and page, and links to the reader at that page with the annotation open.
 
+### 3.9 Mac hotkey: ask from wherever you're reading
+
+A small macOS menu-bar app (`app/mac/`). The web reader stays as it is; this is a second way in, so you never have to leave the app you're reading in.
+
+1. **Press the hotkey** (`⌥⇧D`, a constant at the top of the app). If text is selected in the front app, the app copies it (simulated ⌘C, then the clipboard is restored). If nothing is selected, a crosshair lets you drag a box round the passage (`screencapture -i`), as if taking a screenshot.
+2. **Read it on the Mac.** A dragged box is turned into text with **macOS Vision** (`VNRecognizeTextRequest`) on the device. The image never leaves the Mac.
+3. **Ask.** A small floating panel shows the captured text and a question box. On Enter it sends `POST /api/ask` (§6) with `{quote, question}` and the `X-User-Id` chosen in the app's menu (same seeded users as the web log-in).
+4. **Locate.** The server matches `quote` against the course readings' text (`pages_fts`, then an exact substring check on that page) to find the **reading, page and section**. It computes the highlight `rects` from the PDF (pdfplumber, as the seed does), so the question shows as a normal highlight in the web reader. `TODO(edge)`: text that isn't from a course reading returns 404, "This passage isn't in a course reading."
+5. **Answer and note it.** It runs the same three-layer `/ask` as §3.5. The panel shows peers → sources → AI explanation (or the blocked notices), with a link that opens the web reader at that annotation. The question and any AI answer are saved as annotations like any other: public, labelled and open to replies.
+
+**Permissions:** the app needs **Accessibility** (to copy the selection) and **Screen Recording** (to capture a box) in System Settings. Grant both on the demo Mac beforehand.
+
+### 3.10 Sections
+
+At upload, each reading is split into **sections** by its headings: the PDF's outline (bookmarks) if it has one, otherwise lines that look like headings (short, on their own line, Title Case or ALL CAPS, or numbered like `I.`). Each annotation stores the section it falls in. The peer layer boosts matches in the same section, and the hotkey shows "Ch. 1 › Of Our Spiritual Strivings"-style breadcrumbs.
+
+**Fallback:** a reading with fewer than two headings is split **one section per page**. The demo chapter is a single titled chapter, so in the demo this behaves like the old "same page" boost unless we seed sub-headings.
+
 ---
 
 ## 4. Stack and layout
@@ -132,6 +152,7 @@ A search page (`/search?q=`) over all visible annotations **and** the reading te
   - Fallback if Kagi misbehaves on the day: Brave Search API, same function signature.
 - **Frontend:** React + Vite, `react-router`, `react-pdf`. Plain CSS. No state library.
 - **PWA:** a `manifest.webmanifest` and icon, nothing more.
+- **Mac hotkey app (§3.9):** one small **SwiftUI** menu-bar app, built with Xcode (or `swift build`). Uses only Apple frameworks: Vision (on-device text recognition), AppKit (hotkey, floating panel, pasteboard), `URLSession` for the API. The server URL and hotkey are constants at the top of `DialecticApp.swift`. No third-party packages.
 - **LLM:** DigitalOcean serverless inference, which is OpenAI-compatible (`POST {DO_INFERENCE_URL}/chat/completions`). Model name in `.env`.
 
 ```
@@ -151,6 +172,8 @@ app/
       pages/         # Login, Course, Reader, Charter, Search
       components/    # PdfPage, HighlightLayer, Margin, AskPanel, Composer
     public/manifest.webmanifest
+  mac/
+    DialecticApp.swift  # menu bar, hotkey, capture + Vision OCR, ask panel (split only if it passes ~400 lines)
 .env.example         # DO_INFERENCE_URL, DO_INFERENCE_KEY, DO_MODEL, KAGI_API_KEY
 ```
 
@@ -209,6 +232,14 @@ CREATE TABLE reading_pages (      -- extracted text, for search and AI context
   PRIMARY KEY (reading_id, page)
 );
 
+CREATE TABLE reading_sections (   -- headings found at upload (§3.10)
+  id INTEGER PRIMARY KEY,
+  reading_id INTEGER NOT NULL REFERENCES readings(id),
+  title TEXT NOT NULL,            -- heading text, or 'Page N' in the fallback
+  start_page INTEGER NOT NULL,
+  ord INTEGER NOT NULL            -- order within the reading
+);
+
 CREATE TABLE annotations (
   id INTEGER PRIMARY KEY,
   reading_id INTEGER NOT NULL REFERENCES readings(id),
@@ -216,6 +247,8 @@ CREATE TABLE annotations (
   parent_id INTEGER REFERENCES annotations(id),
   kind TEXT NOT NULL CHECK (kind IN ('note','question','ai_answer')),
   page INTEGER NOT NULL,
+  section_id INTEGER REFERENCES reading_sections(id), -- from page + quote; replies copy the parent's
+  via TEXT NOT NULL DEFAULT 'web' CHECK (via IN ('web','hotkey')),
   quote TEXT,                     -- null for replies
   rects_json TEXT,                -- [{x,y,w,h}] as page fractions; null for replies
   body TEXT NOT NULL,
@@ -267,6 +300,7 @@ All routes are under `/api`; all except `/users` need `X-User-Id`. Professor-onl
 | POST | `/readings/{id}/annotations` | all | Create note or reply |
 | DELETE | `/annotations/{id}` | author | Delete own annotation (and its replies) |
 | POST | `/readings/{id}/ask` | all | The three-layer answer (§3.5) |
+| POST | `/ask` | all | Hotkey ask (§3.9): `{quote, question}` only; the server locates the reading, page, section and rects, then runs the same three layers. 404 if the quote isn't in a course reading |
 | GET | `/charter` | all | Text, toggles, comments |
 | PUT | `/charter` | prof | Update text and/or toggles |
 | POST | `/charter/comments` | all | Student proposal/comment |
@@ -291,6 +325,8 @@ All routes are under `/api`; all except `/users` need `X-User-Id`. Professor-onl
 ```
 
 `ai_answer` is `null` when blocked or when no sources matched (no ungrounded answers).
+
+`POST /ask` (hotkey) returns the same shape plus `"located": {"reading_id": 1, "reading_title": "...", "page": 3, "section": "Of Our Spiritual Strivings", "reader_url": "/readings/1?page=3&annotation=41"}`. Annotations gain `"section"` (title or `null`) and `"via"` (`"web"` | `"hotkey"`).
 
 Annotation shape (`GET /readings/{id}/annotations` returns a list of these, newest first; `POST` returns one):
 
@@ -318,7 +354,7 @@ Other response shapes:
 
 One function, `chat(system, user) -> str`, using `httpx` against the DO endpoint, `temperature=0.2`, with a 30 s timeout and no retries (fail loudly). The prompts are constants at the top of `ai.py`. Calls that return JSON ask for JSON only and are parsed with `json.loads`; a parse failure is a loud error.
 
-**What gets sent (privacy rule, enforced by building the payload in one place):** charter text, permissible-sources description, the highlighted `quote`, the `question`, the reading title, and source titles/snippets/text. **Never** user names, IDs, cohorts or other students' annotations. Kagi gets only the gate's `search_query`.
+**What gets sent (privacy rule, enforced by building the payload in one place):** charter text, permissible-sources description, the highlighted `quote`, the `question`, the reading title, and source titles/snippets/text. **Never** user names, IDs, cohorts or other students' annotations. Kagi gets only the gate's `search_query`. From the hotkey, the server only ever receives recognised text (Vision runs on the Mac), never a screenshot.
 
 A full AI answer is four calls: gate → filter results → pick sentences → explain. That's slow-ish (expect 10–20 s); the Ask panel shows the peer layer immediately and the AI layers with a "Checking the charter… / Finding sources… / Writing…" status as they arrive (stretch: if this is fiddly, one spinner and one response is fine).
 
@@ -345,6 +381,7 @@ Checkpoints are the times things must work by. If a checkpoint slips by more tha
 | 06:00 | `/ask` peer + library layers (no AI) + Ask panel UI | Get the Kagi API key in parallel. |
 | 08:00 | `ai.py` + `search.py`: gate, web search, filter, fetch, pick sentence, explanation as annotation, web cache | **Demo step 3 works.** If web search fights us, fall back to seeded library + LLM sentence picking, and keep the gate. |
 | 09:00 | Charter page: view, prof edit (rules, permissible sources, toggles); blocked notices in the Ask panel | **Demo step 4 works.** |
+| 09:00 | **Mac hotkey (parallel track):** sections at upload + `POST /ask` locate (backend); menu-bar app with hotkey → selection/screenshot → Vision → panel (`app/mac/`) | Start with a 1 h spike in `spikes/` (hotkey + Vision on a screenshot). **Fallback:** selection-copy only, no screenshot box. **Demo step 3 hotkey works.** Doesn't move the other checkpoints; needs its own person. |
 | 10:30 | Deploy to droplet on the domain; run the full demo there | Deploy early so the last hours aren't spent on it. |
 | 12:00 | Search page; charter comments | Stretch #1 |
 | 12:00+ | Polish only: copy, empty states, seed data quality, demo script in `demo/` | Per CLAUDE.md: no new features after noon. |
@@ -352,7 +389,7 @@ Checkpoints are the times things must work by. If a checkpoint slips by more tha
 
 Stretch, in order: search page → charter comments → `annotate_before_peers` → past-student opt-out UI on profile.
 
-**Parallel split (suggestion):** one person on the frontend reader (S1 → reader), one on the backend (schema → `/ask` → `ai.py`), one on seed data + charter page + demo script. Agree the API shapes in §6 first; the frontend can stub `/ask` with the JSON above.
+**Parallel split (suggestion):** one person on the frontend reader (S1 → reader), one on the backend (schema → `/ask` → `ai.py`), one on seed data + charter page + demo script, one on the Mac hotkey app (§3.9). Agree the API shapes in §6 first; the frontend can stub `/ask` with the JSON above.
 
 ---
 
@@ -398,3 +435,4 @@ Because the reading is uploaded live, the seeded annotations can't exist before 
 4. **Past students:** the spec fakes them with a seeded cohort. OK for the demo?
 5. **Model:** which model on DO serverless inference? It must return reliable JSON for the gate, filter and sentence picking. Test the gate on the step-4 questions early: a gate that wrongly allows "what does it mean" breaks the demo's best moment.
 6. **Domain:** `dialectic.space` or a subdomain of an existing domain? Decide by 08:00 so DNS can propagate.
+7. **Hotkey demo:** which Mac and which reading app (Notability vs Preview) do we demo on? Permissions must be granted on that Mac before presenting. Does the demo chapter need seeded sub-headings so "same section" visibly differs from "same page"?
