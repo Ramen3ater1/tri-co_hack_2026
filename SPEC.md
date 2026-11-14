@@ -126,7 +126,7 @@ A search page (`/search?q=`) over all visible annotations **and** the reading te
 
 ## 4. Stack and layout
 
-- **Backend:** Python 3.12, FastAPI, `sqlite3` from the standard library (no ORM), `pypdf` for PDF text, `httpx` for the LLM and search calls, `trafilatura` to extract a web page's main text. `uvicorn` to serve.
+- **Backend:** Python 3.12, managed with **uv** (`app/backend/pyproject.toml` + `uv.lock`), FastAPI, `sqlite3` from the standard library (no ORM), `pypdf` for PDF text, `httpx` for the LLM and search calls, `trafilatura` to extract a web page's main text. `uvicorn` to serve.
 - **Web search:** **Kagi Search API** (preview, ~$12 per 1,000 queries, billed to a Kagi account; a day of building and the demo is a dollar or two). Chosen for the privacy story alongside DigitalOcean inference, and for results with little SEO spam, which helps keep study-guide sites out. All of it lives in one function, `search(query) -> [{title, url, snippet}]` in `search.py`, so swapping providers is a small change.
   - Call (check the current docs at help.kagi.com when building; the API is in preview): `GET https://kagi.com/api/v0/search?q=<query>&limit=8` with header `Authorization: Bot $KAGI_API_KEY`. Results are the items in `data` with `t == 0` (`url`, `title`, `snippet`); `t == 1` items are related searches, ignore them.
   - Fallback if Kagi misbehaves on the day: Brave Search API, same function signature.
@@ -144,7 +144,7 @@ app/
     seed.py          # DEMO: users, course, charter, sources, past-student annotations
     seed/            # DEMO: souls-of-black-folk-ch1.pdf
     uploads/         # gitignored
-    requirements.txt
+    pyproject.toml   # uv project; uv.lock pins versions
   frontend/
     src/
       api.js         # fetch wrapper that adds X-User-Id
@@ -338,10 +338,10 @@ Stretch, in order: search page → charter comments → `annotate_before_peers` 
 
 ## 9. Deployment (existing DigitalOcean droplet)
 
-1. **The droplet deploys only from `stable`** (`git checkout stable && git pull`), so the live URL always shows something that works. To roll back, check out the previous `good-…` tag there; never rewrite `stable`. Then `python -m venv .venv && pip install -r app/backend/requirements.txt`.
+1. **The droplet deploys only from `stable`** (`git checkout stable && git pull`), so the live URL always shows something that works. To roll back, check out the previous `good-…` tag there; never rewrite `stable`. Then `cd app/backend && uv sync` (installs uv's pinned Python 3.12 and the locked deps into `app/backend/.venv`).
 2. `cd app/frontend && npm ci && npm run build`.
 3. `.env` on the droplet only (never in git).
-4. Run `uvicorn main:app --host 127.0.0.1 --port 8000` under a small **systemd** unit (`Restart=always`).
+4. Run `uv run --env-file ../../.env uvicorn main:app --host 127.0.0.1 --port 8000` (from `app/backend`) under a small **systemd** unit (`Restart=always`).
 5. **Domain:** `dialectic.space` if we buy it, otherwise a subdomain of an existing domain (e.g. `dialectic.<existing-domain>`). Either way, an `A` record to the droplet's IP. Do this **early** (by 08:00) so DNS has time to propagate.
 6. Put it behind whatever reverse proxy is already on the droplet. If there isn't one, **Caddy** gets the HTTPS certificate automatically:
    ```
