@@ -41,8 +41,9 @@ CHARTER_TEXT = """1. We read first and ask each other second. AI comes last.
 4. Annotations are shared with future classes unless you untick the box."""
 
 PERMISSIBLE_SOURCES = (
-    "Scholarly encyclopedias (Stanford Encyclopedia of Philosophy, Britannica), university and "
-    "museum sites, and primary sources from 1890–1920. No study-guide or essay-mill sites "
+    "Scholarly encyclopedias (Stanford Encyclopedia of Philosophy, Britannica), peer-reviewed "
+    "scholarship (journal articles, university-press books), university and museum sites, and "
+    "primary sources from 1890–1920. No study-guide or essay-mill sites "
     "(SparkNotes, Course Hero, etc.). Wikipedia is fine for dates and names, not for interpretation."
 )
 

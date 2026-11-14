@@ -13,8 +13,44 @@ import httpx
 
 TEMPERATURE = 0.2
 TIMEOUT_S = 30
+CONTEXT_CHARS = 1500  # the explanation sees this much text either side of each verified sentence
 EXPLAIN_WORD_MARGIN = 20  # ask the model for this many words fewer than the charter's maximum
-MAX_FILTER_KEEP = 8  # spares: ask.py reads up to 5 of these and keeps up to 3 that answer the question
+# The filter and sentence-picking calls are mechanical, so they skip the model's hidden reasoning:
+# measured 02:55 Sat, the filter takes ~2 s at "low" vs ~7 s at the default (it reasons ~700-1300
+# hidden tokens to write ~200). The gate and the explanation keep the default: judgement and writing.
+MECHANICAL_EFFORT = "low"
+
+# Structured output: the API forces the reply into a schema. Without it, at low effort the model
+# sometimes "thinks out loud" after its JSON ("Wait, corrections needed...") and the parse fails.
+FILTER_DECISIONS = ["keep", "ruled_out", "not_covered", "off_topic"]
+USEFULNESS = ["high", "medium", "low", "none"]  # kept results are tried in this order, then search order
+
+
+def filter_schema(n_results):
+    """One decision per search result, in order: the schema forces exactly n_results entries."""
+    decision = {
+        "type": "object", "additionalProperties": False, "required": ["n", "decision", "usefulness", "kind"],
+        "properties": {"n": {"type": "integer"}, "decision": {"type": "string", "enum": FILTER_DECISIONS},
+                       "usefulness": {"type": "string", "enum": USEFULNESS}, "kind": {"type": "string"}},
+    }
+    return {
+        "type": "object", "additionalProperties": False, "required": ["decisions"],
+        "properties": {"decisions": {"type": "array", "items": decision, "minItems": n_results, "maxItems": n_results}},
+    }
+
+
+PICK_SCHEMA = {
+    "type": "object", "additionalProperties": False, "required": ["sentences"],
+    "properties": {"sentences": {"type": "array", "items": {
+        "type": "object", "additionalProperties": False, "required": ["n", "sentence"],
+        "properties": {"n": {"type": "integer"}, "sentence": {"type": "string"}},
+    }}},
+}
+
+# What the student sees for a skipped result; {kind} is the filter's label, e.g. "study-guide sites".
+RULED_OUT_REASON = "Your charter rules out {kind}"
+NOT_COVERED_REASON = "Your charter doesn't mention {kind}"
+
 
 # Shown to the student when a toggle blocks a layer (SPEC §2 step 4).
 TOGGLE_LABELS = {
@@ -56,16 +92,25 @@ FILTER_SOURCES_PROMPT = """A class only uses sources that fit this description, 
 {permissible_sources}
 </permissible_sources>
 
-Here are web search results for a student's question "{question}":
+The class is reading "{reading_title}". A student asks: "{question}"
+
+Web search results:
 
 {results}
 
-Keep at most {max_keep} results that fit the description AND look useful for the question, best
-first. For every result you don't keep because it doesn't fit the description, give a short reason
-a student would understand (e.g. "Study-guide sites aren't permitted"). Results you drop only
-because they're less useful don't need a reason.
+Give each result, in order, exactly one decision:
+- keep: a kind of source the description allows, AND it helps answer the question.
+  Rate how much it helps as usefulness: high, medium or low.
+- ruled_out: the description EXPLICITLY excludes this kind of source, by name or by kind
+  (e.g. "no study-guide sites"), or allows it only for other kinds of questions.
+- not_covered: the description neither allows nor excludes this kind of source; it just
+  doesn't mention it (e.g. blog posts, when the description never mentions blogs).
+- off_topic: an allowed kind of source that doesn't help with this question. A copy of the
+  reading itself is off_topic: the student already has it.
 
-Reply with JSON only: {{"keep": [3, 1], "skipped": [{{"n": 5, "reason": "..."}}]}}"""
+For every result, also name its kind of source as a short plural phrase a student would
+understand, e.g. "study-guide sites", "journal articles", "blog posts". Give usefulness
+"none" for anything that isn't kept."""
 
 PICK_SENTENCE_PROMPT = """A student asks: "{question}" about this passage: "{quote}"
 
@@ -75,7 +120,7 @@ sentence, leave it out.
 
 {sources}
 
-Reply with JSON only: [{{"n": 1, "sentence": "..."}}]"""
+Reply with JSON only: {{"sentences": [{{"n": 1, "sentence": "..."}}]}}"""
 
 EXPLAIN_PROMPT = """You are a teaching assistant bound by this class charter:
 
@@ -100,7 +145,9 @@ Reply with the explanation text only."""
 
 # ---------- the one LLM call ----------
 
-def chat(system, user):
+def chat(system, user, effort=None, schema=None):
+    """One chat completion. effort: None (the model's default) or a reasoning_effort like "low".
+    schema: a JSON schema the reply must follow (structured output)."""
     url = os.environ.get("DO_INFERENCE_URL")
     key = os.environ.get("DO_INFERENCE_KEY")
     model = os.environ.get("DO_MODEL")
@@ -116,6 +163,9 @@ def chat(system, user):
             "model": model,
             "temperature": TEMPERATURE,
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+            **({"reasoning_effort": effort} if effort else {}),
+            **({"response_format": {"type": "json_schema", "json_schema": {"name": "reply", "strict": True, "schema": schema}}}
+               if schema else {}),
         },
         timeout=TIMEOUT_S,
     )
@@ -123,18 +173,18 @@ def chat(system, user):
     return resp.json()["choices"][0]["message"]["content"].strip()
 
 
-def chat_json(conn, prompt):
+def chat_json(conn, prompt, effort=None, schema=None):
     """Ask for JSON and parse it. A reply that isn't JSON raises (fail loudly, SPEC §7).
 
     Cached in web_cache by the exact prompt (DEMO safety and speed): the same question replays
     the same gate verdict, search query, filter and sentences in a second or two. Any change
     to the inputs (charter text, question, search results) is a new prompt, so it runs fresh.
     """
-    key = "llm:" + hashlib.sha256(prompt.encode()).hexdigest()
+    key = "llm:" + hashlib.sha256(f"{effort}|{json.dumps(schema)}|{prompt}".encode()).hexdigest()
     row = conn.execute("SELECT value FROM web_cache WHERE key = ?", (key,)).fetchone()
     if row:
         return json.loads(row["value"])
-    text = chat("You reply with JSON only, no prose.", prompt)
+    text = chat("You reply with JSON only, no prose.", prompt, effort=effort, schema=schema)
     # Models often wrap JSON in a ```json fence; that's formatting, not an error.
     fenced = re.match(r"^```(?:json)?\s*(.*?)\s*```$", text, re.DOTALL)
     if fenced:
@@ -194,17 +244,32 @@ def rule_label(charter_text, rule):
 
 # ---------- pass 2: sources and explanation ----------
 
-def filter_sources(conn, permissible_sources, question, results):
-    """results: [{title, url, snippet}]. Returns {"keep": [indexes], "skipped": [{"index", "reason"}]}, 0-based."""
+def filter_sources(conn, permissible_sources, reading_title, question, results):
+    """A simple decision per search result: keep / ruled_out / not_covered / off_topic.
+
+    results: [{title, url, snippet}]. Returns, with 0-based indexes:
+    {"keep": [most useful first], "skipped": [{"index", "why", "reason"}]}, where why is
+    "not_permitted" (the charter rules it out) or "not_covered" (the charter doesn't mention it).
+    Off-topic results are simply left out.
+    """
     numbered = "\n\n".join(
         f"[{n}] {r['title']}\nURL: {r['url']}\n{r['snippet']}" for n, r in enumerate(results, start=1)
     )
     reply = chat_json(conn, FILTER_SOURCES_PROMPT.format(
-        permissible_sources=permissible_sources, question=question, results=numbered, max_keep=MAX_FILTER_KEEP,
-    ))
-    keep = [n - 1 for n in reply["keep"] if 1 <= n <= len(results)][:MAX_FILTER_KEEP]
-    skipped = [{"index": s["n"] - 1, "reason": s["reason"]} for s in reply.get("skipped", []) if 1 <= s["n"] <= len(results)]
-    return {"keep": keep, "skipped": skipped}
+        permissible_sources=permissible_sources, reading_title=reading_title, question=question, results=numbered,
+    ), effort=MECHANICAL_EFFORT, schema=filter_schema(len(results)))
+    keep, skipped = [], []
+    for item in reply["decisions"]:
+        index = item["n"] - 1
+        if not 0 <= index < len(results):
+            continue
+        if item["decision"] == "keep":
+            keep.append((USEFULNESS.index(item["usefulness"]), index))
+        elif item["decision"] == "ruled_out":
+            skipped.append({"index": index, "why": "not_permitted", "reason": RULED_OUT_REASON.format(kind=item["kind"])})
+        elif item["decision"] == "not_covered":
+            skipped.append({"index": index, "why": "not_covered", "reason": NOT_COVERED_REASON.format(kind=item["kind"])})
+    return {"keep": [index for _, index in sorted(keep)], "skipped": skipped}
 
 
 def normalize_space(text):
@@ -216,9 +281,10 @@ def pick_sentences(conn, question, quote, sources):
     numbered = "\n\n".join(
         f"[{n}] {s['title']}\n{s['text'][:6000]}" for n, s in enumerate(sources, start=1)
     )
-    reply = chat_json(conn, PICK_SENTENCE_PROMPT.format(question=question, quote=quote, sources=numbered))
+    reply = chat_json(conn, PICK_SENTENCE_PROMPT.format(question=question, quote=quote, sources=numbered),
+                      effort=MECHANICAL_EFFORT, schema=PICK_SCHEMA)
     picked = {}
-    for item in reply:
+    for item in reply["sentences"]:
         index = item["n"] - 1
         if not 0 <= index < len(sources):
             continue
@@ -229,10 +295,21 @@ def pick_sentences(conn, question, quote, sources):
     return picked
 
 
+def around_sentence(text, sentence):
+    """The text either side of `sentence` (whitespace normalised, as pick_sentences checked it)."""
+    flat = normalize_space(text)
+    at = flat.find(sentence)
+    if at == -1:  # pick_sentences only keeps sentences it found, so this is a bug: fail loudly
+        raise ValueError(f"Verified sentence not in its source: {sentence[:80]!r}")
+    return flat[max(0, at - CONTEXT_CHARS): at + len(sentence) + CONTEXT_CHARS]
+
+
 def explain(charter_text, reading_title, quote, question, sources, max_words):
-    """sources: [{title, text}], cited as [1], [2] in this order. Returns the explanation, at most max_words."""
+    """sources: [{title, text, sentence}], cited as [1], [2] in this order. Each source is shown to
+    the model as the text around its verified sentence, so the answer is grounded in what we checked.
+    Returns the explanation, at most max_words."""
     numbered = "\n\n".join(
-        f"[{n}] {s['title']}\n{s['text'][:4000]}" for n, s in enumerate(sources, start=1)
+        f"[{n}] {s['title']}\n{around_sentence(s['text'], s['sentence'])}" for n, s in enumerate(sources, start=1)
     )
     # Models overshoot word limits, so ask for a bit less than the charter's maximum.
     target = max(40, max_words - EXPLAIN_WORD_MARGIN)

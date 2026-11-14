@@ -82,15 +82,15 @@ One table covers notes, questions, AI answers and replies:
 3. **Pass 1, the gate** (only if `ai_enabled`): toggles are checked in code first; any layer whose toggle is off is blocked without asking the model. If any AI layer is still possible, one LLM call (`GATE_PROMPT`, §7) reads the charter text, the quote and the question, and returns per layer `allowed` + the `rule` it relied on + a one-line `reason`, plus a web `search_query` to use if source finding is allowed. A denied layer is blocked with that rule quoted to the student. **Layers are judged separately, so a request can be partly allowed** (e.g. sources yes, explanation no): the answer then has only the allowed layers, nothing AI-written comes from a denied one, and the `blocked` list says which part was refused and by which rule. A layer counts as allowed only if the gate returns exactly `true`; anything else (missing, `"false"`, garbled) denies it.
 4. **Pass 2, source layer:**
    - **No AI** (`ai_find_sources` off or denied): FTS5 over the course source library, which holds every source the AI has found before. Top 3. This is how the class gets less dependent on AI over time.
-   - **AI** (allowed): search the web with `search_query` (15 results) → one LLM call filters the results' titles, URLs and snippets against the charter's **permissible sources** description, keeping up to 8 candidates (best first) and giving a short reason for each one dropped → fetch them in order until 5 open (sites that refuse, like Britannica and The Atlantic with a 403, go into `skipped_sources`) and extract the main text (`trafilatura`) → the LLM **quotes the exact sentence** in each that answers the question; up to 3 pages with a real sentence become the sources, and pages with none (e.g. JSTOR's landing pages) go into `skipped_sources` → link out with a text fragment (`url#:~:text=<sentence>`), so the browser jumps to and highlights that sentence. Each used source is saved to `sources` (`found_by = 'ai'`) with its extracted text, so it's searchable from then on. If the web gives no usable source, the layer falls back to the course library, as in no-AI mode.
-5. **Pass 2, AI explanation layer** (allowed): the LLM writes at most `max_explanation_words` words from the sources above, citing them as `[1]`, `[2]`, and ends with a question that sends the student back to the text. The limit is enforced in code by trimming the explanation, never the closing question. If explanations are allowed but there are no sources to ground one in, there's no explanation and `blocked` gets a `"by": "no_sources"` notice instead of a silent gap. Saved as an annotation (`kind = ai_answer`, author = the "Dialectic AI" user, `parent_id` = the question), so it shows in the margin and takes replies.
+   - **AI** (allowed): search the web with `search_query` (15 results) → one LLM call (a simple decision per result) sorts the results' titles, URLs and snippets against the charter's **permissible sources** description: `keep` (with a usefulness rating), `ruled_out` (the description explicitly excludes this kind of source), `not_covered` (the description doesn't mention it) or `off_topic` (including copies of the reading itself), plus a short label for the kind of source; the student-facing reasons are built from that label ("Your charter rules out study-guide sites", "Your charter doesn't mention journal articles") → fetch all kept pages in parallel and read the 5 most useful that open (sites that refuse, like Britannica and The Atlantic with a 403, go into `skipped_sources`) and extract the main text (`trafilatura`) → the LLM **quotes the exact sentence** in each that answers the question; up to 3 pages with a real sentence become the sources, and pages with none (e.g. JSTOR's landing pages) go into `skipped_sources` → link out with a text fragment (`url#:~:text=<sentence>`), so the browser jumps to and highlights that sentence. Each used source is saved to `sources` (`found_by = 'ai'`) with its extracted text, so it's searchable from then on. If the web gives no usable source, the layer falls back to the course library, as in no-AI mode. Before an explanation may cite a library source, the same sentence-picking step must find an answering sentence in it.
+5. **Pass 2, AI explanation layer** (allowed): the LLM writes at most `max_explanation_words` words from the sources above (only those with a verified sentence, each shown to the model as the text around that sentence), citing them as `[1]`, `[2]`, and ends with a question that sends the student back to the text. The limit is enforced in code by trimming the explanation, never the closing question. If explanations are allowed but there are no sources to ground one in, there's no explanation and `blocked` gets a `"by": "no_sources"` notice instead of a silent gap. Saved as an annotation (`kind = ai_answer`, author = the "Dialectic AI" user, `parent_id` = the question), so it shows in the margin and takes replies.
 6. Returns all three layers, a `blocked` list (each with the toggle or charter rule that blocked it) and a `skipped_sources` list, so the UI can explain itself.
 
 ### 3.6 Permissible sources and the course source library
 
 **Nobody has to curate a list.** The charter has a `permissible_sources` field in plain language, written with the rest of the charter, e.g.:
 
-> Scholarly encyclopedias (Stanford Encyclopedia of Philosophy, Britannica), university and museum sites, and primary sources from 1890–1920. No study-guide or essay-mill sites (SparkNotes, Course Hero, etc.). Wikipedia is fine for dates and names, not for interpretation.
+> Scholarly encyclopedias (Stanford Encyclopedia of Philosophy, Britannica), peer-reviewed scholarship (journal articles, university-press books), university and museum sites, and primary sources from 1890–1920. No study-guide or essay-mill sites (SparkNotes, Course Hero, etc.). Wikipedia is fine for dates and names, not for interpretation.
 
 The AI's web search is filtered against this description (§3.5). Every source it uses is stored in the **course source library** (`sources`), which:
 - is what the no-AI mode searches, so once a question has been asked with AI, later students get the same sources without AI;
@@ -322,7 +322,8 @@ All routes are under `/api`; all except `/users` need `X-User-Id`. Professor-onl
   "sources": [{"source_id": 2, "title": "...", "url": "...#:~:text=...", "quote": "..."}],
   "ai_answer": {"annotation_id": 42, "body": "... [1] ..."},
   "skipped_sources": [
-    {"url": "https://www.sparknotes.com/...", "title": "...", "why": "not_permitted", "reason": "Study-guide sites aren't permitted"},
+    {"url": "https://www.sparknotes.com/...", "title": "...", "why": "not_permitted", "reason": "Your charter rules out study-guide sites"},
+    {"url": "https://medium.com/...", "title": "...", "why": "not_covered", "reason": "Your charter doesn't mention blog posts"},
     {"url": "https://www.theatlantic.com/...", "title": "...", "why": "unreachable", "reason": "Couldn't open this page"}
   ],
   "blocked": [
@@ -337,7 +338,7 @@ All routes are under `/api`; all except `/users` need `X-User-Id`. Professor-onl
 
 `blocked[].by` is `toggle` (a charter toggle is off), `rule` (the gate denied it; `reason` explains why) or `no_sources` (allowed, but nothing to ground an explanation in).
 
-`skipped_sources[].why` is `not_permitted` (the charter rules it out: show it, but **don't link it**), `unreachable` (permitted, but we couldn't open or read it) or `no_answer` (permitted and read, but nothing in it answered the question). **Link the last two** so the student can read them themselves.
+`skipped_sources[].why` is `not_permitted` (the charter rules it out: show it, but **don't link it**), `not_covered` (the charter doesn't mention this kind of source: show it, don't link it; the class can amend the charter, see `ideas/01-charter-gaps.md`), `unreachable` (permitted, but we couldn't open or read it) or `no_answer` (permitted and read, but nothing in it answered the question). **Link the last two** so the student can read them themselves.
 
 `POST /ask` (hotkey) returns the same shape plus `"located": {"reading_id": 1, "reading_title": "...", "page": 3, "section": "Of Our Spiritual Strivings", "reader_url": "/readings/1?page=3&annotation=41"}`. Annotations gain `"section"` (title or `null`) and `"via"` (`"web"` | `"hotkey"`).
 
@@ -366,6 +367,8 @@ Other response shapes:
 ## 7. AI calls (`ai.py`)
 
 One function, `chat(system, user) -> str`, using `httpx` against the DO endpoint, `temperature=0.2`, with a 30 s timeout and no retries (fail loudly). The prompts are constants at the top of `ai.py`. Calls that return JSON ask for JSON only and are parsed with `json.loads`; a parse failure is a loud error. Their parsed replies are cached in `web_cache` by the exact prompt (§3.6).
+
+**Speed (measured 03:00 Sat):** by default the model reasons in ~700–1,300 hidden tokens before answering. The mechanical calls (filter, sentence picking) run with `reasoning_effort: "low"` and **structured output** (`response_format` with a JSON schema, which DO supports), so they take 2–4 s instead of 7–11 s. The schema matters: at low effort without it the model sometimes "thinks out loud" after its JSON and the parse fails (about 1 call in 15). The gate and the explanation keep the default effort, for judgement and writing quality. A first-time question takes about 22–25 s, mostly the gate and the explanation; a rehearsed one about 7 s.
 
 **What gets sent (privacy rule, enforced by building the payload in one place):** charter text, permissible-sources description, the highlighted `quote`, the `question`, the reading title, and source titles/snippets/text. **Never** user names, IDs, cohorts or other students' annotations. Kagi gets only the gate's `search_query`. From the hotkey, the server only ever receives recognised text (Vision runs on the Mac), never a screenshot.
 
@@ -404,6 +407,7 @@ When time runs short, **cut from the bottom up.** A slipped checkpoint is never 
 9. Hotkey screenshot box + on-device Vision text recognition.
 10. Sections by heading (§3.10). Fallback: same page.
 11. Search page → charter comments → `annotate_before_peers` → past-student opt-out UI.
+12. Charter gaps on the charter page: what the source filter skipped as "not mentioned in your charter", with one-click amendments (`ideas/01-charter-gaps.md`).
 
 ### Timeline
 
@@ -426,7 +430,7 @@ Checkpoints are the times things must work by. If one slips by more than 45 minu
 | 12:00+ | Polish only: copy, empty states, seed data quality, demo script in `demo/` | Per CLAUDE.md: no new features after noon. |
 | 15:00 | Full demo path rehearsed on the deployed URL | |
 
-Stretch items are #9–11 above, in that order.
+Stretch items are #9–12 above, in that order.
 
 **Parallel split:**
 - **Frontend web reader: owner not decided yet.** This is priority #1; give it a person before anything below #5.
