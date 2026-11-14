@@ -7,6 +7,7 @@ struct RootView: View {
     @EnvironmentObject var state: AppState
     @StateObject private var reader = ReaderController()
     @State private var showSetup = false
+    @State private var showSeminar = false   // the seminar table (SeminarView.swift)
 
     var body: some View {
         VStack(spacing: 0) {
@@ -34,6 +35,7 @@ struct RootView: View {
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showSetup) { SetupView().environmentObject(state) }
+        .fullScreenCover(isPresented: $showSeminar) { SeminarView().environmentObject(state) }
         .onReceive(reader.$selectionToAsk) { quote in
             if let quote { state.openComposer(quote: quote); reader.selectionToAsk = nil }
         }
@@ -62,6 +64,11 @@ struct RootView: View {
                     .frame(minHeight: Theme.minHit)
             }
             Spacer()
+            Button { showSeminar = true } label: {
+                Label("Table", systemImage: "person.3").font(.system(size: 15, weight: .medium)).foregroundColor(Theme.ink)
+                    .frame(minHeight: Theme.minHit)
+            }
+            .accessibilityLabel("Seminar table")
             Button {
                 Task { await reader.askAboutSelection() }
             } label: {

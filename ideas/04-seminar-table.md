@@ -1,6 +1,6 @@
 # 04: Seminar table, a roundtable home page with a graph of the class's insights
 
-**Status:** exploring (Sat 11:05). Not built; for the pitch's "what's next", not today's demo (past the 12:00 feature cutoff by the time it could land). Replaces nothing: it would be a new **Seminar** view next to the reader, not a replacement for it. Open question: SPEC §11 #11.
+**Status:** building on iPad/iPhone (Sat 13:45), at josue's request: a **Table** button in the iOS app's top bar opens it (`app/ios/Dialectic/SeminarView.swift`), read-only, from the existing annotations route. Pages stand in for passages in the knot. Not on the web or in the demo path. Open question: SPEC §11 #11.
 
 **Mockup (clickable):** https://claude.ai/artifact/AWnEUjMrTmBSHkHijy46Fq, built from josue's sketch (8 seats round a table, spokes into a knot in the middle, charter box top left, a per-student panel: annotations, sources, AI influence).
 
