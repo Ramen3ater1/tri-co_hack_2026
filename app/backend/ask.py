@@ -5,6 +5,7 @@ sources (web with AI, or the course library without) -> AI explanation.
 A blocked layer adds an entry to `blocked`; it never raises.
 """
 import json
+import re
 import traceback
 from urllib.parse import quote as url_quote
 
@@ -32,6 +33,10 @@ STAGE_LABELS = {
     "ai_answer": "Writing a short explanation…",
 }
 FRAGMENT_WORDS = 5     # long sentences link as textStart,textEnd with this many words each
+FALLBACK_MIN_WORDS = 4  # shortest plain stretch worth a second, fallback link term (text_fragment_url)
+# Words next to which sites often hide text (citation years, "[2]", "(1903)"); a link term that
+# crosses hidden text doesn't match in the browser, so the fallback term avoids them (#5).
+RISKY_WORD = re.compile(r"[\d()\[\]]")
 
 
 def peer_layer(conn, reading_id, asker_id, page, section_id, quote, question, visibility):
@@ -86,16 +91,44 @@ def library_layer(conn, quote, question):
     ]
 
 
-def text_fragment_url(url, sentence):
-    """Link that makes the browser scroll to and highlight `sentence` on the page."""
+def fragment_directive(words):
+    """The `text=` value for these words: all of them, or textStart,textEnd for a long stretch."""
     def enc(s):
         return url_quote(s, safe="").replace("-", "%2D")
-    words = sentence.split()
     if len(words) > 2 * FRAGMENT_WORDS:
-        directive = enc(" ".join(words[:FRAGMENT_WORDS])) + "," + enc(" ".join(words[-FRAGMENT_WORDS:]))
-    else:
-        directive = enc(sentence)
-    return f"{url.split('#')[0]}#:~:text={directive}"
+        return enc(" ".join(words[:FRAGMENT_WORDS])) + "," + enc(" ".join(words[-FRAGMENT_WORDS:]))
+    return enc(" ".join(words))
+
+
+def longest_plain_stretch(words):
+    """The longest run of words with no digits, brackets or parentheses."""
+    best, run = [], []
+    for word in words:
+        if RISKY_WORD.search(word):
+            run = []
+            continue
+        run.append(word)
+        if len(run) > len(best):
+            best = list(run)
+    return best
+
+
+def text_fragment_url(url, sentence):
+    """Link that makes the browser scroll to and highlight `sentence` on the page.
+
+    Up to two directives: the whole sentence, then its longest plain stretch if the sentence
+    has citations or numbers. The browser highlights each one that matches and scrolls to the
+    first, so when a site hides text inside its citations (screen-reader labels such as
+    "Reference Du Bois") and the whole sentence can't match, the link still lands on it (#5).
+    TODO(edge): some sites ignore text fragments entirely (Cambridge Core re-renders the page
+    after load); there the link opens the top of the page, and the Ask panel copies the quote.
+    """
+    words = sentence.split()
+    directives = [fragment_directive(words)]
+    plain = longest_plain_stretch(words)
+    if FALLBACK_MIN_WORDS <= len(plain) < len(words):
+        directives.append(fragment_directive(plain))
+    return f"{url.split('#')[0]}#:~:" + "&".join(f"text={d}" for d in directives)
 
 
 def verify_library_sources(conn, meter, question, quote, sources):

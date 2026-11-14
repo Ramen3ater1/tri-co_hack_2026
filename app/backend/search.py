@@ -21,6 +21,16 @@ FETCH_TIMEOUT_S = 15
 MAX_EXCERPT_CHARS = 20_000
 # A generic client name: no user or project details go to the sites we fetch.
 USER_AGENT = "Mozilla/5.0 (compatible; Dialectic/0.1)"
+# Text only screen readers get, e.g. Cambridge's citation labels ("Du Bois (Reference Du Bois1897"
+# on the page reads "Du Bois (1897"). Readers never see it, so quotes and sentence links must not
+# include it (#5). Dropped before extraction; pages already in web_cache keep it.
+SCREEN_READER_ONLY_CLASSES = [
+    "sr-only", "show-for-sr", "visually-hidden", "visuallyhidden", "screen-reader-text",
+    "screen-reader-only", "element-invisible", "u-visually-hidden",
+]
+SCREEN_READER_ONLY_XPATH = [
+    f"//*[contains(concat(' ', normalize-space(@class), ' '), ' {name} ')]" for name in SCREEN_READER_ONLY_CLASSES
+]
 
 
 def cache_get(conn, key):
@@ -75,7 +85,8 @@ def download_page(url):
     resp = httpx.get(url, headers={"User-Agent": USER_AGENT}, timeout=FETCH_TIMEOUT_S, follow_redirects=True)
     resp.raise_for_status()
     html = resp.text
-    text = trafilatura.extract(html, include_comments=False, include_tables=False) or ""
+    text = trafilatura.extract(html, include_comments=False, include_tables=False,
+                               prune_xpath=SCREEN_READER_ONLY_XPATH) or ""
     metadata = trafilatura.extract_metadata(html)
     title = (metadata.title if metadata and metadata.title else url)
     return {"title": title, "text": text[:MAX_EXCERPT_CHARS]}

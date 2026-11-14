@@ -83,7 +83,7 @@ function WithCitations({ text, sources }) {
     if (i % 2 === 0) return part;
     const source = sources?.[Number(part) - 1];
     return source
-      ? <a key={i} className="cite" href={source.url} target="_blank" rel="noreferrer" title={source.title}>{part}</a>
+      ? <a key={i} className="cite" href={source.url} target="_blank" rel="noreferrer" title={source.title} onClick={() => copyQuote(source)}>{part}</a>
       : <span key={i} className="cite">{part}</span>;
   });
 }
@@ -149,19 +149,33 @@ function PeerList({ peer, onPeerClick }) {
   ));
 }
 
+// Links open at the quoted sentence, but some sites ignore that and open at the top (#5:
+// Cambridge Core). So opening a source also copies its sentence, ready for the browser's Find.
+const COPY_HINT = "Opening a source copies its sentence: if the page doesn't jump to it, press ⌘F (Ctrl+F) and paste.";
+
+function copyQuote(source) {
+  if (!source.quote || !navigator.clipboard) return; // TODO(edge): plain http has no clipboard API
+  navigator.clipboard.writeText(source.quote);
+}
+
 function SourceList({ sources }) {
-  return sources.map((s, i) => (
-    <div key={s.source_id ?? s.url} className="source-item">
-      <span className="source-num">{i + 1}</span>
-      <div className="content">
-        <span>
-          <a href={s.url} target="_blank" rel="noreferrer">{s.title}</a>
-          <span className="muted"> · {site(s.url)}</span>
-        </span>
-        {s.quote && <span className="source-quote">“{s.quote}”</span>}
-      </div>
-    </div>
-  ));
+  return (
+    <>
+      {sources.map((s, i) => (
+        <div key={s.source_id ?? s.url} className="source-item">
+          <span className="source-num">{i + 1}</span>
+          <div className="content">
+            <span>
+              <a href={s.url} target="_blank" rel="noreferrer" onClick={() => copyQuote(s)}>{s.title}</a>
+              <span className="muted"> · {site(s.url)}</span>
+            </span>
+            {s.quote && <span className="source-quote">“{s.quote}”</span>}
+          </div>
+        </div>
+      ))}
+      {sources.some((s) => s.quote) && <span className="muted small">{COPY_HINT}</span>}
+    </>
+  );
 }
 
 // Ruled-out and not-covered results are shown WITHOUT a link (the charter excludes them);
