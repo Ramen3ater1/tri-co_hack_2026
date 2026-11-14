@@ -64,24 +64,25 @@ def professor(user=Depends(current_user)):
 
 # ---------- shared helpers ----------
 
-def get_course(conn):
-    return dict(conn.execute("SELECT * FROM course").fetchone())
+def get_course(conn, course_id):
+    return dict(conn.execute("SELECT * FROM course WHERE id = ?", (course_id,)).fetchone())
 
 
-def get_charter(conn):
-    return dict(conn.execute("SELECT * FROM charter").fetchone())
+def get_charter(conn, course_id):
+    return dict(conn.execute("SELECT * FROM charter WHERE course_id = ?", (course_id,)).fetchone())
 
 
-def get_reading_or_404(conn, reading_id):
+def get_reading_or_404(conn, reading_id, user):
+    """A reading in the user's course. Other courses' readings are 404, as if they didn't exist."""
     row = conn.execute("SELECT * FROM readings WHERE id = ?", (reading_id,)).fetchone()
-    if row is None:
-        raise HTTPException(404, f"No reading {reading_id}")
+    if row is None or row["course_id"] != user["course_id"]:
+        raise HTTPException(404, f"No reading {reading_id} in your course")
     return row
 
 
-def get_ready_reading(conn, reading_id):
+def get_ready_reading(conn, reading_id, user):
     """Like get_reading_or_404, but 409 while the scan is still being OCR'd (SPEC §3.11)."""
-    reading = get_reading_or_404(conn, reading_id)
+    reading = get_reading_or_404(conn, reading_id, user)
     if reading["status"] != "ready":
         raise HTTPException(409, "This reading is still being processed. Try again in a minute."
                             if reading["status"] == "processing" else f"This reading failed to process: {reading['error']}")
@@ -95,11 +96,11 @@ def require_quote(quote):
         raise HTTPException(422, "Type the passage you're asking about: this box has no readable text.")
 
 
-def create_reading(conn, title, pdf_path, uploaded_by, status="ready"):
+def create_reading(conn, course_id, title, pdf_path, uploaded_by, status="ready"):
     """Insert a reading. With status 'ready' (seed.py), also extract its pages and sections now."""
     cur = conn.execute(
-        "INSERT INTO readings (title, pdf_path, uploaded_by, created_at, status) VALUES (?, ?, ?, ?, ?)",
-        (title, str(pdf_path), uploaded_by, db.now(), status),
+        "INSERT INTO readings (course_id, title, pdf_path, uploaded_by, created_at, status) VALUES (?, ?, ?, ?, ?, ?)",
+        (course_id, title, str(pdf_path), uploaded_by, db.now(), status),
     )
     reading_id = cur.lastrowid
     if status == "ready":
@@ -188,21 +189,24 @@ def answer_summary(row):
     }
 
 
-def load_annotation(conn, annotation_id):
+def load_annotation(conn, annotation_id, user):
     row = conn.execute(
         """SELECT a.*, u.name, u.role, u.cohort, s.title AS section_title FROM annotations a JOIN users u ON u.id = a.user_id
            LEFT JOIN reading_sections s ON s.id = a.section_id WHERE a.id = ?""",
         (annotation_id,),
     ).fetchone()
-    return annotation_json(row, get_course(conn)["current_cohort"])
+    return annotation_json(row, get_course(conn, user["course_id"])["current_cohort"])
 
 
 # ---------- routes: users, course, readings ----------
 
 @app.get("/api/users")
 def list_users(conn=Depends(get_conn)):
-    # The AI isn't someone you can log in as.
-    rows = conn.execute("SELECT * FROM users WHERE role != 'ai' ORDER BY id").fetchall()
+    # The AI isn't someone you can log in as. The log-in page groups people by course.
+    rows = conn.execute(
+        """SELECT u.*, c.title AS course_title, c.current_cohort FROM users u JOIN course c ON c.id = u.course_id
+           WHERE u.role != 'ai' ORDER BY u.course_id, u.id"""
+    ).fetchall()
     return [dict(r) for r in rows]
 
 
@@ -217,8 +221,8 @@ def course(user=Depends(current_user), conn=Depends(get_conn)):
                      WHERE a.reading_id = r.id AND a.parent_id IS NULL AND a.kind = 'note' AND {db.VISIBLE_SQL}) AS note_count,
                    (SELECT COUNT(*) FROM annotations a JOIN users u ON u.id = a.user_id
                      WHERE a.reading_id = r.id AND a.kind = 'question' AND {db.VISIBLE_SQL}) AS question_count
-            FROM readings r ORDER BY r.id""",
-        db.visibility_params(conn, user),
+            FROM readings r WHERE r.course_id = :course_id ORDER BY r.id""",
+        {"course_id": user["course_id"], **db.visibility_params(conn, user)},
     ).fetchall()
     cards = []
     for r in readings:
@@ -226,7 +230,7 @@ def course(user=Depends(current_user), conn=Depends(get_conn)):
         # Uploads are saved as "<timestamp>-<name>.pdf": show the name the professor uploaded.
         card["filename"] = re.sub(r"^\d+-", "", Path(card.pop("pdf_path")).name)
         cards.append(card)
-    return {"course": get_course(conn), "readings": cards, "user": user}
+    return {"course": get_course(conn, user["course_id"]), "readings": cards, "user": user}
 
 
 @app.post("/api/readings")
@@ -237,16 +241,18 @@ def upload_reading(title: str = Form(), file: UploadFile = File(), user=Depends(
     dest.write_bytes(file.file.read())
     # OCR takes ~5 s a page, longer than Cloudflare's 100 s request limit for a long reading,
     # so return at once with status "processing" and do the work in a thread (SPEC §3.11).
-    reading_id = create_reading(conn, title, dest, user["id"], status="processing")
+    reading_id = create_reading(conn, user["course_id"], title, dest, user["id"], status="processing")
     conn.commit()
-    threading.Thread(target=process_upload, args=(reading_id, dest, file.filename == seed.DEMO_PDF_NAME),
-                     daemon=True).start()
+    # DEMO: only the demo course's upload of the demo PDF gets the shortcut and seeded notes (SPEC §10).
+    is_demo_pdf = (file.filename == seed.DEMO_PDF_NAME
+                   and get_course(conn, user["course_id"])["title"] == seed.COURSE_TITLE)
+    threading.Thread(target=process_upload, args=(reading_id, dest, is_demo_pdf), daemon=True).start()
     return reading_info(reading_id, user, conn)
 
 
 @app.get("/api/readings/{reading_id}")
 def reading_info(reading_id: int, user=Depends(current_user), conn=Depends(get_conn)):
-    reading = get_reading_or_404(conn, reading_id)
+    reading = get_reading_or_404(conn, reading_id, user)
     pages = conn.execute("SELECT COUNT(*) FROM reading_pages WHERE reading_id = ?", (reading_id,)).fetchone()[0]
     return {"id": reading["id"], "title": reading["title"], "page_count": pages, "created_at": reading["created_at"],
             "status": reading["status"], "error": reading["error"]}
@@ -254,7 +260,7 @@ def reading_info(reading_id: int, user=Depends(current_user), conn=Depends(get_c
 
 @app.get("/api/readings/{reading_id}/pdf")
 def reading_pdf(reading_id: int, user=Depends(current_user), conn=Depends(get_conn)):
-    reading = get_reading_or_404(conn, reading_id)
+    reading = get_reading_or_404(conn, reading_id, user)
     return FileResponse(reading["pdf_path"], media_type="application/pdf")
 
 
@@ -264,7 +270,7 @@ def reading_pdf(reading_id: int, user=Depends(current_user), conn=Depends(get_co
 def list_annotations(reading_id: int, user=Depends(current_user), conn=Depends(get_conn)):
     """Visible top-level annotations, newest first, each with its visible replies (oldest first).
     Ones the engagement lock hides come back as {id, page, rects, locked: true} only."""
-    get_reading_or_404(conn, reading_id)
+    get_reading_or_404(conn, reading_id, user)
     rows = conn.execute(
         f"""SELECT a.*, u.name, u.role, u.cohort, s.title AS section_title FROM annotations a JOIN users u ON u.id = a.user_id
             LEFT JOIN reading_sections s ON s.id = a.section_id
@@ -272,7 +278,7 @@ def list_annotations(reading_id: int, user=Depends(current_user), conn=Depends(g
             ORDER BY a.created_at, a.id""",
         {"reading_id": reading_id, **db.visibility_params(conn, user)},
     ).fetchall()
-    current_cohort = get_course(conn)["current_cohort"]
+    current_cohort = get_course(conn, user["course_id"])["current_cohort"]
     full_ids = db.full_view_ids(conn, user, reading_id)
     # One lock card per cluster of nearby locked notes ("2 notes near here").
     groups = db.locked_groups([
@@ -322,7 +328,7 @@ class NewAnnotation(BaseModel):
 
 @app.post("/api/readings/{reading_id}/annotations")
 def create_annotation(reading_id: int, new: NewAnnotation, user=Depends(current_user), conn=Depends(get_conn)):
-    get_ready_reading(conn, reading_id)
+    get_ready_reading(conn, reading_id, user)
     if new.parent_id is not None:
         parent = conn.execute("SELECT * FROM annotations WHERE id = ?", (new.parent_id,)).fetchone()
         if parent is None or parent["reading_id"] != reading_id:
@@ -341,7 +347,7 @@ def create_annotation(reading_id: int, new: NewAnnotation, user=Depends(current_
         parent_id=new.parent_id, share_with_future=new.share_with_future, section_id=section_id,
     )
     conn.commit()
-    return load_annotation(conn, annotation_id)
+    return load_annotation(conn, annotation_id, user)
 
 
 class BoxRequest(BaseModel):
@@ -352,7 +358,7 @@ class BoxRequest(BaseModel):
 @app.post("/api/readings/{reading_id}/box-text")
 def box_text(reading_id: int, box: BoxRequest, user=Depends(current_user), conn=Depends(get_conn)):
     """The text inside a box drawn on the page (SPEC §3.3), to prefill the passage it's about."""
-    reading = get_ready_reading(conn, reading_id)
+    reading = get_ready_reading(conn, reading_id, user)
     return {"text": ocr.box_text(reading["pdf_path"], box.page, box.rect)}
 
 
@@ -365,6 +371,8 @@ def saved_answer(question_id: int, user=Depends(current_user), conn=Depends(get_
             WHERE a.id = :id AND a.kind = 'question' AND {db.VISIBLE_SQL}""",
         {"id": question_id, **db.visibility_params(conn, user)},
     ).fetchone()
+    if row is not None:
+        get_reading_or_404(conn, row["reading_id"], user)  # 404 for another course's question
     if row is None or row["id"] not in db.full_view_ids(conn, user, row["reading_id"]):
         raise HTTPException(404, f"No question {question_id} you can see")
     if not row["answer_json"]:
@@ -410,7 +418,7 @@ def update_sharing(annotation_id: int, update: SharingUpdate, user=Depends(curre
         raise HTTPException(403, "You can only change your own annotations")
     conn.execute("UPDATE annotations SET share_with_future = ? WHERE id = ?", (int(update.share_with_future), annotation_id))
     conn.commit()
-    return load_annotation(conn, annotation_id)
+    return load_annotation(conn, annotation_id, user)
 
 
 @app.put("/api/me/sharing")
@@ -434,7 +442,7 @@ class AskRequest(BaseModel):
 @app.post("/api/readings/{reading_id}/ask")
 def ask_question(reading_id: int, req: AskRequest, user=Depends(current_user), conn=Depends(get_conn),
                  x_device_id: str | None = Header(None)):
-    reading = get_ready_reading(conn, reading_id)
+    reading = get_ready_reading(conn, reading_id, user)
     require_quote(req.quote)
     return ask.answer(conn, reading, user, req.page, req.quote, req.rects, req.question, device_id=x_device_id)
 
@@ -459,7 +467,7 @@ def stream_events(events):
 def ask_question_stream(reading_id: int, req: AskRequest, user=Depends(current_user), conn=Depends(get_conn),
                         x_device_id: str | None = Header(None)):
     """The same answer as /ask, sent step by step so the Ask panel can show its stages."""
-    reading = dict(get_ready_reading(conn, reading_id))
+    reading = dict(get_ready_reading(conn, reading_id, user))
     require_quote(req.quote)
 
     def events():
@@ -479,13 +487,13 @@ class HotkeyAskRequest(BaseModel):
     source_app: str | None = None  # the app the text came from, e.g. "Notability" (optional)
 
 
-def locate_quote(conn, quote):
-    """The Mac hotkey only sends text: find its reading, page and highlight boxes. 404 if it's in none."""
-    found = locate.find_page(conn, quote)
+def locate_quote(conn, quote, user):
+    """The Mac hotkey only sends text: find its reading (in your course), page and highlight boxes. 404 if it's in none."""
+    found = locate.find_page(conn, quote, user["course_id"])
     if found is None:
         raise HTTPException(404, "This passage isn't in a course reading.")
     reading_id, page = found
-    reading = dict(get_reading_or_404(conn, reading_id))
+    reading = dict(get_reading_or_404(conn, reading_id, user))
     rects = locate.quote_rects(reading["pdf_path"], page, quote)
     return reading, page, rects
 
@@ -519,7 +527,7 @@ def hotkey_steps(conn, reading, user, page, rects, req, device_id):
 def hotkey_ask(req: HotkeyAskRequest, user=Depends(current_user), conn=Depends(get_conn),
                x_device_id: str | None = Header(None)):
     """The Mac hotkey (SPEC §3.9), all at once."""
-    reading, page, rects = locate_quote(conn, req.quote)
+    reading, page, rects = locate_quote(conn, req.quote, user)
     for event in hotkey_steps(conn, reading, user, page, rects, req, x_device_id):
         if event["event"] == "done":
             return event["result"]
@@ -529,7 +537,7 @@ def hotkey_ask(req: HotkeyAskRequest, user=Depends(current_user), conn=Depends(g
 def hotkey_ask_stream(req: HotkeyAskRequest, user=Depends(current_user), conn=Depends(get_conn),
                       x_device_id: str | None = Header(None)):
     """The Mac hotkey, step by step. Locating happens first, so a passage in no reading is still a plain 404."""
-    reading, page, rects = locate_quote(conn, req.quote)
+    reading, page, rects = locate_quote(conn, req.quote, user)
 
     def events():
         stream_conn = db.connect()
@@ -551,7 +559,7 @@ class HotkeyNoteRequest(BaseModel):
 def hotkey_note(req: HotkeyNoteRequest, user=Depends(current_user), conn=Depends(get_conn)):
     """A note from the Mac hotkey (⌥⇧N): like POST /readings/{id}/annotations, but the server
     finds the reading, page and rects from the quote, as /ask does."""
-    reading, page, rects = locate_quote(conn, req.quote)
+    reading, page, rects = locate_quote(conn, req.quote, user)
     section = sections.section_for(conn, reading["id"], page, req.quote)
     annotation_id = db.insert_annotation(
         conn, reading["id"], user["id"], "note", page, req.quote, json.dumps(rects), req.body,
@@ -559,7 +567,7 @@ def hotkey_note(req: HotkeyNoteRequest, user=Depends(current_user), conn=Depends
         source_app=req.source_app,
     )
     conn.commit()
-    result = load_annotation(conn, annotation_id)
+    result = load_annotation(conn, annotation_id, user)
     result["reader_url"] = f"/readings/{reading['id']}?page={page}&annotation={annotation_id}"
     return result
 
@@ -571,12 +579,13 @@ CHARTER_TOGGLES = ["ai_enabled", "ai_find_sources", "ai_explanations", "show_pas
 
 @app.get("/api/charter")
 def charter(user=Depends(current_user), conn=Depends(get_conn)):
-    data = get_charter(conn)
+    data = get_charter(conn, user["course_id"])
     for toggle in CHARTER_TOGGLES:
         data[toggle] = bool(data[toggle])
     comments = conn.execute(
         """SELECT c.id, c.body, c.created_at, u.name AS author, u.role AS author_role
-           FROM charter_comments c JOIN users u ON u.id = c.user_id ORDER BY c.id"""
+           FROM charter_comments c JOIN users u ON u.id = c.user_id WHERE c.course_id = ? ORDER BY c.id""",
+        (user["course_id"],),
     ).fetchall()
     data["comments"] = [dict(c) for c in comments]
     return data
@@ -599,11 +608,12 @@ def update_charter(update: CharterUpdate, user=Depends(professor), conn=Depends(
     changes = update.model_dump(exclude_none=True)
     if "permissible_sources" in changes:
         # Gaps were judged against the old description: start the list again.
-        conn.execute("DELETE FROM charter_gaps")
+        conn.execute("DELETE FROM charter_gaps WHERE course_id = ?", (user["course_id"],))
     for field, value in changes.items():
         # Field names come from CharterUpdate, never from the request, so the f-string is safe.
-        conn.execute(f"UPDATE charter SET {field} = ?", (int(value) if isinstance(value, bool) else value,))
-    conn.execute("UPDATE charter SET updated_at = ?", (db.now(),))
+        conn.execute(f"UPDATE charter SET {field} = ? WHERE course_id = ?",
+                     (int(value) if isinstance(value, bool) else value, user["course_id"]))
+    conn.execute("UPDATE charter SET updated_at = ? WHERE course_id = ?", (db.now(), user["course_id"]))
     conn.commit()
     return charter(user, conn)
 
@@ -615,8 +625,8 @@ class NewComment(BaseModel):
 @app.post("/api/charter/comments")
 def add_charter_comment(new: NewComment, user=Depends(current_user), conn=Depends(get_conn)):
     conn.execute(
-        "INSERT INTO charter_comments (user_id, body, created_at) VALUES (?, ?, ?)",
-        (user["id"], new.body, db.now()),
+        "INSERT INTO charter_comments (course_id, user_id, body, created_at) VALUES (?, ?, ?, ?)",
+        (user["course_id"], user["id"], new.body, db.now()),
     )
     conn.commit()
     return charter(user, conn)
@@ -632,8 +642,8 @@ def charter_gaps(user=Depends(current_user), conn=Depends(get_conn)):
     (SPEC §3.7, ideas/01-charter-gaps.md). Grouped by the filter's label, ignoring case."""
     rows = conn.execute(
         """SELECT kind, url, title FROM charter_gaps
-           WHERE dismissed = 0 AND last_seen >= ? ORDER BY last_seen DESC""",
-        ((datetime.now() - timedelta(days=GAPS_DAYS)).isoformat(timespec="seconds"),),
+           WHERE course_id = ? AND dismissed = 0 AND last_seen >= ? ORDER BY last_seen DESC""",
+        (user["course_id"], (datetime.now() - timedelta(days=GAPS_DAYS)).isoformat(timespec="seconds")),
     ).fetchall()
     groups = {}
     for r in rows:
@@ -651,7 +661,8 @@ class GapDismissal(BaseModel):
 @app.post("/api/charter/gaps/dismiss")
 def dismiss_charter_gap(dismissal: GapDismissal, user=Depends(current_user), conn=Depends(get_conn)):
     """Hide a kind from the gaps list (the [Dismiss] button). Anyone can: it changes no rule."""
-    conn.execute("UPDATE charter_gaps SET dismissed = 1 WHERE lower(kind) = lower(?)", (dismissal.kind,))
+    conn.execute("UPDATE charter_gaps SET dismissed = 1 WHERE course_id = ? AND lower(kind) = lower(?)",
+                 (user["course_id"], dismissal.kind))
     conn.commit()
     return charter_gaps(user, conn)
 
@@ -665,7 +676,8 @@ def list_sources(user=Depends(current_user), conn=Depends(get_conn)):
                   q.body AS first_question, qu.name AS first_question_author
            FROM sources s LEFT JOIN annotations q ON q.id = s.first_question_id
            LEFT JOIN users qu ON qu.id = q.user_id
-           ORDER BY s.id DESC"""
+           WHERE s.course_id = ? ORDER BY s.id DESC""",
+        (user["course_id"],),
     ).fetchall()
     return [dict(r) for r in rows]
 
@@ -680,9 +692,9 @@ def add_source(new: NewSource, user=Depends(professor), conn=Depends(get_conn)):
     if not page["text"]:
         raise HTTPException(422, f"Couldn't extract any text from {new.url}")
     conn.execute(
-        """INSERT INTO sources (title, url, excerpt, found_by, created_at) VALUES (?, ?, ?, 'professor', ?)
-           ON CONFLICT (url) DO NOTHING""",
-        (page["title"], new.url, page["text"], db.now()),
+        """INSERT INTO sources (course_id, title, url, excerpt, found_by, created_at) VALUES (?, ?, ?, ?, 'professor', ?)
+           ON CONFLICT (course_id, url) DO NOTHING""",
+        (user["course_id"], page["title"], new.url, page["text"], db.now()),
     )
     conn.commit()
     return list_sources(user, conn)
@@ -690,7 +702,7 @@ def add_source(new: NewSource, user=Depends(professor), conn=Depends(get_conn)):
 
 @app.delete("/api/sources/{source_id}")
 def delete_source(source_id: int, user=Depends(professor), conn=Depends(get_conn)):
-    conn.execute("DELETE FROM sources WHERE id = ?", (source_id,))
+    conn.execute("DELETE FROM sources WHERE id = ? AND course_id = ?", (source_id, user["course_id"]))
     conn.commit()
     return list_sources(user, conn)
 
@@ -723,21 +735,21 @@ def search_repository(q: str, user=Depends(current_user), conn=Depends(get_conn)
             JOIN annotations a ON a.id = f.rowid
             JOIN users u ON u.id = a.user_id
             JOIN readings r ON r.id = a.reading_id
-            WHERE annotations_fts MATCH :match AND {db.VISIBLE_SQL}
+            WHERE annotations_fts MATCH :match AND r.course_id = :course_id AND {db.VISIBLE_SQL}
             ORDER BY bm25(annotations_fts) LIMIT :limit""",
-        {"match": match, "limit": SEARCH_LIMIT, **db.visibility_params(conn, user)},
+        {"match": match, "limit": SEARCH_LIMIT, "course_id": user["course_id"], **db.visibility_params(conn, user)},
     ).fetchall()
     pages = conn.execute(
         """SELECT p.reading_id, r.title AS reading_title, p.page,
                   snippet(pages_fts, 0, '[[', ']]', '…', 20) AS snippet
            FROM pages_fts p JOIN readings r ON r.id = p.reading_id
-           WHERE pages_fts MATCH ? ORDER BY bm25(pages_fts) LIMIT ?""",
-        (match, SEARCH_LIMIT),
+           WHERE pages_fts MATCH ? AND r.course_id = ? ORDER BY bm25(pages_fts) LIMIT ?""",
+        (match, user["course_id"], SEARCH_LIMIT),
     ).fetchall()
     # Locked annotations never appear: search is not a way around the engagement lock (SPEC §3.8).
     full_ids = {}
     unlocked = []
-    current_cohort = get_course(conn)["current_cohort"]
+    current_cohort = get_course(conn, user["course_id"])["current_cohort"]
     for r in annotations:
         if r["reading_id"] not in full_ids:
             full_ids[r["reading_id"]] = db.full_view_ids(conn, user, r["reading_id"])

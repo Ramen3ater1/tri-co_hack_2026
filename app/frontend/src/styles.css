@@ -96,6 +96,9 @@ mark { background: var(--quote); color: inherit; border-radius: 3px; padding: 0 
 .login main { width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 24px; }
 .login-title { display: flex; flex-direction: column; gap: 8px; text-align: center; }
 .login-title h1 { margin: 0; font-family: var(--serif); font-size: 34px; font-weight: 600; line-height: 1.2; }
+.login-course { display: flex; flex-direction: column; gap: 10px; }
+.login-course h2 { margin: 0; font-family: var(--serif); font-size: 21px; font-weight: 600; line-height: 1.25; }
+.login-course ul { max-height: 60vh; overflow-y: auto; }
 .login ul { margin: 0; padding: 0; list-style: none; }
 .login li { display: flex; align-items: center; gap: 14px; padding: 16px 20px; border-bottom: 1px solid var(--line-soft); }
 .login li:last-child { border-bottom: 0; }

@@ -20,8 +20,8 @@ def squash(text):
     return "".join(out)
 
 
-def find_page(conn, quote):
-    """Returns (reading_id, page) of the first page whose text contains the quote, or None.
+def find_page(conn, quote, course_id):
+    """Returns (reading_id, page) of the first page in this course's readings whose text contains the quote, or None.
 
     FTS ranks the candidate pages, then the squashed-substring check decides.
     TODO(edge): a quote that runs across a page break isn't found.
@@ -32,14 +32,17 @@ def find_page(conn, quote):
     match = db.fts_query(quote)
     if match is not None:
         candidates = conn.execute(
-            "SELECT reading_id, page, text FROM pages_fts WHERE pages_fts MATCH ? ORDER BY bm25(pages_fts) LIMIT 10",
-            (match,),
+            """SELECT f.reading_id, f.page, f.text FROM pages_fts f JOIN readings r ON r.id = f.reading_id
+               WHERE pages_fts MATCH ? AND r.course_id = ? ORDER BY bm25(pages_fts) LIMIT 10""",
+            (match, course_id),
         ).fetchall()
         for row in candidates:
             if target in squash(row["text"]):
                 return row["reading_id"], row["page"]
     # Very short quotes may be all stopwords; just scan every page.
-    for row in conn.execute("SELECT reading_id, page, text FROM reading_pages ORDER BY reading_id, page"):
+    for row in conn.execute(
+            """SELECT p.reading_id, p.page, p.text FROM reading_pages p JOIN readings r ON r.id = p.reading_id
+               WHERE r.course_id = ? ORDER BY p.reading_id, p.page""", (course_id,)):
         if target in squash(row["text"]):
             return row["reading_id"], row["page"]
     return None

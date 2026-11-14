@@ -72,7 +72,7 @@ def peer_layer(conn, reading_id, asker_id, page, section_id, quote, question, vi
     ]
 
 
-def library_layer(conn, quote, question):
+def library_layer(conn, course_id, quote, question):
     """No-AI sources: the course library, searched with FTS. Returns source dicts incl. text."""
     match = db.fts_query(f"{quote} {question}")
     if match is None:
@@ -81,8 +81,8 @@ def library_layer(conn, quote, question):
         """SELECT s.id, s.title, s.url, s.excerpt,
                   snippet(sources_fts, 1, '', '', '…', 30) AS snippet
            FROM sources_fts JOIN sources s ON s.id = sources_fts.rowid
-           WHERE sources_fts MATCH ? ORDER BY bm25(sources_fts) LIMIT ?""",
-        (match, LIBRARY_LIMIT),
+           WHERE sources_fts MATCH ? AND s.course_id = ? ORDER BY bm25(sources_fts) LIMIT ?""",
+        (match, course_id, LIBRARY_LIMIT),
     ).fetchall()
     return [
         {"source_id": r["id"], "title": r["title"], "url": r["url"], "quote": r["snippet"], "text": r["excerpt"],
@@ -145,15 +145,15 @@ def verify_library_sources(conn, meter, question, quote, sources):
             source.update(quote=sentence, url=text_fragment_url(source["url"], sentence), verified=True)
 
 
-def save_source(conn, title, url, text, question_id):
+def save_source(conn, course_id, title, url, text, question_id):
     """Add a source the AI used to the course library (or reuse it if it's there already)."""
-    row = conn.execute("SELECT id FROM sources WHERE url = ?", (url,)).fetchone()
+    row = conn.execute("SELECT id FROM sources WHERE course_id = ? AND url = ?", (course_id, url)).fetchone()
     if row:
         return row["id"]
     cur = conn.execute(
-        """INSERT INTO sources (title, url, excerpt, found_by, first_question_id, created_at)
-           VALUES (?, ?, ?, 'ai', ?, ?)""",
-        (title, url, text, question_id, db.now()),
+        """INSERT INTO sources (course_id, title, url, excerpt, found_by, first_question_id, created_at)
+           VALUES (?, ?, ?, ?, 'ai', ?, ?)""",
+        (course_id, title, url, text, question_id, db.now()),
     )
     return cur.lastrowid
 
@@ -168,7 +168,7 @@ def skipped_entry(result, why, reason):
     return {"url": result["url"], "title": result["title"], "why": why, "reason": reason}
 
 
-def log_charter_gaps(conn, results, skipped):
+def log_charter_gaps(conn, course_id, results, skipped):
     """Remember results skipped as `not_covered`, for the charter page's gaps list (SPEC §3.7,
     ideas/01-charter-gaps.md). Only the source and its kind: never who asked or what."""
     for s in skipped:
@@ -176,9 +176,9 @@ def log_charter_gaps(conn, results, skipped):
             continue
         result = results[s["index"]]
         conn.execute(
-            """INSERT INTO charter_gaps (kind, url, title, last_seen) VALUES (?, ?, ?, ?)
-               ON CONFLICT (url) DO UPDATE SET kind = excluded.kind, last_seen = excluded.last_seen""",
-            (s["kind"], result["url"], result["title"] or result["url"], db.now()),
+            """INSERT INTO charter_gaps (course_id, kind, url, title, last_seen) VALUES (?, ?, ?, ?, ?)
+               ON CONFLICT (course_id, url) DO UPDATE SET kind = excluded.kind, last_seen = excluded.last_seen""",
+            (course_id, s["kind"], result["url"], result["title"] or result["url"], db.now()),
         )
 
 
@@ -192,7 +192,7 @@ def web_layer(conn, meter, charter, reading_title, question_id, quote, question,
         return [], []
     verdict = ai.filter_sources(conn, meter, charter["permissible_sources"], reading_title, question, results)
     skipped = [skipped_entry(results[s["index"]], s["why"], s["reason"]) for s in verdict["skipped"]]
-    log_charter_gaps(conn, results, verdict["skipped"])
+    log_charter_gaps(conn, charter["course_id"], results, verdict["skipped"])
 
     # Fetch every kept candidate at once (most useful first): some sites refuse us
     # (Britannica and The Atlantic answer 403) and some pages are just a landing page (JSTOR).
@@ -223,7 +223,7 @@ def web_layer(conn, meter, charter, reading_title, question_id, quote, question,
         if sentence is None or len(sources) == MAX_WEB_SOURCES:
             skipped.append(skipped_entry(source, "no_answer", "Couldn't find a passage here that answers the question"))
             continue
-        source_id = save_source(conn, source["title"], source["url"], source["text"], question_id)
+        source_id = save_source(conn, charter["course_id"], source["title"], source["url"], source["text"], question_id)
         sources.append({
             "source_id": source_id,
             "title": source["title"],
@@ -273,7 +273,7 @@ def answer_steps(conn, reading, user, page, quote, rects, question, via="web", d
     device_id: the X-Device-Id header, for the per-device spending limit (SPEC §9.1).
     source_app: for hotkey asks, the Mac app the text came from (e.g. "Notability"), if it said.
     """
-    charter = conn.execute("SELECT * FROM charter").fetchone()
+    charter = conn.execute("SELECT * FROM charter WHERE course_id = ?", (reading["course_id"],)).fetchone()
     ai_user_id = conn.execute("SELECT id FROM users WHERE role = 'ai'").fetchone()["id"]
 
     # 1. The question is a public annotation others can answer.
@@ -336,7 +336,7 @@ def answer_steps(conn, reading, user, page, quote, rects, question, via="web", d
     if not sources:
         # No AI allowed, or the web gave nothing usable (e.g. every good site refused us, or it failed):
         # the course library is the fallback either way.
-        sources = library_layer(conn, quote, question)
+        sources = library_layer(conn, reading["course_id"], quote, question)
     yield {"event": "sources", "sources": public_sources(sources), "skipped_sources": skipped_sources}
 
     # 6. Pass 2, explanation: grounded only in sources with a verified sentence, posted publicly as the AI.

@@ -33,6 +33,7 @@ In production the same process also serves the built React app (`app/frontend/di
 | `search.py` | ~120 | Kagi web search and fetching pages' main text (several at once), all cached in the database. |
 | `locate.py` | ~85 | For the Mac hotkey: finds which reading and page a copied passage is from, and its highlight boxes in the PDF. |
 | `seed.py` | ~160 | DEMO data: users, course, charter, and the past-student annotations. |
+| `seed_large.py` | ~330 | DEMO: a second course, a big lecture (AMST 101) with ~70 people and ~100 notes on the same chapter. |
 | `seed/souls-of-black-folk-ch1.pdf` | | The demo reading (Gutenberg #408, Ch. 1, printed with Chrome). |
 | `pyproject.toml`, `uv.lock` | | Dependencies, managed with uv. |
 
@@ -83,6 +84,8 @@ All under `/api`, all in `main.py`. The exact request and response shapes are in
 - **web_cache**: search results and fetched pages (keyed by query or URL), and the replies of the LLM calls, including the explanation (keyed by a hash of the exact prompt). It's demo insurance and speed: once a question has been asked, it replays the same gate verdict, search and sources much faster. `seed.py --reset` keeps this table.
 
 The database runs in **WAL mode** with a 5-second **busy timeout** (`db.connect()`), so many people can read while someone writes, and two writers wait for each other instead of failing with "database is locked". It means the database has two side files, `dialectic.db-wal` and `-shm`; `seed.py --reset` deletes them with it. Each connection is opened with `check_same_thread=False`, because FastAPI may open a request's connection on one thread and close it on another (pages that load several things at once hit this); each request still has its own connection.
+
+**Courses.** There can be several, and each person is in exactly one (`users.course_id`; the AI is in none). Readings, the charter, its comments and gaps, and the source library each carry a `course_id`. Routes use the logged-in user's course: `get_reading_or_404(conn, id, user)` 404s on another course's reading, and the charter, sources and search queries filter by `user["course_id"]`. `/ask` uses the charter of the reading's course.
 
 There are **no migrations**: `CREATE TABLE IF NOT EXISTS` runs only when `seed.py --reset` builds a fresh database. After a schema change, everyone runs `uv run seed.py --reset` (it keeps `web_cache`).
 

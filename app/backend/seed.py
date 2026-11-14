@@ -4,6 +4,9 @@
     uv run seed.py --reset --with-reading  # also add the reading, as if Prof. Rivera uploaded it
     uv run seed.py --reset --with-sources  # also preload the source library
 
+Every reset also adds a second course, the large AMST 101 lecture (seed_large.py), already
+mid-semester with its reading and ~100 notes, to show the product with a crowded margin.
+
 Seeded annotations (Sam's past-cohort notes, the professor's) belong to the demo reading.
 The demo uploads that reading live, so `POST /readings` calls add_demo_annotations()
 when the uploaded file is the demo PDF. See DEMO_PDF_NAME.
@@ -16,6 +19,7 @@ from pathlib import Path
 import db
 import locate
 import sections
+import seed_large
 
 BACKEND_DIR = Path(__file__).parent
 UPLOADS_DIR = BACKEND_DIR / "uploads"
@@ -26,14 +30,14 @@ DEMO_READING_TITLE = "The Souls of Black Folk, Ch. 1: Of Our Spiritual Strivings
 COURSE_TITLE = "HIST 214: Black Intellectual Traditions"
 CURRENT_COHORT = "Fall 2026"
 
-# (name, role, cohort). Ids follow this order: Rivera = 1, Ana = 2, Ben = 3, Sam = 4, AI = 5.
+# (name, role, cohort), all in HIST 214 (course 1). Ids follow this order: Rivera = 1, Ana = 2, Ben = 3, Sam = 4.
 USERS = [
     ("Prof. Rivera", "professor", CURRENT_COHORT),
     ("Ana", "student", CURRENT_COHORT),
     ("Ben", "student", CURRENT_COHORT),
     ("Sam", "student", "Spring 2026"),
-    ("Dialectic AI", "ai", CURRENT_COHORT),
 ]
+# The AI serves every course, so it has none. Id 5.
 AI_USER_NAME = "Dialectic AI"
 
 CHARTER_TEXT = """1. We read first and ask each other second. AI comes last.
@@ -76,7 +80,11 @@ DEMO_SOURCES = [
 
 
 def user_id(conn, name):
-    return conn.execute("SELECT id FROM users WHERE name = ?", (name,)).fetchone()["id"]
+    # HIST 214's people only: names can repeat across courses.
+    return conn.execute("SELECT id FROM users WHERE name = ? AND course_id = ?", (name, DEMO_COURSE_ID)).fetchone()["id"]
+
+
+DEMO_COURSE_ID = 1  # HIST 214 is inserted first
 
 
 def add_demo_annotations(conn, reading_id, pdf_path):
@@ -93,7 +101,7 @@ def add_demo_reading(conn):
     UPLOADS_DIR.mkdir(exist_ok=True)
     dest = UPLOADS_DIR / DEMO_PDF_NAME
     shutil.copy(DEMO_PDF_PATH, dest)
-    reading_id = main.create_reading(conn, DEMO_READING_TITLE, dest, user_id(conn, "Prof. Rivera"))
+    reading_id = main.create_reading(conn, DEMO_COURSE_ID, DEMO_READING_TITLE, dest, user_id(conn, "Prof. Rivera"))
     add_demo_annotations(conn, reading_id, dest)
 
 
@@ -102,8 +110,8 @@ def add_demo_sources(conn):
     for url in DEMO_SOURCES:
         page = search.fetch_page(conn, url)
         conn.execute(
-            "INSERT INTO sources (title, url, excerpt, found_by, created_at) VALUES (?, ?, ?, 'professor', ?)",
-            (page["title"], url, page["text"], db.now()),
+            "INSERT INTO sources (course_id, title, url, excerpt, found_by, created_at) VALUES (?, ?, ?, ?, 'professor', ?)",
+            (DEMO_COURSE_ID, page["title"], url, page["text"], db.now()),
         )
 
 
@@ -134,12 +142,17 @@ def reset(with_reading, with_sources):
     # question_id isn't kept: the questions are gone. The device-hour count restarts; budgets don't.
     conn.executemany("INSERT INTO spend (at, service, units, usd, device_id) VALUES (?, ?, ?, ?, ?)",
                      [tuple(r) for r in spent])
-    conn.executemany("INSERT INTO users (name, role, cohort) VALUES (?, ?, ?)", USERS)
-    conn.execute("INSERT INTO course (title, current_cohort) VALUES (?, ?)", (COURSE_TITLE, CURRENT_COHORT))
+    course_id = conn.execute("INSERT INTO course (title, current_cohort) VALUES (?, ?)",
+                             (COURSE_TITLE, CURRENT_COHORT)).lastrowid
+    assert course_id == DEMO_COURSE_ID
+    conn.executemany("INSERT INTO users (name, role, cohort, course_id) VALUES (?, ?, ?, ?)",
+                     [(*u, DEMO_COURSE_ID) for u in USERS])
+    conn.execute("INSERT INTO users (name, role, cohort) VALUES (?, 'ai', ?)", (AI_USER_NAME, CURRENT_COHORT))
     conn.execute(
-        "INSERT INTO charter (text_md, permissible_sources, updated_at) VALUES (?, ?, ?)",
-        (CHARTER_TEXT, PERMISSIBLE_SOURCES, db.now()),
+        "INSERT INTO charter (course_id, text_md, permissible_sources, updated_at) VALUES (?, ?, ?, ?)",
+        (DEMO_COURSE_ID, CHARTER_TEXT, PERMISSIBLE_SOURCES, db.now()),
     )
+    seed_large.add_course(conn, DEMO_PDF_PATH, UPLOADS_DIR)
     if with_reading:
         add_demo_reading(conn)
     if with_sources:

@@ -17,9 +17,11 @@ CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY,
   name TEXT NOT NULL,
   role TEXT NOT NULL CHECK (role IN ('professor','student','ai')),
-  cohort TEXT NOT NULL
+  cohort TEXT NOT NULL,
+  course_id INTEGER REFERENCES course(id)  -- each person is in one course; null for the AI (it serves every course)
 );
 
+-- One row per course. Readings, the charter, its comments and gaps, and the source library are per course.
 CREATE TABLE IF NOT EXISTS course (
   id INTEGER PRIMARY KEY,
   title TEXT NOT NULL,
@@ -28,6 +30,7 @@ CREATE TABLE IF NOT EXISTS course (
 
 CREATE TABLE IF NOT EXISTS charter (
   id INTEGER PRIMARY KEY,
+  course_id INTEGER NOT NULL UNIQUE REFERENCES course(id),
   text_md TEXT NOT NULL,
   permissible_sources TEXT NOT NULL,
   ai_enabled INTEGER NOT NULL DEFAULT 1,
@@ -41,6 +44,7 @@ CREATE TABLE IF NOT EXISTS charter (
 
 CREATE TABLE IF NOT EXISTS charter_comments (
   id INTEGER PRIMARY KEY,
+  course_id INTEGER NOT NULL REFERENCES course(id),
   user_id INTEGER NOT NULL REFERENCES users(id),
   body TEXT NOT NULL,
   created_at TEXT NOT NULL
@@ -48,6 +52,7 @@ CREATE TABLE IF NOT EXISTS charter_comments (
 
 CREATE TABLE IF NOT EXISTS readings (
   id INTEGER PRIMARY KEY,
+  course_id INTEGER NOT NULL REFERENCES course(id),
   title TEXT NOT NULL,
   pdf_path TEXT NOT NULL,
   uploaded_by INTEGER NOT NULL REFERENCES users(id),
@@ -93,23 +98,27 @@ CREATE TABLE IF NOT EXISTS annotations (
 
 CREATE TABLE IF NOT EXISTS sources (
   id INTEGER PRIMARY KEY,
+  course_id INTEGER NOT NULL REFERENCES course(id),
   title TEXT NOT NULL,
-  url TEXT NOT NULL UNIQUE,
+  url TEXT NOT NULL,
   excerpt TEXT NOT NULL,
   found_by TEXT NOT NULL CHECK (found_by IN ('ai','professor')),
   first_question_id INTEGER REFERENCES annotations(id),
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  UNIQUE (course_id, url)
 );
 
 -- Search results the source filter skipped because the charter doesn't mention their kind
 -- (SPEC §3.7 charter gaps). One row per URL; no user or question, on purpose.
 CREATE TABLE IF NOT EXISTS charter_gaps (
   id INTEGER PRIMARY KEY,
+  course_id INTEGER NOT NULL REFERENCES course(id),
   kind TEXT NOT NULL,          -- the filter's label, e.g. "journal articles"
-  url TEXT NOT NULL UNIQUE,
+  url TEXT NOT NULL,
   title TEXT NOT NULL,
   last_seen TEXT NOT NULL,
-  dismissed INTEGER NOT NULL DEFAULT 0
+  dismissed INTEGER NOT NULL DEFAULT 0,
+  UNIQUE (course_id, url)
 );
 
 -- Every paid call that wasn't served from the cache (SPEC §9.1). Kept by seed.py --reset,
@@ -209,7 +218,9 @@ VISIBLE_SQL = """(
 
 
 def visibility_params(conn, user):
-    show_past = conn.execute("SELECT show_past_cohorts FROM charter").fetchone()[0]
+    # Readings are per course and you only see your own course's, so your course's charter decides.
+    show_past = conn.execute("SELECT show_past_cohorts FROM charter WHERE course_id = ?",
+                             (user["course_id"],)).fetchone()[0]
     return {"viewer_cohort": user["cohort"], "show_past": show_past}
 
 
@@ -285,7 +296,8 @@ def full_view_ids(conn, user, reading_id):
             WHERE a.reading_id = :reading_id AND {VISIBLE_SQL}""",
         {"reading_id": reading_id, **visibility_params(conn, user)},
     ).fetchall()
-    lock_on = conn.execute("SELECT annotate_before_peers FROM charter").fetchone()[0]
+    lock_on = conn.execute("SELECT annotate_before_peers FROM charter WHERE course_id = ?",
+                           (user["course_id"],)).fetchone()[0]
     if not lock_on or user["role"] == "professor":
         return {r["id"] for r in rows}
 

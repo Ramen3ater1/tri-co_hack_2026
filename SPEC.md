@@ -34,7 +34,9 @@ Seed users: **Prof. Rivera** (professor), **Ana** and **Ben** (students), plus *
    - **Toggle:** Prof. Rivera turns off "AI may write explanations". Ben asks the same question and gets peer annotations and sources only, plus a notice: *"Your class charter doesn't allow AI explanations (AI may write explanations — off)."*
    - **Rule text (shows the gate):** the class adds the rule "AI may not interpret the text for us." Ben asks "What does Du Bois *mean* by double-consciousness?" and the gate refuses the **AI explanation**, quoting that rule, but still lets the AI **point him to sources**, because rule 2 allows that: a partial refusal (tested 02:00 Sat, the same verdict three runs out of three). He rephrases to "Where did the term come from?" and the gate allows both. Peer annotations show both times.
 
-**Non-goals:** real auth, multiple courses, notifications, mobile polish. Also out: offline/service worker, charter version history, editing PDFs, a hand-curated source library UI beyond a simple add form.
+5. **(Optional) At scale: the big lecture.** Log out and in as **Maya** in *AMST 101* (a seeded 70-student lecture on the same chapter, §10). Page 3's margin is one card, **"24 notes near here"**; she adds a note on double-consciousness and two dozen classmates' notes and threads open. Her Ask gets five peer answers before any AI. Shows the lock and peer-first answers are what make a crowded margin readable.
+
+**Non-goals:** real auth, a course picker (each person is in exactly one course, §3.2), notifications, mobile polish. Also out: offline/service worker, charter version history, editing PDFs, a hand-curated source library UI beyond a simple add form.
 
 ---
 
@@ -42,13 +44,13 @@ Seed users: **Prof. Rivera** (professor), **Ana** and **Ben** (students), plus *
 
 ### 3.1 Log in as
 
-A page listing the seeded users. Clicking one stores their `user_id` in `localStorage` and sends it as an `X-User-Id` header (alongside the `X-Device-Id` from §9.1). No passwords. `TODO(edge)`: anyone can be anyone.
+A page listing the seeded users, **grouped by course**; a course with more than five people shows its first four (the professor, then the seed's featured students) and a **Show all N people** link. Clicking one stores their `user_id` in `localStorage` and sends it as an `X-User-Id` header (alongside the `X-Device-Id` from §9.1). No passwords. `TODO(edge)`: anyone can be anyone.
 
 Each user row also has a small **Use on Mac** link to `dialectic://login?user=<id>`. Clicking it opens the Mac app (§3.9), which saves that user, so both apps act as the same person without picking twice. If the Mac app isn't installed the link does nothing. `TODO(edge)`.
 
 ### 3.2 Course home
 
-One course, seeded (`HIST 214: Black Intellectual Traditions`, or similar). Shows: readings, a link to the charter, the search box. Professor sees an **Upload reading** form (title + PDF file).
+**Several courses, each person in exactly one** (`users.course_id`), so there's no course picker: your course is whoever you logged in as. Each course has its own readings, charter (and comments and gaps), source library and search; another course's readings are a 404. Seeded: `HIST 214: Black Intellectual Traditions` (the demo path) and `AMST 101`, a large lecture (§10). The AI user belongs to no course and serves all of them. Course home shows: readings, a link to the charter, the search box. Professor sees an **Upload reading** form (title + PDF file).
 
 ### 3.3 Reader (the core screen)
 
@@ -264,17 +266,19 @@ CREATE TABLE users (
   id INTEGER PRIMARY KEY,
   name TEXT NOT NULL,
   role TEXT NOT NULL CHECK (role IN ('professor','student','ai')),
-  cohort TEXT NOT NULL            -- 'Fall 2026' (current), 'Spring 2026' (past)
+  cohort TEXT NOT NULL,           -- 'Fall 2026' (current), 'Spring 2026' (past)
+  course_id INTEGER REFERENCES course(id)  -- the one course you're in; null for the AI
 );
 
-CREATE TABLE course (             -- exactly one row (non-goal: multiple courses)
+CREATE TABLE course (             -- one row per course (§3.2)
   id INTEGER PRIMARY KEY,
   title TEXT NOT NULL,
   current_cohort TEXT NOT NULL
 );
 
-CREATE TABLE charter (            -- exactly one row
+CREATE TABLE charter (            -- one row per course
   id INTEGER PRIMARY KEY,
+  course_id INTEGER NOT NULL UNIQUE REFERENCES course(id),
   text_md TEXT NOT NULL,             -- numbered rules
   permissible_sources TEXT NOT NULL, -- plain-language description (§3.6)
   ai_enabled INTEGER NOT NULL DEFAULT 1,
@@ -288,6 +292,7 @@ CREATE TABLE charter (            -- exactly one row
 
 CREATE TABLE charter_comments (
   id INTEGER PRIMARY KEY,
+  course_id INTEGER NOT NULL REFERENCES course(id),
   user_id INTEGER NOT NULL REFERENCES users(id),
   body TEXT NOT NULL,
   created_at TEXT NOT NULL
@@ -295,6 +300,7 @@ CREATE TABLE charter_comments (
 
 CREATE TABLE readings (
   id INTEGER PRIMARY KEY,
+  course_id INTEGER NOT NULL REFERENCES course(id),
   title TEXT NOT NULL,
   pdf_path TEXT NOT NULL,
   uploaded_by INTEGER NOT NULL REFERENCES users(id),
@@ -336,10 +342,11 @@ CREATE TABLE annotations (
   created_at TEXT NOT NULL
 );
 
-CREATE TABLE sources (             -- the course source library
+CREATE TABLE sources (             -- the course source library (one per course)
   id INTEGER PRIMARY KEY,
+  course_id INTEGER NOT NULL REFERENCES course(id),
   title TEXT NOT NULL,
-  url TEXT NOT NULL UNIQUE,
+  url TEXT NOT NULL,               -- UNIQUE (course_id, url)
   excerpt TEXT NOT NULL,           -- extracted main text (trimmed to ~20k chars)
   found_by TEXT NOT NULL CHECK (found_by IN ('ai','professor')),
   first_question_id INTEGER REFERENCES annotations(id),
@@ -348,8 +355,9 @@ CREATE TABLE sources (             -- the course source library
 
 CREATE TABLE charter_gaps (        -- results skipped as not_covered by the charter (§3.7); no user or question
   id INTEGER PRIMARY KEY,
+  course_id INTEGER NOT NULL REFERENCES course(id),
   kind TEXT NOT NULL,              -- the filter's label, e.g. 'journal articles'
-  url TEXT NOT NULL UNIQUE,
+  url TEXT NOT NULL,               -- UNIQUE (course_id, url)
   title TEXT NOT NULL,
   last_seen TEXT NOT NULL,
   dismissed INTEGER NOT NULL DEFAULT 0
@@ -385,11 +393,11 @@ Insert/delete triggers on `annotations` and `sources` keep their FTS tables curr
 
 ## 6. API
 
-All routes are under `/api`; all except `/users` and `/spend` need `X-User-Id`. The Ask routes also read an optional `X-Device-Id` (§9.1). Professor-only routes return 403 for students.
+All routes are under `/api`; all except `/users` and `/spend` need `X-User-Id`. **Everything is scoped to the user's course** (§3.2): `/course`, `/charter*`, `/sources`, `/search` and the hotkey's locate only see that course, and another course's reading, PDF or question is a 404. The Ask routes also read an optional `X-Device-Id` (§9.1). Professor-only routes return 403 for students.
 
 | Method | Path | Who | Purpose |
 | --- | --- | --- | --- |
-| GET | `/users` | anyone | Log-in-as list |
+| GET | `/users` | anyone | Log-in-as list, ordered by course: each user also has `course_id`, `course_title`, `current_cohort` |
 | GET | `/course` | all | Course, readings list (with what each reading card shows), current user |
 | POST | `/readings` | prof | Multipart upload: title + PDF. Returns at once with `"status": "processing"`; OCR (§3.11), then page extraction with `pypdf`, run in the background |
 | GET | `/readings/{id}` | all | Metadata + page count + `status`, `error` |
@@ -645,6 +653,7 @@ Cached answers (`web_cache`) cost nothing. Two layers of protection:
 - **Charter:** the rules in §3.7 plus the permissible-sources text in §3.6.
 - **Source library:** start **empty** for the live demo, so step 3 visibly finds sources and step 4 can show the no-AI path reusing them. Keep a `--with-sources` seed flag that preloads them (SEP "W.E.B. Du Bois", a primary text from the period, …) in case the web search fails on stage. The `web_cache` covers the normal case.
 - **Annotations:** Sam (Spring 2026) on the double-consciousness passage; Prof. Rivera on "the Veil"; two or three others spread across pages so the margin doesn't look empty.
+- **The big lecture (`seed_large.py`, added by every `--reset`):** `AMST 101: Introduction to American Studies (lecture)`, Prof. Okafor, ~65 current students and 8 from Spring 2026, its own charter (rule 4: reply before starting a new thread on the same line). It's mid-semester, so its copy of the same chapter is already there with ~100 notes and questions and ~35 replies, spread over the last week and densest on the double-consciousness passage (one lock card of 24 on page 3). **Maya** has written nothing (all lock cards); **Jordan** has two notes. Because it's seeded before the live upload, **HIST 214's reading is now reading 2**, not 1.
 
 Write the seed so `seed.py --reset` gives the exact starting state of demo step 1, **minus** the upload. Also add a `--with-reading` flag in case the live upload fails during the demo.
 
