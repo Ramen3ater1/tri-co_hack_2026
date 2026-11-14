@@ -6,7 +6,7 @@ import WebKit
 
 /// The web reader. In production FastAPI serves the built frontend on the server's own port.
 /// In development use Vite's address instead (`npm run dev` in app/frontend: http://localhost:5173).
-let READER_URL = SERVER_URL
+var READER_URL: String { SERVER_URL }  // follows the menu's Server pick
 let READER_SIZE = NSSize(width: 1280, height: 860)
 /// localStorage keys the web app reads (app/frontend/src/api.js and colors.js).
 let WEB_USER_KEY = "dialectic_user"     // the whole user object from GET /api/users
@@ -46,7 +46,7 @@ final class ReaderWindowController: NSObject, WKNavigationDelegate, WKUIDelegate
     private let model = ReaderModel()
     private var failureView: NSView!
     private var signedInAs: Int?
-    private var lastURL: URL?
+    private(set) var lastURL: URL?  // read by Report a problem…
 
     override init() {
         window = NSWindow(contentRect: NSRect(origin: .zero, size: READER_SIZE),

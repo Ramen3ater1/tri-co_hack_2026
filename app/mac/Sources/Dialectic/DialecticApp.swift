@@ -10,8 +10,20 @@ import SwiftUI
 
 // ---------- tunables ----------
 
-/// The Dialectic server. DEMO: set to the deployed site (SPEC §9) before the demo.
-let SERVER_URL = "http://localhost:8000"
+/// The server a fresh install starts on. CI builds set it to the dev copy (.github/workflows/mac-app.yml).
+let DEFAULT_SERVER_URL = "http://localhost:8000"
+/// The menu-bar "Server" submenu (DEPLOY.md lists the copies). The pick is remembered.
+let SERVERS: [(name: String, url: String)] = [
+    ("Dev: newest work", "https://dialectic-dev.yaggy.dev"),
+    ("Demo: the judges' copy", "https://dialectic.yaggy.dev"),
+    ("Sandbox: the public copy", "https://dialectic-sandbox.yaggy.dev"),
+    ("This Mac (localhost:8000)", "http://localhost:8000"),
+]
+let SERVER_DEFAULTS_KEY = "serverURL"
+/// The server in use: the one picked in the menu, else DEFAULT_SERVER_URL.
+var SERVER_URL: String { UserDefaults.standard.string(forKey: SERVER_DEFAULTS_KEY) ?? DEFAULT_SERVER_URL }
+/// "Report a problem…" opens this GitHub issue form, as the web app's button does (CLAUDE.md, Feedback issues).
+let NEW_ISSUE_URL = "https://github.com/Ramen3ater1/tri-co_hack_2026/issues/new"
 let HOTKEY_MODIFIERS = UInt32(optionKey | shiftKey)
 let HOTKEY_ASK_KEY = UInt32(kVK_ANSI_D)
 let HOTKEY_NOTE_KEY = UInt32(kVK_ANSI_N)
@@ -132,6 +144,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         menu.addItem(withTitle: "Reload users", action: #selector(reloadUsers), keyEquivalent: "r")
         menu.addItem(.separator())
+        let serverMenu = NSMenu()
+        for (index, server) in SERVERS.enumerated() {
+            let item = NSMenuItem(title: server.name, action: #selector(pickServer(_:)), keyEquivalent: "")
+            item.tag = index
+            item.state = server.url == SERVER_URL ? .on : .off
+            item.target = self
+            serverMenu.addItem(item)
+        }
+        if !SERVERS.contains(where: { $0.url == SERVER_URL }) {
+            serverMenu.addItem(NSMenuItem(title: "Other: \(SERVER_URL)", action: nil, keyEquivalent: ""))
+        }
+        let serverItem = menu.addItem(withTitle: "Server", action: nil, keyEquivalent: "")
+        menu.setSubmenu(serverMenu, for: serverItem)
+        menu.addItem(withTitle: "Report a problem…", action: #selector(reportProblem), keyEquivalent: "")
+        menu.addItem(.separator())
         menu.addItem(withTitle: "Quit Dialectic", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         for item in menu.items where item.action != #selector(NSApplication.terminate(_:)) { item.target = self }
         statusItem.menu = menu
@@ -141,6 +168,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func pickUser(_ sender: NSMenuItem) { setUser(sender.tag) }
     @objc func openReader() { reader.show() }
     @objc func reloadUsers() { Task { await loadUsers() } }
+
+    // ----- server & feedback -----
+
+    @objc func pickServer(_ sender: NSMenuItem) {
+        let server = SERVERS[sender.tag]
+        UserDefaults.standard.set(server.url, forKey: SERVER_DEFAULTS_KEY)
+        print("Server set to \(server.url)")
+        // Same seeded users on every copy, so the picked user carries over.
+        Task {
+            await loadUsers()
+            reader.open(path: "/")
+            overlay.refreshNow()
+        }
+    }
+
+    /// The web app's "Report a problem" form, prefilled with what the Mac knows.
+    @objc func reportProblem() {
+        let user = users.first(where: { $0.id == currentUserId() })
+        let build = Bundle.main.url(forResource: "version", withExtension: "txt")
+            .flatMap { try? String(contentsOf: $0, encoding: .utf8) }?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? "local build"
+        let os = ProcessInfo.processInfo.operatingSystemVersion
+        var parts = URLComponents(string: NEW_ISSUE_URL)!
+        parts.queryItems = [
+            URLQueryItem(name: "template", value: "feedback.yml"),
+            URLQueryItem(name: "page", value: "Mac app · server \(SERVER_URL) · reader at \(reader.lastURL?.absoluteString ?? "not opened")"),
+            URLQueryItem(name: "user", value: user.map { "\($0.name) (\($0.role))" } ?? "not picked"),
+            URLQueryItem(name: "browser", value: "Dialectic for Mac, build \(build) · macOS \(os.majorVersion).\(os.minorVersion).\(os.patchVersion)"),
+        ]
+        NSWorkspace.shared.open(parts.url!)
+    }
     @objc func askHotKey() { hotKeyPressed(.ask) }
     @objc func noteHotKey() { hotKeyPressed(.note) }
     @objc func highlightsHotKey() { hotKeyPressed(.highlights) }

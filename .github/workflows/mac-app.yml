@@ -1,7 +1,7 @@
 # Builds the Mac app on every push that touches app/mac, so teammates without Xcode can
 # download it and a broken Swift build shows up straight away. See app/mac/README.md.
 # The downloadable build talks to the dev copy (https://dialectic-dev.yaggy.dev), not
-# localhost: CI swaps SERVER_URL before building. The source still says localhost.
+# localhost: CI swaps DEFAULT_SERVER_URL before building (the menu's Server pick still wins).
 name: Mac app
 
 on:
@@ -22,8 +22,8 @@ jobs:
 
       - name: Point the build at the dev copy
         run: |
-          sed -i '' "s|^let SERVER_URL = \".*\"|let SERVER_URL = \"$BUILD_SERVER_URL\"|" app/mac/Sources/Dialectic/DialecticApp.swift
-          grep -n '^let SERVER_URL' app/mac/Sources/Dialectic/DialecticApp.swift
+          sed -i '' "s|^let DEFAULT_SERVER_URL = \".*\"|let DEFAULT_SERVER_URL = \"$BUILD_SERVER_URL\"|" app/mac/Sources/Dialectic/DialecticApp.swift
+          grep -n '^let DEFAULT_SERVER_URL' app/mac/Sources/Dialectic/DialecticApp.swift
 
       - name: Build
         run: ./app/mac/build.sh
