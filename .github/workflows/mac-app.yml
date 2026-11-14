@@ -1,0 +1,56 @@
+# Builds the Mac app on every push that touches app/mac, so teammates without Xcode can
+# download it and a broken Swift build shows up straight away. See app/mac/README.md.
+# The downloadable build talks to the dev copy (https://dialectic-dev.yaggy.dev), not
+# localhost: CI swaps SERVER_URL before building. The source still says localhost.
+name: Mac app
+
+on:
+  push:
+    branches: [main]
+    paths: ["app/mac/**", ".github/workflows/mac-app.yml"]
+  workflow_dispatch:
+
+env:
+  BUILD_SERVER_URL: https://dialectic-dev.yaggy.dev
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Point the build at the dev copy
+        run: |
+          sed -i '' "s|^let SERVER_URL = \".*\"|let SERVER_URL = \"$BUILD_SERVER_URL\"|" app/mac/Sources/Dialectic/DialecticApp.swift
+          grep -n '^let SERVER_URL' app/mac/Sources/Dialectic/DialecticApp.swift
+
+      - name: Build
+        run: ./app/mac/build.sh
+
+      - name: Zip the app
+        run: |
+          cd app/mac/build
+          echo "${GITHUB_SHA::7}" > Dialectic.app/Contents/Resources/version.txt
+          ditto -c -k --keepParent Dialectic.app "Dialectic-dev-${GITHUB_SHA::7}.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dialectic-dev-mac
+          path: app/mac/build/Dialectic-dev-*.zip
+          retention-days: 7
+
+      # Screens drawn with stub data (RenderCheck.swift), so UI changes can be reviewed
+      # without a Mac. Best effort: a CI runner may not allow it.
+      - name: Render check
+        continue-on-error: true
+        timeout-minutes: 3
+        run: app/mac/build/Dialectic.app/Contents/MacOS/Dialectic --render "$RUNNER_TEMP/render"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: render-check
+          path: ${{ runner.temp }}/render
+          if-no-files-found: ignore
+          retention-days: 7
