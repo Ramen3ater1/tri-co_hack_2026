@@ -16,8 +16,9 @@ import search
 PEER_LIMIT = 5
 LIBRARY_LIMIT = 3
 MAX_WEB_SOURCES = 3
-MAX_PAGES_TO_READ = 5  # fetch up to this many permitted pages, keep up to MAX_WEB_SOURCES with an answer
+MAX_PAGES_TO_READ = 5  # read up to this many pages that open, keep up to MAX_WEB_SOURCES with an answer
 SAME_PAGE_BOOST = 2.0  # bm25 scores are negative (lower = better), so we subtract this
+NO_SOURCES_LABEL = "No sources to base an explanation on yet"
 FRAGMENT_WORDS = 5     # long sentences link as textStart,textEnd with this many words each
 
 
@@ -110,18 +111,18 @@ def web_layer(conn, charter, question_id, quote, question, search_query):
     verdict = ai.filter_sources(conn, charter["permissible_sources"], question, results)
     skipped = [skipped_entry(results[s["index"]], "not_permitted", s["reason"]) for s in verdict["skipped"]]
 
-    # Fetch a few more pages than we need, best first: some sites refuse us (Britannica and
-    # The Atlantic answer 403) and some pages are just a landing page (JSTOR).
+    # Fetch every candidate at once (spares included, best first): some sites refuse us
+    # (Britannica and The Atlantic answer 403) and some pages are just a landing page (JSTOR).
+    pages = search.fetch_pages(conn, [results[index]["url"] for index in verdict["keep"]])
     fetched = []
     for index in verdict["keep"]:
         if len(fetched) == MAX_PAGES_TO_READ:
             break
         result = results[index]
-        try:
-            page = search.fetch_page(conn, result["url"])
-        except httpx.HTTPError as e:
+        page = pages[result["url"]]
+        if isinstance(page, httpx.HTTPError):
             # Not a bug, just a site that won't let us in: show it as skipped instead of failing /ask.
-            print(f"fetch failed, skipping {result['url']}: {e}")
+            print(f"fetch failed, skipping {result['url']}: {page}")
             skipped.append(skipped_entry(result, "unreachable", "Couldn't open this page"))
             continue
         if not page["text"]:
@@ -181,10 +182,12 @@ def answer(conn, reading, user, page, quote, rects, question, via="web"):
     search_query = None
     if can_find_sources or can_explain:
         verdict = ai.gate(conn, charter["text_md"], reading["title"], quote, question)
-        if can_find_sources and not verdict["find_sources"]["allowed"]:
+        # Each layer is judged on its own, so a request can be partly allowed (e.g. sources yes,
+        # explanation no). Only an explicit `true` allows a layer: anything else denies it.
+        if can_find_sources and verdict["find_sources"]["allowed"] is not True:
             blocked.append(rule_block(charter, "sources_ai", verdict["find_sources"]))
             can_find_sources = False
-        if can_explain and not verdict["explain"]["allowed"]:
+        if can_explain and verdict["explain"]["allowed"] is not True:
             blocked.append(rule_block(charter, "ai_answer", verdict["explain"]))
             can_explain = False
         search_query = verdict.get("search_query") or question
@@ -211,6 +214,9 @@ def answer(conn, reading, user, page, quote, rects, question, via="web"):
             parent_id=question_id, cited_source_ids=[s["source_id"] for s in sources], via=via,
         )
         ai_answer = {"annotation_id": answer_id, "body": body}
+    elif can_explain:
+        # Allowed, but nothing to ground it in: say so rather than leave a silent gap.
+        blocked.append({"layer": "ai_answer", "by": "no_sources", "label": NO_SOURCES_LABEL})
     conn.commit()
 
     for s in sources:

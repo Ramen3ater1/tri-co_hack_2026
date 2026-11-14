@@ -7,6 +7,7 @@ import html as html_lib
 import json
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor
 
 import httpx
 import trafilatura
@@ -64,18 +65,51 @@ def search(conn, query):
     return results
 
 
-def fetch_page(conn, url):
-    """Fetch a page and extract its main text. Returns {title, text}; text is '' if extraction found nothing."""
-    key = f"page:{url}"
-    cached = cache_get(conn, key)
-    if cached is not None:
-        return cached
+def download_page(url):
+    """Fetch a page and extract its main text, with no caching. Returns {title, text};
+    text is '' if extraction found nothing. Raises httpx.HTTPError if the site refuses."""
     resp = httpx.get(url, headers={"User-Agent": USER_AGENT}, timeout=FETCH_TIMEOUT_S, follow_redirects=True)
     resp.raise_for_status()
     html = resp.text
     text = trafilatura.extract(html, include_comments=False, include_tables=False) or ""
     metadata = trafilatura.extract_metadata(html)
     title = (metadata.title if metadata and metadata.title else url)
-    page = {"title": title, "text": text[:MAX_EXCERPT_CHARS]}
+    return {"title": title, "text": text[:MAX_EXCERPT_CHARS]}
+
+
+def fetch_page(conn, url):
+    """One page, cached. Used when the professor adds a source and by the seed."""
+    key = f"page:{url}"
+    cached = cache_get(conn, key)
+    if cached is not None:
+        return cached
+    page = download_page(url)
     cache_put(conn, key, page)
     return page
+
+
+def fetch_pages(conn, urls):
+    """Several pages at once, so one slow site doesn't hold up the rest.
+
+    Returns {url: page}, where page is {title, text}, or the httpx.HTTPError the site raised.
+    Downloads run in threads; the cache is read and written here, on this thread, because
+    a SQLite connection can't be shared across threads.
+    """
+    pages = {}
+    to_download = []
+    for url in urls:
+        cached = cache_get(conn, f"page:{url}")
+        if cached is not None:
+            pages[url] = cached
+        else:
+            to_download.append(url)
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        futures = {url: pool.submit(download_page, url) for url in to_download}
+    for url, future in futures.items():
+        try:
+            pages[url] = future.result()
+        except httpx.HTTPError as e:
+            pages[url] = e
+            continue
+        cache_put(conn, f"page:{url}", pages[url])
+    return pages

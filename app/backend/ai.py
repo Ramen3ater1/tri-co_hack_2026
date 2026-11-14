@@ -13,6 +13,7 @@ import httpx
 
 TEMPERATURE = 0.2
 TIMEOUT_S = 30
+EXPLAIN_WORD_MARGIN = 20  # ask the model for this many words fewer than the charter's maximum
 MAX_FILTER_KEEP = 8  # spares: ask.py reads up to 5 of these and keeps up to 3 that answer the question
 
 # Shown to the student when a toggle blocks a layer (SPEC §2 step 4).
@@ -229,15 +230,28 @@ def pick_sentences(conn, question, quote, sources):
 
 
 def explain(charter_text, reading_title, quote, question, sources, max_words):
-    """sources: [{title, text}], cited as [1], [2] in this order. Returns the explanation, cut to max_words."""
+    """sources: [{title, text}], cited as [1], [2] in this order. Returns the explanation, at most max_words."""
     numbered = "\n\n".join(
         f"[{n}] {s['title']}\n{s['text'][:4000]}" for n, s in enumerate(sources, start=1)
     )
+    # Models overshoot word limits, so ask for a bit less than the charter's maximum.
+    target = max(40, max_words - EXPLAIN_WORD_MARGIN)
     text = chat("You are a careful teaching assistant.", EXPLAIN_PROMPT.format(
         charter=charter_text, reading_title=reading_title, quote=quote, question=question,
-        max_words=max_words, sources=numbered,
+        max_words=target, sources=numbered,
     ))
-    words = text.split()
-    if len(words) > max_words:
-        text = " ".join(words[:max_words]) + "…"
-    return text
+    return cut_to_words(text, max_words)
+
+
+def cut_to_words(text, max_words):
+    """Enforce the charter's word limit, but keep the closing question that sends the
+    student back to the text: trim the explanation before it instead."""
+    if len(text.split()) <= max_words:
+        return text
+    body, closing = text, ""
+    paragraphs = text.rstrip().split("\n")
+    if paragraphs[-1].strip().endswith("?"):
+        body, closing = "\n".join(paragraphs[:-1]), paragraphs[-1].strip()
+    room = max_words - len(closing.split())
+    trimmed = " ".join(body.split()[:max(room, 0)]) + "…"
+    return f"{trimmed}\n\n{closing}" if closing else trimmed

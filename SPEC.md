@@ -29,10 +29,10 @@ Seed users: **Prof. Rivera** (professor), **Ana** and **Ben** (students), plus *
    1. **From your class:** matching peer, past-student and professor annotations (Ana's, Sam's), each linking to its place in the text.
    2. **Sources:** sources the AI found on the web that fit the charter's permissible-sources description, each linking out to the exact sentence that answers the question. A small note shows what was filtered out ("2 results skipped: study-guide sites aren't permitted").
    3. **AI explanation** (if allowed): a short summary citing the sources above, posted as a public annotation by "Dialectic AI" that Ana can reply to.
-   - **Same thing without leaving your text (hotkey):** Ana has the same chapter open in Notability (or Preview), not in Dialectic. She highlights a sentence about "the Veil", presses the hotkey and types her question. A floating panel shows the same three layers. Back in the web reader, Ben sees her question and its answer in the margin on that passage: it was noted.
+   - **Same thing without leaving your text (hotkey):** Ana has the same chapter open in Notability (or Preview), not in Dialectic. She highlights "the Negro is a sort of seventh son, born with a veil, and gifted with second-sight", presses the hotkey and asks for **context**, not interpretation: "Where does the idea of a seventh son born with a veil come from?" A floating panel shows the same three layers: Prof. Rivera's folklore note, encyclopedia sources on the caul and seventh-son beliefs, and a short AI explanation. (Tested 02:45 Sat; a *why*-question such as "Why does he use the image of a veil here?" gets its explanation refused under rule 2, so don't demo that. Ch. 1 never says "the Veil" exactly; it has "a vast veil" and "born with a veil".) Back in the web reader, Ben sees her question and its answer in the margin on that passage: it was noted.
 4. **The charter changes the answer.** Two versions; pick whichever lands better in rehearsal:
    - **Toggle:** Prof. Rivera turns off "AI may write explanations". Ben asks the same question and gets peer annotations and sources only, plus a notice: *"Your class charter doesn't allow AI explanations (AI may write explanations — off)."*
-   - **Rule text (shows the gate):** the class adds the rule "AI may not interpret the text for us." Ben asks "What does Du Bois *mean* by double-consciousness?" and the gate refuses the AI layers, quoting that rule. He rephrases to "Where did the term come from?" and the gate allows it. Peer annotations show both times.
+   - **Rule text (shows the gate):** the class adds the rule "AI may not interpret the text for us." Ben asks "What does Du Bois *mean* by double-consciousness?" and the gate refuses the **AI explanation**, quoting that rule, but still lets the AI **point him to sources**, because rule 2 allows that: a partial refusal (tested 02:00 Sat, the same verdict three runs out of three). He rephrases to "Where did the term come from?" and the gate allows both. Peer annotations show both times.
 
 **Non-goals:** real auth, multiple courses, notifications, mobile polish. Also out: offline/service worker, charter version history, editing PDFs, a hand-curated source library UI beyond a simple add form.
 
@@ -79,11 +79,11 @@ One table covers notes, questions, AI answers and replies:
 
 1. Saves the question as an annotation (`kind = question`), so it's public and answerable.
 2. **Peer layer (always on, no AI):** FTS5 search over visible **notes and replies** on this reading (not other questions or AI answers, which aren't answers from your class) using keywords from `quote + question`, boosted for annotations on the same **page** (the same section instead, once §3.10 is built). Top 5.
-3. **Pass 1, the gate** (only if `ai_enabled`): toggles are checked in code first; any layer whose toggle is off is blocked without asking the model. If any AI layer is still possible, one LLM call (`GATE_PROMPT`, §7) reads the charter text, the quote and the question, and returns per layer `allowed` + the `rule` it relied on + a one-line `reason`, plus a web `search_query` to use if source finding is allowed. A denied layer is blocked with that rule quoted to the student.
+3. **Pass 1, the gate** (only if `ai_enabled`): toggles are checked in code first; any layer whose toggle is off is blocked without asking the model. If any AI layer is still possible, one LLM call (`GATE_PROMPT`, §7) reads the charter text, the quote and the question, and returns per layer `allowed` + the `rule` it relied on + a one-line `reason`, plus a web `search_query` to use if source finding is allowed. A denied layer is blocked with that rule quoted to the student. **Layers are judged separately, so a request can be partly allowed** (e.g. sources yes, explanation no): the answer then has only the allowed layers, nothing AI-written comes from a denied one, and the `blocked` list says which part was refused and by which rule. A layer counts as allowed only if the gate returns exactly `true`; anything else (missing, `"false"`, garbled) denies it.
 4. **Pass 2, source layer:**
    - **No AI** (`ai_find_sources` off or denied): FTS5 over the course source library, which holds every source the AI has found before. Top 3. This is how the class gets less dependent on AI over time.
    - **AI** (allowed): search the web with `search_query` (15 results) → one LLM call filters the results' titles, URLs and snippets against the charter's **permissible sources** description, keeping up to 8 candidates (best first) and giving a short reason for each one dropped → fetch them in order until 5 open (sites that refuse, like Britannica and The Atlantic with a 403, go into `skipped_sources`) and extract the main text (`trafilatura`) → the LLM **quotes the exact sentence** in each that answers the question; up to 3 pages with a real sentence become the sources, and pages with none (e.g. JSTOR's landing pages) go into `skipped_sources` → link out with a text fragment (`url#:~:text=<sentence>`), so the browser jumps to and highlights that sentence. Each used source is saved to `sources` (`found_by = 'ai'`) with its extracted text, so it's searchable from then on. If the web gives no usable source, the layer falls back to the course library, as in no-AI mode.
-5. **Pass 2, AI explanation layer** (allowed): the LLM writes at most `max_explanation_words` words from the sources above, citing them as `[1]`, `[2]`. Saved as an annotation (`kind = ai_answer`, author = the "Dialectic AI" user, `parent_id` = the question), so it shows in the margin and takes replies.
+5. **Pass 2, AI explanation layer** (allowed): the LLM writes at most `max_explanation_words` words from the sources above, citing them as `[1]`, `[2]`, and ends with a question that sends the student back to the text. The limit is enforced in code by trimming the explanation, never the closing question. If explanations are allowed but there are no sources to ground one in, there's no explanation and `blocked` gets a `"by": "no_sources"` notice instead of a silent gap. Saved as an annotation (`kind = ai_answer`, author = the "Dialectic AI" user, `parent_id` = the question), so it shows in the margin and takes replies.
 6. Returns all three layers, a `blocked` list (each with the toggle or charter rule that blocked it) and a `skipped_sources` list, so the UI can explain itself.
 
 ### 3.6 Permissible sources and the course source library
@@ -327,12 +327,15 @@ All routes are under `/api`; all except `/users` need `X-User-Id`. Professor-onl
   ],
   "blocked": [
     {"layer": "ai_answer", "by": "toggle", "label": "AI may write explanations — off"},
-    {"layer": "sources_ai", "by": "rule", "label": "Rule 2: AI may not interpret the text for us", "reason": "The question asks what the passage means."}
+    {"layer": "sources_ai", "by": "rule", "label": "Rule 2: AI may not interpret the text for us", "reason": "The question asks what the passage means."},
+    {"layer": "ai_answer", "by": "no_sources", "label": "No sources to base an explanation on yet"}
   ]
 }
 ```
 
 `ai_answer` is `null` when blocked or when no sources matched (no ungrounded answers).
+
+`blocked[].by` is `toggle` (a charter toggle is off), `rule` (the gate denied it; `reason` explains why) or `no_sources` (allowed, but nothing to ground an explanation in).
 
 `skipped_sources[].why` is `not_permitted` (the charter rules it out: show it, but **don't link it**), `unreachable` (permitted, but we couldn't open or read it) or `no_answer` (permitted and read, but nothing in it answered the question). **Link the last two** so the student can read them themselves.
 

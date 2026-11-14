@@ -91,13 +91,16 @@ flowchart TD
 The points worth knowing:
 
 - **Peers come first and need no AI.** The peer layer only searches `note`s (including replies), not other questions or AI answers, and boosts notes on the same page.
-- **Two kinds of "no".** A toggle that's off blocks a layer *in code*, before any model call (`ai.toggle_blocks`). The **gate** (`ai.gate`) is an LLM call that reads the charter's rules text and can deny a layer citing a rule number; `ai.rule_label` turns "2" into "Rule 2: AI may point us to sources…". Either way the layer is added to `blocked`, and the request still succeeds.
+- **Partial refusals are normal.** The gate judges each layer on its own, so "What does Du Bois *mean* by…" gets sources (rule 2 lets AI point to sources) but no explanation (rule 2 forbids interpreting). The answer then contains only the allowed layers, and `blocked` says which part was refused and why. A layer counts as allowed only if the gate says exactly `true`; anything else denies it.
+- **No silent gaps.** If explanations are allowed but there are no sources to ground one in, `blocked` gets a `no_sources` notice.
+- **The word limit never cuts the closing question.** The model is asked for 20 words fewer than the charter's limit, and if it still runs long, `ai.cut_to_words` trims the explanation but keeps its final question back to the text.
+- **Two kinds of "no"** from the charter. A toggle that's off blocks a layer *in code*, before any model call (`ai.toggle_blocks`). The **gate** (`ai.gate`) is an LLM call that reads the charter's rules text and can deny a layer citing a rule number; `ai.rule_label` turns "2" into "Rule 2: AI may point us to sources…". Either way the layer is added to `blocked`, and the request still succeeds.
 - **The AI can't invent quotes.** When it picks "the sentence that answers the question" from a source, `ai.pick_sentences` checks that the sentence really appears in the page text and drops it otherwise. Kept sentences become text-fragment links (`url#:~:text=…`), which make the browser scroll to and highlight that sentence.
 - **Sites that refuse us don't break the answer.** Britannica and The Atlantic answer our fetcher with 403, and JSTOR serves a landing page with no article text. So the filter keeps up to 8 candidates out of 15 search results, `ask.web_layer` reads up to 5 that open, and only pages where the AI finds a real answering sentence become sources (at most 3). Everything else is listed in `skipped_sources` with a `why`: `not_permitted` (shown, not linked), or `unreachable` / `no_answer` (linked, so the student can read it themselves).
 - **If the web gives nothing usable, the library is the fallback**, the same as when AI is off.
 - **The library grows by itself.** Every source the AI uses is saved to `sources`. Later questions, including ones where AI is off or denied, find it with plain full-text search.
 - **No ungrounded answers.** The explanation is only written if there are sources to cite, and it's cut to `max_explanation_words` in code even if the model runs long.
-- A full AI answer is **four LLM calls** (gate, filter, pick sentences, explain) plus a search and up to five page fetches, all in one request (not a stream). Measured with the real services: **about 35 s the first time** a question is asked and **about 6 s on replay**, when only the explanation is written fresh. So rehearse the demo question once before presenting.
+- A full AI answer is **four LLM calls** (gate, filter, pick sentences, explain) plus a search and the page fetches, all in one request (not a stream). Pages are fetched **in parallel** (`search.fetch_pages`), so one slow site doesn't hold up the rest (8 pages: 5.0 s one by one, 0.9 s at once). Measured with the real services: **about 25–30 s the first time** a question is asked, almost all of it the LLM calls (the filter alone takes 9–11 s), and **about 6–7 s on replay**, when only the explanation is written fresh. So rehearse the demo questions once before presenting.
 
 ## The Mac hotkey: `POST /api/ask`
 
@@ -151,12 +154,11 @@ curl -H 'X-User-Id: 3' -H 'Content-Type: application/json' \
   localhost:8000/api/readings/1/ask
 ```
 
-## Known gaps (as of 02:25 Sat)
+## Known gaps (as of 02:50 Sat)
 
-- **The real gate passes the demo questions** (each tried three times, same verdict every time): "what did it mean in 1903?" and "where did the term come from?" are allowed. "What does Du Bois *mean* by…" has its **explanation** denied under rule 2, but **finding sources** stays allowed, since rule 2 says AI may point us to sources.
+- **The real gate passes the demo questions** (each tried three times, same verdict every time): "what did it mean in 1903?", "where did the term come from?" and the hotkey question "where does the idea of a seventh son born with a veil come from?" are allowed; "what does Du Bois *mean* by…" is partly refused, as intended.
 - **The seed charter keeps out modern journal articles.** Its permissible-sources text only lists encyclopedias, university and museum sites, and primary sources, so the filter (correctly) drops journal articles. Add "peer-reviewed scholarship" to the text if we want them.
-- A first-time question takes about 35 s, mostly fetching pages one after another. Fetching them in parallel would cut that if needed.
-- **The hotkey demo question needs to ask for context, not interpretation.** "*Why* does he use the image of a veil here?" gets its explanation refused under rule 2, which is correct but a refusal on stage. Also, Chapter 1 never says "the Veil" exactly: it has "a vast veil", "born with a veil" and "through a veil".
+- A first-time question takes 25–30 s, almost all LLM time. The levers are a faster model for the filter and sentence-picking calls, or shorter filter output.
 - A quote that runs across a page break isn't found by the hotkey route.
 - If an AI call fails, the question has already been saved, so it shows in the margin without an answer.
 - Not built yet: `annotate_before_peers` (stretch) and the step-by-step "Checking the charter…" status (one response for now).
