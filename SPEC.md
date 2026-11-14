@@ -78,7 +78,7 @@ One table covers notes, questions, AI answers and replies:
 `POST /api/readings/{id}/ask` with `page`, `quote`, `rects`, `question`. The server:
 
 1. Saves the question as an annotation (`kind = question`), so it's public and answerable.
-2. **Peer layer (always on, no AI):** FTS5 search over visible **notes and replies** on this reading (not other questions or AI answers, which aren't answers from your class) using keywords from `quote + question`, boosted for annotations in the same **section** (§3.10). Top 5.
+2. **Peer layer (always on, no AI):** FTS5 search over visible **notes and replies** on this reading (not other questions or AI answers, which aren't answers from your class) using keywords from `quote + question`, boosted for annotations on the same **page** (the same section instead, once §3.10 is built). Top 5.
 3. **Pass 1, the gate** (only if `ai_enabled`): toggles are checked in code first; any layer whose toggle is off is blocked without asking the model. If any AI layer is still possible, one LLM call (`GATE_PROMPT`, §7) reads the charter text, the quote and the question, and returns per layer `allowed` + the `rule` it relied on + a one-line `reason`, plus a web `search_query` to use if source finding is allowed. A denied layer is blocked with that rule quoted to the student.
 4. **Pass 2, source layer:**
    - **No AI** (`ai_find_sources` off or denied): FTS5 over the course source library, which holds every source the AI has found before. Top 3. This is how the class gets less dependent on AI over time.
@@ -128,6 +128,8 @@ A search page (`/search?q=`) over all visible annotations **and** the reading te
 
 A small macOS menu-bar app (`app/mac/`). The web reader stays as it is; this is a second way in, so you never have to leave the app you're reading in.
 
+**An independent track.** The app is Swift only and lives entirely in `app/mac/`, so it never touches the Python or React code. Its only link to the rest is the HTTP contract in §6: `POST /api/ask` with `{quote, question}` and `X-User-Id`, returning the `/ask` shape plus `located`. Until the server route exists, the app reads a **stub response** (`app/mac/stub-ask-response.json`, copied from §6), and one URL constant at the top of `DialecticApp.swift` switches it to the real server. The route itself (step 4 below) is one small backend task, done by the backend owner after demo step 3 works (§8).
+
 1. **Press the hotkey** (`⌥⇧D`, a constant at the top of the app). If text is selected in the front app, the app copies it (simulated ⌘C, then the clipboard is restored). If nothing is selected, a crosshair lets you drag a box round the passage (`screencapture -i`), as if taking a screenshot.
 2. **Read it on the Mac.** A dragged box is turned into text with **macOS Vision** (`VNRecognizeTextRequest`) on the device. The image never leaves the Mac.
 3. **Ask.** A small floating panel shows the captured text and a question box. On Enter it sends `POST /api/ask` (§6) with `{quote, question}` and the `X-User-Id` chosen in the app's menu (same seeded users as the web log-in).
@@ -137,6 +139,8 @@ A small macOS menu-bar app (`app/mac/`). The web reader stays as it is; this is 
 **Permissions:** the app needs **Accessibility** (to copy the selection) and **Screen Recording** (to capture a box) in System Settings. Grant both on the demo Mac beforehand.
 
 ### 3.10 Sections
+
+**Could-have (§8 priority #10).** Until it's built, `section_id` stays `null`, `located.section` is `null`, and every "same section" rule means **same page**. Nothing else waits on it.
 
 At upload, each reading is split into **sections** by its headings: the PDF's outline (bookmarks) if it has one, otherwise lines that look like headings (short, on their own line, Title Case or ALL CAPS, or numbered like `I.`). Each annotation stores the section it falls in. The peer layer boosts matches in the same section, and the hotkey shows "Ch. 1 › Of Our Spiritual Strivings"-style breadcrumbs.
 
@@ -370,7 +374,32 @@ A full AI answer is four calls: gate → filter results → pick sentences → e
 
 ## 8. Build order (Saturday)
 
-Checkpoints are the times things must work by. If a checkpoint slips by more than 45 minutes, cut the next stretch item, not the demo path.
+### Priorities
+
+When time runs short, **cut from the bottom up.** A slipped checkpoint is never a reason to cut something above an item that hasn't been cut yet.
+
+**Must** (no demo without these)
+1. **Web reader:** PDF, highlights, margin, notes and replies (demo steps 1–2), or the paragraph fallback from S1. **Owner: not decided yet.** Nothing in the demo works without it.
+2. **Ask, no AI:** peer and library layers plus the Ask panel.
+3. **Charter gate + AI explanation** posted as an annotation (demo step 3).
+4. **Charter page:** editing rules and toggles, and blocked notices in the Ask panel (demo step 4).
+5. **Deployed** on the domain from `stable`, demo rehearsed.
+
+**Should**
+
+6. **Live Kagi search** filtered by permissible sources, with sentence links. Fallback: `seed.py --with-sources` + LLM sentence picking.
+7. **Mac hotkey app** (independent track, §3.9), copying the selection only, plus the server's `POST /api/ask` route.
+8. **Staged Ask panel** ("Checking the charter… / Finding sources…"). Fallback: one spinner.
+
+**Could**
+
+9. Hotkey screenshot box + on-device Vision text recognition.
+10. Sections by heading (§3.10). Fallback: same page.
+11. Search page → charter comments → `annotate_before_peers` → past-student opt-out UI.
+
+### Timeline
+
+Checkpoints are the times things must work by. If one slips by more than 45 minutes, cut from the bottom of the list above, never the demo path.
 
 **At every checkpoint, promote to `stable`** (see `CLAUDE.md`, *Branches*): click through the demo steps that work so far, then `git push origin main:stable` and tag it `good-HHMM`. Also promote whenever something you'd hate to lose starts working.
 
@@ -382,15 +411,22 @@ Checkpoints are the times things must work by. If a checkpoint slips by more tha
 | 06:00 | `/ask` peer + library layers (no AI) + Ask panel UI | Get the Kagi API key in parallel. |
 | 08:00 | `ai.py` + `search.py`: gate, web search, filter, fetch, pick sentence, explanation as annotation, web cache | **Demo step 3 works.** If web search fights us, fall back to seeded library + LLM sentence picking, and keep the gate. |
 | 09:00 | Charter page: view, prof edit (rules, permissible sources, toggles); blocked notices in the Ask panel | **Demo step 4 works.** |
-| 09:00 | **Mac hotkey (parallel track):** sections at upload + `POST /ask` locate (backend); menu-bar app with hotkey → selection/screenshot → Vision → panel (`app/mac/`) | Start with a 1 h spike in `spikes/` (hotkey + Vision on a screenshot). **Fallback:** selection-copy only, no screenshot box. **Demo step 3 hotkey works.** Doesn't move the other checkpoints; needs its own person. |
+| 09:00 | **Mac hotkey app (independent track, `app/mac/`):** hotkey → copy selection → floating panel → show the `/ask` response | Owner: josoup. Builds against the stub response, so it needs nothing from anyone else until the route exists. Start with a 1 h spike (hotkey + selection copy). Screenshot + Vision only once everything else works (#9). **Doesn't move other checkpoints.** |
+| 09:30 | **`POST /api/ask` (hotkey route):** locate the quote → reading, page, rects; reuse the three layers | Backend owner, after demo step 3 works. The Mac app swaps its stub for the real URL. |
 | 10:30 | Deploy to droplet on the domain; run the full demo there | Deploy early so the last hours aren't spent on it. |
 | 12:00 | Search page; charter comments | Stretch #1 |
 | 12:00+ | Polish only: copy, empty states, seed data quality, demo script in `demo/` | Per CLAUDE.md: no new features after noon. |
 | 15:00 | Full demo path rehearsed on the deployed URL | |
 
-Stretch, in order: search page → charter comments → `annotate_before_peers` → past-student opt-out UI on profile.
+Stretch items are #9–11 above, in that order.
 
-**Parallel split (suggestion):** one person on the frontend reader (S1 → reader), one on the backend (schema → `/ask` → `ai.py`), one on seed data + charter page + demo script, one on the Mac hotkey app (§3.9). Agree the API shapes in §6 first; the frontend can stub `/ask` with the JSON above.
+**Parallel split:**
+- **Frontend web reader: owner not decided yet.** This is priority #1; give it a person before anything below #5.
+- **Backend:** schema → `/ask` → `ai.py` → the hotkey route.
+- **Seed data, charter page and demo script.**
+- **Mac hotkey app (josoup):** independent; needs only §6 and its stub.
+
+Agree the API shapes in §6 first; the frontend can stub `/ask` with the JSON above, as the Mac app does.
 
 ---
 
