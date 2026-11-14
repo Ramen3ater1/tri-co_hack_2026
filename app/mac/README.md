@@ -68,11 +68,6 @@ POST /api/locate        X-User-Id: <id>
 - Leader lines from margin cards to boxes; clicking a box on the page (the overlay is click-through).
 - `TODO(edge)`: two pages side by side, rotated or scanned PDFs, several displays (uses the reading window's screen).
 
-## Proposed SPEC change (pending Owen)
+## SPEC change: approved
 
-Not in `SPEC.md` yet: it's Owen's file and needs his OK. Proposed wording:
-
-- **§3.9, new paragraph after "Same server, same person, same data":** *"**Reader window.** The Mac app also has a window (menu → Open Dialectic, ⌘O) that shows the web reader itself in a `WKWebView`, signed in as the Mac menu's user. There is no native reader: reader features are built once, on the web, and the Mac shows them. **Open in reader** in the Mac panels opens the annotation in this window; links to other sites open in the default browser."*
-- **§4, Mac line:** add *"WebKit (`WKWebView`, the reader window)"* to the Apple frameworks it uses.
-- **§4, layout:** `mac/` becomes `Sources/Dialectic/*.swift  # menu bar, hotkeys, panels, overlay (capture + Vision), reader window (WKWebView)` plus `build.sh`.
-
+The reader-window wording below was approved by Owen (Sat 06:45) and is now in `SPEC.md` §3.9 and §4.

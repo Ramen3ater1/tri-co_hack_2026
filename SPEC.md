@@ -171,6 +171,8 @@ A small macOS menu-bar app (`app/mac/`). The web reader stays as it is; this is 
 
 **Same server, same person, same data.** The Mac app and the web app are two clients of one server and one database; neither keeps its own copy of anything. Every rule (engagement lock, charter gate, source filter, locate) runs on the server, so the Swift side only captures text and shows JSON.
 
+**Reader window.** The Mac app also has a window (menu → Open Dialectic, ⌘O) that shows the web reader itself in a `WKWebView`, signed in as the Mac menu's user. There is no native reader: reader features are built once, on the web, and the Mac shows them. **Open in reader** in the Mac panels opens the annotation in this window; links to other sites open in the default browser. (Approved by Owen, Sat 06:45.)
+
 - **Server URL:** one constant, `SERVER_URL`, at the top of `DialecticApp.swift`, set to the deployed site (§9) for the demo, `http://localhost:8000` while building.
 - **Who you are:** the menu lists users from `GET /api/users` and saves the choice in `UserDefaults`; every request sends it as `X-User-Id`, exactly as the web does. The app registers the `dialectic` URL scheme, so the web's **Use on Mac** link (§3.1, `dialectic://login?user=<id>`) sets the same user.
 - **Open in reader:** the panel's button opens `SERVER_URL + located.reader_url` in the default browser, at that annotation.
@@ -218,7 +220,7 @@ Professors upload what they have: phone photos of their own copy, library-scanne
   - Fallback if Kagi misbehaves on the day: Brave Search API, same function signature.
 - **Frontend:** React + Vite, `react-router`, `react-pdf`. Plain CSS. No state library.
 - **PWA:** a `manifest.webmanifest` and icon, nothing more.
-- **Mac hotkey app (§3.9):** one small **SwiftUI** menu-bar app, built with Xcode (or `swift build`). Uses only Apple frameworks: Vision (on-device text recognition), AppKit (hotkey, floating panel, pasteboard), `URLSession` for the API. The server URL and hotkey are constants at the top of `DialecticApp.swift`. No third-party packages.
+- **Mac hotkey app (§3.9):** one small **SwiftUI** menu-bar app, built with Xcode (or `swift build`). Uses only Apple frameworks: Vision (on-device text recognition), WebKit (`WKWebView`, the reader window), AppKit (hotkey, floating panel, pasteboard), `URLSession` for the API. The server URL and hotkey are constants at the top of `DialecticApp.swift`. No third-party packages.
 - **LLM:** DigitalOcean serverless inference, which is OpenAI-compatible (`POST {DO_INFERENCE_URL}/chat/completions`). Model: **`anthropic-claude-sonnet-5.5`** (the exact ID from DO's `/v1/models` list), set as `DO_MODEL` in `.env`.
 - **Bring your own AI (self-hosting).** Everything provider-specific is configuration or one function, so an institution can run Dialectic on its own infrastructure (pitch: `demo/business-model.md`):
   - **AI:** any OpenAI-compatible endpoint (vLLM or Ollama on campus GPUs, a university Azure OpenAI or Bedrock gateway, a campus AI service) by changing `DO_INFERENCE_URL`, `DO_INFERENCE_KEY` and `DO_MODEL`. Keep the AI call in `ai.py`'s one `chat()` function and keep provider-specific options (like reasoning effort) as constants at the top, so this stays true.
@@ -243,7 +245,8 @@ app/
       components/    # PdfPage, HighlightLayer, Margin, AskPanel, Composer
     public/manifest.webmanifest
   mac/
-    DialecticApp.swift  # menu bar, hotkey, capture + Vision OCR, ask panel (split only if it passes ~400 lines)
+    Sources/Dialectic/*.swift  # menu bar, hotkeys, panels, overlay (capture + Vision), reader window (WKWebView)
+    build.sh                   # builds Dialectic.app (CI: .github/workflows/mac-app.yml)
 .env.example         # DO_INFERENCE_URL, DO_INFERENCE_KEY, DO_MODEL, KAGI_API_KEY
 ```
 
