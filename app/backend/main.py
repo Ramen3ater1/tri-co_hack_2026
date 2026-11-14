@@ -221,9 +221,9 @@ def list_annotations(reading_id: int, user=Depends(current_user), conn=Depends(g
     ).fetchall()
     current_cohort = get_course(conn)["current_cohort"]
     full_ids = db.full_view_ids(conn, user, reading_id)
-    # One lock card per cluster of nearby locked notes, with how many classmates wrote them.
+    # One lock card per cluster of nearby locked notes ("2 notes near here").
     groups = db.locked_groups([
-        {"id": r["id"], "user_id": r["user_id"], "page": r["page"],
+        {"id": r["id"], "page": r["page"],
          "rects": json.loads(r["rects_json"]) if r["rects_json"] else None}
         for r in rows if r["id"] not in full_ids and r["parent_id"] is None
     ])

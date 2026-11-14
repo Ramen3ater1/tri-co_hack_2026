@@ -224,9 +224,9 @@ def is_near(page_a, extent_a, page_b, extent_b):
 def locked_groups(locked):
     """Cluster locked top-level annotations that sit near each other, for one lock card each.
 
-    locked: [{"id", "user_id", "page", "rects"}]. Returns {id: {"group", "group_notes",
-    "group_authors"}}, where group is the smallest id in the cluster and group_authors counts
-    distinct authors ("2 classmates annotated near here") without saying who they are.
+    locked: [{"id", "page", "rects"}]. Returns {id: {"group", "group_notes"
+    }}, where group is the smallest id in the cluster and group_notes its size ("2 notes near here").
+    Deliberately no author information, not even a count of people.
     """
     group_of = {a["id"]: a["id"] for a in locked}
 
@@ -245,9 +245,8 @@ def locked_groups(locked):
         members.setdefault(root(a["id"]), []).append(a)
     out = {}
     for group, items in members.items():
-        authors = len({a["user_id"] for a in items})
         for a in items:
-            out[a["id"]] = {"group": group, "group_notes": len(items), "group_authors": authors}
+            out[a["id"]] = {"group": group, "group_notes": len(items)}
     return out
 
 
