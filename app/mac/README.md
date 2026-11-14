@@ -12,7 +12,7 @@ If ⌥⇧D or ⌥⇧N copies nothing (Notability with scanned or annotated PDFs,
 
 ## Reader window
 
-**Open Dialectic** (menu, ⌘O; also shown at launch) opens a 1280×860 window with the web app in a `WKWebView`, loading `READER_URL` (top of `ReaderWindow.swift`, default `SERVER_URL`: in production FastAPI serves the built frontend on the same port). **In development** point it at Vite instead: `npm run dev` in `app/frontend` serves on `http://localhost:5173` and forwards `/api` to `:8000`.
+**Open Dialectic** (menu, ⌘O; also shown at launch) opens a 1280×860 window. While it's open Dialectic acts as a normal app (its own menu bar, a Dock icon, ⌘Tab); close it and it goes back to living in the menu bar only. The window holds the web app in a `WKWebView`, loading `READER_URL` (top of `ReaderWindow.swift`, default `SERVER_URL`: in production FastAPI serves the built frontend on the same port). **In development** point it at Vite instead: `npm run dev` in `app/frontend` serves on `http://localhost:5173` and forwards `/api` to `:8000`.
 
 - **Same person in both:** before every page load the window sets the web app's `localStorage` user (`dialectic_user`, the whole user object, plus `dialectic_users`, as `app/frontend/src/api.js` and `colors.js` save them at log-in) to the user picked in the menu, and reloads when that changes (menu or `dialectic://login`).
 - **Open in reader** (Ask and Note panels, thread view) opens `reader_url` in this window and brings it to the front. Links to other sites (sources) open in the default browser.

@@ -2,7 +2,7 @@
 //   ⌥⇧D  ask about the selected text      (Panels.swift)
 //   ⌥⇧N  write a note on the selected text (Panels.swift)
 //   ⌥⇧H  show / hide classmates' highlights over the reading window (Overlay.swift)
-// Menu-bar only. Talks to the same server as the web app; keeps no data of its own.
+// Menu-bar app; a normal app (menu bar, Dock icon) while the reader window is open. Talks to the same server as the web app; keeps no data of its own.
 import AppKit
 import Carbon.HIToolbox
 import Combine
@@ -77,6 +77,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             reader.show()  // the web reader, signed in as the menu's user
         }
         print("Dialectic running. Server: \(SERVER_URL). Hotkeys: \(HOTKEY_ASK_LABEL) ask, \(HOTKEY_NOTE_LABEL) note, \(HOTKEY_HIGHLIGHTS_LABEL) highlights.")
+    }
+
+    /// Clicking the Dock icon (shown while the reader window is open or minimised) brings the reader back.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        reader.show()
+        return false
     }
 
     // dialectic://login?user=<id> (the web's "Use on Mac" link, SPEC §3.1)

@@ -40,7 +40,7 @@ struct ReaderFailureView: View {
 }
 
 @MainActor
-final class ReaderWindowController: NSObject, WKNavigationDelegate, WKUIDelegate {
+final class ReaderWindowController: NSObject, WKNavigationDelegate, WKUIDelegate, NSWindowDelegate {
     let window: NSWindow
     let webView: WKWebView
     private let model = ReaderModel()
@@ -53,6 +53,7 @@ final class ReaderWindowController: NSObject, WKNavigationDelegate, WKUIDelegate
                           styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
         window.title = "Dialectic"
         window.isReleasedWhenClosed = false
+        window.delegate = self
         window.setFrameAutosaveName("DialecticReader")
         webView = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
         super.init()
@@ -74,8 +75,20 @@ final class ReaderWindowController: NSObject, WKNavigationDelegate, WKUIDelegate
 
     func show() {
         if webView.url == nil { open(path: "/") }
+        bringToFront()
+    }
+
+    /// While the reader window is open Dialectic is a normal app: menu bar, Dock icon, ⌘Tab.
+    /// Menu-bar-only (.accessory) apps never get the menu bar, even with a window in front.
+    private func bringToFront() {
+        NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
+    }
+
+    /// Closing the reader window makes Dialectic menu-bar-only again (hotkeys and overlay keep working).
+    func windowWillClose(_ notification: Notification) {
+        NSApp.setActivationPolicy(.accessory)
     }
 
     func open(path: String) {
@@ -84,8 +97,7 @@ final class ReaderWindowController: NSObject, WKNavigationDelegate, WKUIDelegate
             return
         }
         load(url)
-        NSApp.activate(ignoringOtherApps: true)
-        window.makeKeyAndOrderFront(nil)
+        bringToFront()
     }
 
     private func load(_ url: URL) {
@@ -186,7 +198,7 @@ func jsString(_ text: String) -> String {
     String(data: try! JSONEncoder().encode(text), encoding: .utf8)!
 }
 
-/// An Edit menu, so ⌘C / ⌘V / ⌘A work in the reader's text boxes (menu-bar apps have no menu otherwise).
+/// The menu bar while the reader window is open, with an Edit menu so ⌘C / ⌘V / ⌘A work in its text boxes.
 @MainActor
 func installMainMenu() {
     let main = NSMenu()
