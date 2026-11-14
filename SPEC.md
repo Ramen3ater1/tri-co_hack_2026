@@ -92,7 +92,7 @@ Otherwise it's **locked**: the API returns it as `{"id", "page", "rects", "locke
 `POST /api/readings/{id}/ask` with `page`, `quote`, `rects`, `question`. The server:
 
 1. Saves the question as an annotation (`kind = question`), so it's public and answerable.
-2. **Peer layer (always on, no AI):** FTS5 search over visible **notes and replies** on this reading (not other questions or AI answers, which aren't answers from your class) using keywords from `quote + question`, boosted for annotations on the same **page** (the same section instead, once §3.10 is built). Top 5.
+2. **Peer layer (always on, no AI):** FTS5 search over visible **notes and replies** on this reading (not other questions or AI answers, which aren't answers from your class, and not the asker's own notes) using keywords from `quote + question`, boosted for annotations on the same **page** (the same section instead, once §3.10 is built). Top 5.
 3. **Pass 1, the gate** (only if `ai_enabled`): toggles are checked in code first; any layer whose toggle is off is blocked without asking the model. If any AI layer is still possible, one LLM call (`GATE_PROMPT`, §7) reads the charter text, the quote and the question, and returns per layer `allowed` + the `rule` it relied on + a one-line `reason`, plus a web `search_query` to use if source finding is allowed. A denied layer is blocked with that rule quoted to the student. **Layers are judged separately, so a request can be partly allowed** (e.g. sources yes, explanation no): the answer then has only the allowed layers, nothing AI-written comes from a denied one, and the `blocked` list says which part was refused and by which rule. A layer counts as allowed only if the gate returns exactly `true`; anything else (missing, `"false"`, garbled) denies it.
 4. **Pass 2, source layer:**
    - **No AI** (`ai_find_sources` off or denied): FTS5 over the course source library, which holds every source the AI has found before. Top 3. This is how the class gets less dependent on AI over time.
@@ -124,7 +124,7 @@ The AI's web search is filtered against this description (§3.5). Every source i
 - is visible on a **Sources** tab (title, link, who/what found it, which question it answered);
 - lets the professor **add** a source by URL (the server fetches and extracts its text) or **remove** one. That's the whole curation UI.
 
-**Demo safety:** the live web is the most fragile part of the demo. Seed the library with the sources the demo question will find, cache search results and fetched pages by URL in the DB, and run the demo question once before presenting. The JSON LLM calls (gate, filter, sentence picking) are cached by their exact prompt too, so the rehearsed question replays the same verdict, query and sources in about 6 s instead of about 35 s; only the explanation is written fresh. Editing the charter changes the prompt, so the gate runs again.
+**Demo safety:** the live web is the most fragile part of the demo. Seed the library with the sources the demo question will find, cache search results and fetched pages by URL in the DB, and run the demo question once before presenting. All the LLM calls (gate, filter, sentence picking and the explanation) are cached by their exact prompt too, so the rehearsed question replays the same verdict, query, sources and explanation word for word, in a few seconds, and costs nothing. One exception: a page that refused us once isn't cached, so if it opens on a later try the sources (and so the sentence pick and explanation) can change once. Editing the charter changes the prompt, so the gate runs again.
 
 ### 3.7 Class charter
 
@@ -373,8 +373,8 @@ All routes are under `/api`; all except `/users` and `/spend` need `X-User-Id`. 
 | PUT | `/me/sharing` | all | `{share_with_future}` for everything you've written (past-student opt-out); returns `{updated, share_with_future}` |
 | POST | `/readings/{id}/ask` | all | The three-layer answer (§3.5) |
 | POST | `/readings/{id}/ask/stream` | all | The same, step by step as newline-delimited JSON (staged panel, below) |
-| POST | `/ask` | all | Hotkey ask (§3.9): `{quote, question}` only; the server locates the reading, page, section and rects, then runs the same three layers. 404 if the quote isn't in a course reading |
-| POST | `/note` | all | Hotkey note (⌥⇧N, §3.9): `{quote, body, share_with_future}`; locates like `/ask`, saves a `note` with `via: "hotkey"`, returns the annotation plus `reader_url`. 404 if the quote isn't in a course reading |
+| POST | `/ask` | all | Hotkey ask (§3.9): `{quote, question}` plus an optional `source_app` (the app the text came from, e.g. `"Notability"`); the server locates the reading, page, section and rects, then runs the same three layers. 404 if the quote isn't in a course reading |
+| POST | `/note` | all | Hotkey note (⌥⇧N, §3.9): `{quote, body, share_with_future}` plus an optional `source_app`; locates like `/ask`, saves a `note` with `via: "hotkey"`, returns the annotation plus `reader_url`. 404 if the quote isn't in a course reading |
 | POST | `/ask/stream` | all | Hotkey ask, step by step (still a plain 404 if the quote isn't found) |
 | GET | `/charter` | all | Text, toggles, comments |
 | PUT | `/charter` | prof | Update text and/or toggles |
@@ -413,7 +413,7 @@ All routes are under `/api`; all except `/users` and `/spend` need `X-User-Id`. 
 
 `skipped_sources[].why` is `not_permitted` (the charter rules it out: show it, but **don't link it**), `not_covered` (the charter doesn't mention this kind of source: show it, don't link it; the class can amend the charter, see `ideas/01-charter-gaps.md`), `unreachable` (permitted, but we couldn't open or read it) or `no_answer` (permitted and read, but nothing in it answered the question). **Link the last two** so the student can read them themselves.
 
-`POST /ask` (hotkey) returns the same shape plus `"located": {"reading_id": 1, "reading_title": "...", "page": 3, "section": "Of Our Spiritual Strivings", "reader_url": "/readings/1?page=3&annotation=41"}`. `reader_url` is relative: the Mac app prefixes its `SERVER_URL`. Annotations gain `"section"` (title or `null`) and `"via"` (`"web"` | `"hotkey"`).
+`POST /ask` (hotkey) returns the same shape plus `"located": {"reading_id": 1, "reading_title": "...", "page": 3, "section": "Of Our Spiritual Strivings", "reader_url": "/readings/1?page=3&annotation=41"}`. `reader_url` is relative: the Mac app prefixes its `SERVER_URL`. Annotations gain `"section"` (title or `null`), `"via"` (`"web"` | `"hotkey"`) and `"source_app"` (the app a hotkey question or note came from, e.g. `"Notability"`, or `null`).
 
 Annotation shape (`GET /readings/{id}/annotations` returns a list of these, newest first; `POST` returns one):
 

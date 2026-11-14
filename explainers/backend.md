@@ -71,7 +71,7 @@ All under `/api`, all in `main.py`. The exact request and response shapes are in
   - `kind` is `note`, `question` or `ai_answer`.
   - `parent_id` makes something a reply (an AI answer is a reply to the question it answers).
   - `page`, `quote` and `rects` place the highlight: `rects` are boxes as *fractions* of the page size, so they redraw at any zoom. `section_id` is the section it falls in.
-  - `via` is `web` or `hotkey` (asked or noted from the Mac app).
+  - `via` is `web` or `hotkey` (asked or noted from the Mac app); `source_app` is the app the hotkey text came from (e.g. "Notability"), if the Mac app sent it.
   - `share_with_future`: whether later classes may see it. Its author can change it at any time.
   - `answer_json` (questions only): the finished `/ask` response, so the answer card can be reopened.
 - **readings** + **reading_pages** + **reading_sections**: the uploaded PDF's path, each page's extracted text (for search, locating quotes and sections), and the headings found at upload.
@@ -79,7 +79,7 @@ All under `/api`, all in `main.py`. The exact request and response shapes are in
 - **sources**: the **course source library**. Every web page the AI used, plus any the professor added by hand.
 - **charter_gaps**: search results the source filter skipped because the charter doesn't mention their kind (URL, title, kind; never who asked), for the charter page's gaps list.
 - **spend**: one row per paid call that wasn't served from the cache: when, which service (`ai` or `search`), tokens or searches, the cost in USD, the device and the Ask it was for. `seed.py --reset` keeps it, so reseeding never resets a budget.
-- **web_cache**: search results and fetched pages (keyed by query or URL), and the parsed replies of the JSON LLM calls (keyed by a hash of the exact prompt). It's demo insurance and speed: once a question has been asked, it replays the same gate verdict, search and sources much faster. `seed.py --reset` keeps this table.
+- **web_cache**: search results and fetched pages (keyed by query or URL), and the replies of the LLM calls, including the explanation (keyed by a hash of the exact prompt). It's demo insurance and speed: once a question has been asked, it replays the same gate verdict, search and sources much faster. `seed.py --reset` keeps this table.
 
 The database runs in **WAL mode** with a 5-second **busy timeout** (`db.connect()`), so many people can read while someone writes, and two writers wait for each other instead of failing with "database is locked". It means the database has two side files, `dialectic.db-wal` and `-shm`; `seed.py --reset` deletes them with it. Each connection is opened with `check_same_thread=False`, because FastAPI may open a request's connection on one thread and close it on another (pages that load several things at once hit this); each request still has its own connection.
 
@@ -138,7 +138,7 @@ flowchart TD
 
 The points worth knowing:
 
-- **Peers come first and need no AI.** The peer layer only searches `note`s (including replies), not other questions or AI answers, and boosts notes in the same section (same page for a reading uploaded before sections existed).
+- **Peers come first and need no AI.** The peer layer only searches `note`s (including replies), not other questions or AI answers and not the asker's own notes, and boosts notes in the same section (same page for a reading uploaded before sections existed).
 - **A failed or refused AI step doesn't sink the answer.** If the gate, the web layer or the explanation throws, `ask.failed_block` turns it into a `blocked` entry: `by: "limit"` with the notice as its `label` if a spending limit refused it (below), otherwise `by: "error"` with the real message (the AI service or Kagi down, or a bug; the traceback is logged). The sources fall back to the library, and the rest still arrives. Failures outside the AI steps still fail the request: a 500, or a last `error` line on a stream.
 - **Partial refusals are normal.** The gate judges each layer on its own, so "What does Du Bois *mean* by…" gets sources (rule 2 lets AI point to sources) but no explanation (rule 2 forbids interpreting). The answer then contains only the allowed layers, and `blocked` says which part was refused and why. A layer counts as allowed only if the gate says exactly `true`; anything else denies it.
 - **Two kinds of "no"** from the charter. A toggle that's off blocks a layer *in code*, before any model call (`ai.toggle_blocks`). The **gate** (`ai.gate`) is an LLM call that reads the charter's rules text and can deny a layer citing a rule number; `ai.rule_label` turns "2" into "Rule 2: AI may point us to sources…". Either way the layer is added to `blocked`, and the request still succeeds.
@@ -158,7 +158,7 @@ The AI (DigitalOcean, prepaid credit) and web search (Kagi, $0.012 a search) cos
 
 - **Before** the call, `meter.check(service)` raises `spend.LimitReached` (the notice is its message) if `AI_OFF=1`, if this device has started `DEVICE_ASKS_PER_HOUR` paid Asks in the last hour (`0` = no limit), or if the service's total has reached `AI_BUDGET_USD` / `SEARCH_BUDGET_USD` (that one is the subclass `BudgetExceeded`).
 - **After** the call, `meter.record()` writes a `spend` row and commits it at once: the model's cost comes from the reply's `usage` token counts × `LLM_USD_PER_MTOK_IN` / `LLM_USD_PER_MTOK_OUT` (top of `ai.py`), a search costs `KAGI_USD_PER_SEARCH` (top of `search.py`).
-- **Cached calls never reach the meter**: they're answered from `web_cache` before `chat_once` or `search` is called. So a rehearsed question replays free even when the budget is gone or AI is off; only its explanation (never cached) is refused.
+- **Cached calls never reach the meter**: they're answered from `web_cache` before `chat_once` or `search` is called. Every LLM call is cached by its prompt, the explanation too (`ai.explain`), so a rehearsed question replays free and word for word, even when the budget is gone or AI is off, and it doesn't count against the device limit.
 - **The device limit counts Asks, not calls**: distinct `question_id`s with spend from that `X-Device-Id` in the last hour. An Ask that has already paid once is allowed to finish. A request without the header counts as one shared device, `unknown`. It's not by IP address: at the venue everyone shares one.
 - The settings are read from the environment on every check, so a missing one shows up as an `error` notice naming the variable to copy from `.env.example`, rather than quietly meaning "no limit". Changing one needs a restart of that copy's service (the `.env` is read at start).
 
@@ -235,11 +235,12 @@ curl -N -H 'X-User-Id: 2' -H 'Content-Type: application/json' \
 ## Known gaps (as of 05:40 Sat)
 
 - **The real gate passes the demo questions** (each tried three times, same verdict every time): "what did it mean in 1903?", "where did the term come from?" and the hotkey question are allowed; "what does Du Bois *mean* by…" is partly refused, as intended.
+- **A flaky site can change a replay once.** Fetch failures aren't cached, so a page that refused us once and opens on a later try changes that question's sources, and that one run pays for a new sentence pick and explanation.
 - **The cache replays bad luck too.** A question's gate verdict, filter and sentences are cached by their exact prompt. If a question's first run was unlucky (e.g. every good page refused us), it stays that way until its `llm:` rows are deleted from `web_cache`. Clearing them means the gate writes a new search query. Checking the rehearsed answers is an open item in `TODO.md`.
 - **Saved answers are snapshots.** Reopening an answer card shows the classmates and sources as they were when it was asked, even if a note was deleted since.
 - **The sentence pick only reads the first 6,000 characters of each page,** so an answer deeper in a long page is missed (the page lands in `no_answer`).
 - **A quote that runs across a page break** isn't found by the hotkey routes, and on the web gets the section of its first page.
-- **The Mac app doesn't say which app the text came from** ("from Notability"): `TODO.md`, owner josoup.
+- **The Mac app doesn't send which app the text came from yet** ("from Notability"): the server accepts and returns `source_app`; `TODO.md`, owner josoup.
 - **`main.py` is past the ~400 lines** at which SPEC §4 says to split it. Left alone until after the demo, so nobody's edits collide.
 - **Budgets can overshoot by one Ask.** The check is "has the total reached the budget?" before each call, so the calls of Asks already running when it's reached still go through: a few cents, not dollars.
 - **The device limit is per device id**, which a student can reset by clearing browser storage. It's for fairness; the budget is the real cap.

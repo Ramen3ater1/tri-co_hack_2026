@@ -34,11 +34,12 @@ STAGE_LABELS = {
 FRAGMENT_WORDS = 5     # long sentences link as textStart,textEnd with this many words each
 
 
-def peer_layer(conn, reading_id, page, section_id, quote, question, visibility):
+def peer_layer(conn, reading_id, asker_id, page, section_id, quote, question, visibility):
     """Visible notes and replies on this reading that share keywords with the quote and question,
     boosted in the same section (or the same page, for a reading with no sections).
 
-    Only kind = 'note': other questions and AI answers aren't answers from your class.
+    Only kind = 'note': other questions and AI answers aren't answers from your class, and not
+    the asker's own notes: this layer is what classmates said.
     """
     match = db.fts_query(f"{quote} {question}")
     if match is None:
@@ -49,13 +50,14 @@ def peer_layer(conn, reading_id, page, section_id, quote, question, visibility):
             JOIN annotations a ON a.id = f.rowid
             JOIN users u ON u.id = a.user_id
             WHERE annotations_fts MATCH :match
-              AND a.reading_id = :reading_id AND a.kind = 'note' AND {db.VISIBLE_SQL}
+              AND a.reading_id = :reading_id AND a.kind = 'note' AND a.user_id != :asker_id
+              AND {db.VISIBLE_SQL}
             ORDER BY bm25(annotations_fts) - CASE
                 WHEN :section_id IS NOT NULL AND a.section_id = :section_id THEN :section_boost
                 WHEN :section_id IS NULL AND a.page = :page THEN :page_boost
                 ELSE 0 END
             LIMIT :limit""",
-        {"match": match, "reading_id": reading_id, "page": page, "section_id": section_id,
+        {"match": match, "reading_id": reading_id, "asker_id": asker_id, "page": page, "section_id": section_id,
          "section_boost": SAME_SECTION_BOOST, "page_boost": SAME_PAGE_BOOST, "limit": PEER_LIMIT, **visibility},
     ).fetchall()
     return [
@@ -229,13 +231,14 @@ def status(stage):
     return {"event": "status", "stage": stage, "label": STAGE_LABELS[stage]}
 
 
-def answer_steps(conn, reading, user, page, quote, rects, question, via="web", device_id=None):
+def answer_steps(conn, reading, user, page, quote, rects, question, via="web", device_id=None, source_app=None):
     """Run the whole /ask flow, yielding progress events as it goes (SPEC §3.5, §6).
 
     Events, in this order: question, status/peer, status/blocked..., status/sources,
     status/ai_answer, then done with the full response. A `blocked` event can come after the
     charter check, after sources and after the explanation. via: 'web' or 'hotkey'.
     device_id: the X-Device-Id header, for the per-device spending limit (SPEC §9.1).
+    source_app: for hotkey asks, the Mac app the text came from (e.g. "Notability"), if it said.
     """
     charter = conn.execute("SELECT * FROM charter").fetchone()
     ai_user_id = conn.execute("SELECT id FROM users WHERE role = 'ai'").fetchone()["id"]
@@ -244,7 +247,7 @@ def answer_steps(conn, reading, user, page, quote, rects, question, via="web", d
     section = sections.section_for(conn, reading["id"], page, quote)
     question_id = db.insert_annotation(
         conn, reading["id"], user["id"], "question", page, quote, json.dumps(rects), question, via=via,
-        section_id=section["id"] if section else None,
+        section_id=section["id"] if section else None, source_app=source_app,
     )
     conn.commit()
     yield {"event": "question", "question_id": question_id, "section": section["title"] if section else None}
@@ -253,7 +256,7 @@ def answer_steps(conn, reading, user, page, quote, rects, question, via="web", d
 
     # 2. Peer layer: always on, no AI.
     yield status("peer")
-    peer = peer_layer(conn, reading["id"], page, section["id"] if section else None, quote, question,
+    peer = peer_layer(conn, reading["id"], user["id"], page, section["id"] if section else None, quote, question,
                       db.visibility_params(conn, user))
     yield {"event": "peer", "peer": peer}
 
@@ -343,7 +346,7 @@ def explain_layer(conn, meter, charter, reading, ai_user_id, page, quote, questi
     if not grounded:
         return None
     body = ai.explain(
-        meter, charter["text_md"], reading["title"], quote, question,
+        conn, meter, charter["text_md"], reading["title"], quote, question,
         [{"title": s["title"], "text": s["text"], "sentence": s["quote"]} for s in grounded],
         charter["max_explanation_words"],
     )

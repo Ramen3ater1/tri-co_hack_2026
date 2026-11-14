@@ -20,23 +20,27 @@ The cached answer for the hotkey demo question ("Where does the idea of a sevent
 
 ## The Mac app doesn't say which app the text came from
 
-**Owner:** josoup (Mac app), then backend · **Status:** open · **Found:** 04:50 Sat (design frame S05)
+**Owner:** josoup (Mac app) · **Status:** open, server side done 05:55 · **Found:** 04:50 Sat (design frame S05)
 
 The design shows a hotkey question in the margin as "from Notability via the Mac hotkey". The server only knows `via: "hotkey"`: `POST /api/ask` takes just `{quote, question}`.
 
 **What it would take:** the Mac app sends the frontmost app's name (e.g. `NSWorkspace.shared.frontmostApplication?.localizedName`) as an optional `source_app` in `/api/ask` and `/api/ask/stream`; the server stores it on the question (a new `annotations.source_app` column) and returns it in the annotation shape (SPEC §6). Until then the card just says "via the Mac hotkey".
 
+**Done so far (05:55):** the server side. `/api/ask`, `/api/ask/stream` and `/api/note` accept an optional `source_app`, store it, and annotations return `"source_app"` (or `null`). Left: the Mac app sends it, and the margin card shows "from <source_app> via the Mac hotkey" when it's set.
+
 
 ## The AI explanation isn't cached, so "replays" still cost and count
 
-**Owner:** anyone (backend) · **Status:** open · **Found:** 05:23 Sat, local check of main before promoting
+**Owner:** anyone (backend) · **Status:** done 05:55 · **Found:** 05:23 Sat, local check of main before promoting
 
 Re-asking an identical question replays the gate, search, filter and sentence picks from `web_cache`, but `ai.explain` calls `chat()` directly, not `chat_json`, so the explanation is generated again every time (~1 cent, ~6 s). Effects: (1) a replay counts as a **paid Ask** against `DEVICE_ASKS_PER_HOUR`, contrary to SPEC §9.1 ("replays are free"); with the limit at 2, ask, replay, new question → the new question is blocked; (2) on stage, a rehearsed question regenerates its explanation, so the wording can differ from rehearsal.
 
 **What it would take:** cache the explanation text in `web_cache` keyed by its exact prompt, like `chat_json` does (`llm:` + hash).
 
+**Done (05:55):** `ai.explain` caches its text that way. Tested through the real routes: two users on two devices replaying the hotkey demo question made no paid calls, got the same explanation word for word, and none counted against the device limit. One caveat found while testing: fetch failures aren't cached, so a site that refused us once (here a CUNY Commons page, 403) and opens on a later try changes that question's sources once, and that run pays for a new sentence pick and explanation. After that it replays free again.
+
 ## Ask's peer layer includes the asker's own note
 
-**Owner:** anyone (backend) · **Status:** open · **Found:** 05:23 Sat, same check
+**Owner:** anyone (backend) · **Status:** done 05:55 · **Found:** 05:23 Sat, same check
 
-Ben's Ask returned his own note ("Is this the same idea as being split in two?") under peers, alongside Sam's. SPEC §3.5 means *classmates'* answers. Small, but it reads oddly in the demo ("From your class: Ben"). **Fix:** exclude `a.user_id = <asker>` in `peer_layer`.
+Ben's Ask returned his own note ("Is this the same idea as being split in two?") under peers, alongside Sam's. SPEC §3.5 means *classmates'* answers. Small, but it reads oddly in the demo ("From your class: Ben"). **Fix:** exclude `a.user_id = <asker>` in `peer_layer`. **Done (05:55):** tested: Prof. Rivera asking about her own annotated passage now gets only Sam's note.

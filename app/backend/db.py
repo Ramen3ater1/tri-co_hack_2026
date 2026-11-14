@@ -83,6 +83,7 @@ CREATE TABLE IF NOT EXISTS annotations (
   body TEXT NOT NULL,
   cited_source_ids TEXT,
   share_with_future INTEGER NOT NULL DEFAULT 1,
+  source_app TEXT,   -- hotkey only: the Mac app the text came from (e.g. 'Notability'), if sent
   answer_json TEXT,  -- questions only: the finished /ask response, so the answer card can reopen
   created_at TEXT NOT NULL
 );
@@ -211,12 +212,12 @@ def visibility_params(conn, user):
 
 def insert_annotation(conn, reading_id, user_id, kind, page, quote, rects_json, body,
                       parent_id=None, share_with_future=True, cited_source_ids=None,
-                      section_id=None, via="web"):
+                      section_id=None, via="web", source_app=None):
     cur = conn.execute(
-        """INSERT INTO annotations (reading_id, user_id, parent_id, kind, page, section_id, via, quote,
+        """INSERT INTO annotations (reading_id, user_id, parent_id, kind, page, section_id, via, source_app, quote,
                                     rects_json, body, cited_source_ids, share_with_future, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        (reading_id, user_id, parent_id, kind, page, section_id, via, quote, rects_json, body,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (reading_id, user_id, parent_id, kind, page, section_id, via, source_app, quote, rects_json, body,
          json.dumps(cited_source_ids) if cited_source_ids is not None else None,
          int(share_with_future), now()),
     )

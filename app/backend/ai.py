@@ -337,19 +337,32 @@ def around_sentence(text, sentence):
     return flat[max(0, at - CONTEXT_CHARS): at + len(sentence) + CONTEXT_CHARS]
 
 
-def explain(meter, charter_text, reading_title, quote, question, sources, max_words):
+def explain(conn, meter, charter_text, reading_title, quote, question, sources, max_words):
     """sources: [{title, text, sentence}], cited as [1], [2] in this order. Each source is shown to
     the model as the text around its verified sentence, so the answer is grounded in what we checked.
-    Returns the explanation, at most max_words."""
+    Returns the explanation, at most max_words.
+
+    Cached in web_cache by the exact prompt, like chat_json: a replayed question gets the same
+    explanation, word for word, for free (so it doesn't count against the device limit either)."""
     numbered = "\n\n".join(
         f"[{n}] {s['title']}\n{around_sentence(s['text'], s['sentence'])}" for n, s in enumerate(sources, start=1)
     )
     # Models overshoot word limits, so ask for a bit less than the charter's maximum.
     target = max(40, max_words - EXPLAIN_WORD_MARGIN)
-    text = chat("You are a careful teaching assistant.", EXPLAIN_PROMPT.format(
+    prompt = EXPLAIN_PROMPT.format(
         charter=charter_text, reading_title=reading_title, quote=quote, question=question,
         max_words=target, sources=numbered,
-    ), meter, effort=EXPLAIN_EFFORT)
+    )
+    key = "llm:" + hashlib.sha256(f"explain|{EXPLAIN_EFFORT}|{prompt}".encode()).hexdigest()
+    row = conn.execute("SELECT value FROM web_cache WHERE key = ?", (key,)).fetchone()
+    if row:
+        return cut_to_words(json.loads(row["value"]), max_words)
+    text = chat("You are a careful teaching assistant.", prompt, meter, effort=EXPLAIN_EFFORT)
+    conn.execute(
+        "INSERT OR REPLACE INTO web_cache (key, value, created_at) VALUES (?, ?, datetime('now'))",
+        (key, json.dumps(text)),
+    )
+    conn.commit()
     return cut_to_words(text, max_words)
 
 

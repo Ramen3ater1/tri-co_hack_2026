@@ -112,6 +112,7 @@ def annotation_json(row, current_cohort):
         "page": row["page"],
         "section": row["section_title"],
         "via": row["via"],
+        "source_app": row["source_app"],
         "quote": row["quote"],
         "rects": json.loads(row["rects_json"]) if row["rects_json"] else None,
         "body": row["body"],
@@ -409,6 +410,7 @@ def ask_question_stream(reading_id: int, req: AskRequest, user=Depends(current_u
 class HotkeyAskRequest(BaseModel):
     quote: str
     question: str
+    source_app: str | None = None  # the app the text came from, e.g. "Notability" (optional)
 
 
 def locate_quote(conn, quote):
@@ -436,7 +438,7 @@ def hotkey_steps(conn, reading, user, page, rects, req, device_id):
     """answer_steps with a `located` event right after the question is saved, and `located` in the result."""
     located = None
     for event in ask.answer_steps(conn, reading, user, page, req.quote, rects, req.question, via="hotkey",
-                                  device_id=device_id):
+                                  device_id=device_id, source_app=req.source_app):
         if event["event"] == "question":
             located = located_json(reading, page, event)
             yield event
@@ -476,6 +478,7 @@ class HotkeyNoteRequest(BaseModel):
     quote: str
     body: str
     share_with_future: bool = True
+    source_app: str | None = None  # as for HotkeyAskRequest
 
 
 @app.post("/api/note")
@@ -487,6 +490,7 @@ def hotkey_note(req: HotkeyNoteRequest, user=Depends(current_user), conn=Depends
     annotation_id = db.insert_annotation(
         conn, reading["id"], user["id"], "note", page, req.quote, json.dumps(rects), req.body,
         share_with_future=req.share_with_future, section_id=section["id"] if section else None, via="hotkey",
+        source_app=req.source_app,
     )
     conn.commit()
     result = load_annotation(conn, annotation_id)
