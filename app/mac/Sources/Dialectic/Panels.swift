@@ -2,8 +2,8 @@
 import AppKit
 import SwiftUI
 
-let ASK_PANEL_WIDTH: CGFloat = 500
-let NOTE_PANEL_WIDTH: CGFloat = 460
+let COMPOSER_WIDTH: CGFloat = 500        // the one Ask | Note panel
+let PANEL_MODE_KEY = "panelMode"         // UserDefaults: the last tab used, "ask" or "note"
 let MESSAGE_PANEL_WIDTH: CGFloat = 420
 let ANSWER_HEIGHT: CGFloat = 430          // the answer scrolls inside this
 let ASK_HINT = "Visible to the class. Classmates answer first."
@@ -65,20 +65,14 @@ final class AskModel: ObservableObject {
     }
 }
 
-struct AskView: View {
+/// The Ask tab: question box, then the three-layer answer (board 2).
+struct AskTab: View {
     @ObservedObject var model: AskModel
     let users: [User]
     @FocusState private var focused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(contextTitle("Ask", section: model.section, page: model.page))
-                    .font(.system(size: 14, weight: .semibold)).foregroundColor(Theme.ink)
-                Spacer()
-                KeyCap(label: HOTKEY_ASK_LABEL)
-            }
-            QuoteChip(text: model.quote)
             TextField("Ask a question about this passage", text: $model.question)
                 .textFieldStyle(.plain)
                 .font(.system(size: 13))
@@ -115,8 +109,6 @@ struct AskView: View {
                 }
             }
         }
-        .frame(width: ASK_PANEL_WIDTH - 32, alignment: .leading)
-        .panelSurface()
         .onAppear { focused = true }
     }
 }
@@ -257,25 +249,13 @@ final class NoteModel: ObservableObject {
     }
 }
 
-struct NoteView: View {
+/// The Note tab: note box, share checkbox, Save (board 3).
+struct NoteTab: View {
     @ObservedObject var model: NoteModel
     @FocusState private var focused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(contextTitle("Note", section: model.saved?.section ?? model.context?.section, page: model.saved?.page ?? model.context?.page))
-                    .font(.system(size: 14, weight: .semibold)).foregroundColor(Theme.ink)
-                Spacer()
-                KeyCap(label: HOTKEY_NOTE_LABEL)
-            }
-            if let near = model.context?.nearLockedCount, near > 0, model.saved == nil {
-                RoleCard(role: .classmate, dashed: true) {
-                    Text("\(lockedTitle(near)). Your note opens them.")
-                        .font(.system(size: 12.5)).foregroundColor(Theme.ink)
-                }
-            }
-            QuoteChip(text: model.quote)
             SectionLabel("Your note")
             TextArea(placeholder: "What do you notice here?", text: $model.body, height: 96)
                 .focused($focused)
@@ -304,9 +284,104 @@ struct NoteView: View {
                 }
             }
         }
-        .frame(width: NOTE_PANEL_WIDTH - 32, alignment: .leading)
-        .panelSurface()
         .onAppear { focused = true }
+    }
+}
+
+// ---------- the one panel: Ask | Note ----------
+
+enum ComposerMode: String {
+    case ask, note
+}
+
+@MainActor
+final class ComposerModel: ObservableObject {
+    @Published var mode: ComposerMode {
+        didSet { UserDefaults.standard.set(mode.rawValue, forKey: PANEL_MODE_KEY) }  // remember the last choice
+    }
+    let ask = AskModel()
+    let note = NoteModel()
+
+    init(quote: String, context: PassageContext?, onSaved: @escaping () -> Void) {
+        mode = ComposerMode(rawValue: UserDefaults.standard.string(forKey: PANEL_MODE_KEY) ?? "") ?? .ask
+        ask.quote = quote
+        ask.context = context
+        ask.onSaved = onSaved
+        note.quote = quote
+        note.context = context
+        note.onSaved = onSaved
+    }
+
+    var section: String? { ask.response?.located?.section ?? note.saved?.section ?? ask.context?.section }
+    var page: Int? { ask.response?.located?.page ?? note.saved?.page ?? ask.context?.page }
+}
+
+/// ⌥⇧D's panel: header with Ask | Note and the highlights switch, the quote, then the chosen tab.
+struct ComposerView: View {
+    @ObservedObject var model: ComposerModel
+    @ObservedObject var ask: AskModel      // observed too, so the header follows an answer arriving
+    @ObservedObject var note: NoteModel
+    @ObservedObject var overlay: OverlayModel
+    let users: [User]
+
+    var place: String {
+        [model.section, model.page.map { "p. \($0)" }].compactMap { $0 }.joined(separator: ", ")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                ModeSwitch(mode: $model.mode)
+                Spacer(minLength: 4)
+                Toggle("Highlights", isOn: Binding(get: { overlay.active }, set: { _ in AppDelegate.shared.toggleHighlights() }))
+                    .toggleStyle(.switch).controlSize(.mini).font(.system(size: 11.5))
+                    .help("Show classmates' highlights on the page you're reading")
+                KeyCap(label: HOTKEY_LABEL)
+            }
+            if !place.isEmpty {
+                Text(place).font(.system(size: 12.5)).foregroundColor(Theme.muted).lineLimit(1).truncationMode(.middle)
+            }
+            if model.mode == .note, let near = note.context?.nearLockedCount, near > 0, note.saved == nil {
+                RoleCard(role: .classmate, dashed: true) {
+                    Text("\(lockedTitle(near)). Your note opens them.")
+                        .font(.system(size: 12.5)).foregroundColor(Theme.ink)
+                }
+            }
+            QuoteChip(text: model.ask.quote)
+            if model.mode == .ask {
+                AskTab(model: ask, users: users)
+            } else {
+                NoteTab(model: note)
+            }
+        }
+        .frame(width: COMPOSER_WIDTH - 32, alignment: .leading)
+        .panelSurface()
+    }
+}
+
+/// Ask | Note as two pills (the canvas look; a native segmented control doesn't match it).
+struct ModeSwitch: View {
+    @Binding var mode: ComposerMode
+    var body: some View {
+        HStack(spacing: 2) {
+            pill("Ask", .ask)
+            pill("Note", .note)
+        }
+        .padding(2)
+        .background(Capsule().fill(Theme.ground))
+        .overlay(Capsule().stroke(Theme.hairline, lineWidth: 1))
+    }
+
+    func pill(_ title: String, _ value: ComposerMode) -> some View {
+        Button { mode = value } label: {
+            Text(title)
+                .font(.system(size: 13, weight: mode == value ? .semibold : .regular))
+                .foregroundColor(mode == value ? Theme.ink : Theme.muted)
+                .padding(.horizontal, 14).frame(minHeight: 28)
+                .background(Capsule().fill(mode == value ? Theme.panel : Color.clear))
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 }
 

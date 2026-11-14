@@ -125,15 +125,16 @@ func renderCheck(into dir: String) {
     model.selectedId = 3
     savePNG(MarginView(model: model, refresh: {}, scrolls: false).frame(height: 760), "\(dir)/5-thread.png")
 
-    // 3. Panels.
-    let ask = AskModel()
-    ask.quote = "the Negro is a sort of seventh son, born with a veil, and gifted with second-sight"
-    ask.question = "Where does the idea of a seventh son born with a veil come from?"
-    ask.response = sample(ASK_JSON, as: AskResponse.self)
-    savePNG(AnswerView(response: ask.response!, users: users, showAI: .constant(false)).frame(width: 468).padding(16).background(Color.white), "\(dir)/2-ask-answer.png")
-    savePNG(AskView(model: ask, users: users), "\(dir)/2-ask-panel.png")
-    let note = NoteModel()
-    note.quote = "this double-consciousness, this sense of always looking at one’s self through the eyes of others"
-    note.context = ctx
-    savePNG(NoteView(model: note), "\(dir)/3-note.png")
+    // 3. The one ⌥⇧D panel, both tabs (the answer scrolls, so it's drawn on its own too).
+    let savedMode = UserDefaults.standard.string(forKey: PANEL_MODE_KEY)
+    defer { UserDefaults.standard.set(savedMode, forKey: PANEL_MODE_KEY) }
+    let composer = ComposerModel(quote: "this double-consciousness, this sense of always looking at one’s self through the eyes of others",
+                                 context: ctx, onSaved: {})
+    composer.mode = .ask
+    composer.ask.question = "Where does the idea of double-consciousness come from?"
+    savePNG(ComposerView(model: composer, ask: composer.ask, note: composer.note, overlay: model, users: users), "\(dir)/2-panel-ask.png")
+    composer.mode = .note
+    savePNG(ComposerView(model: composer, ask: composer.ask, note: composer.note, overlay: model, users: users), "\(dir)/3-panel-note.png")
+    let answer = sample(ASK_JSON, as: AskResponse.self)
+    savePNG(AnswerView(response: answer, users: users, showAI: .constant(false)).frame(width: 468).padding(16).background(Color.white), "\(dir)/2-ask-answer.png")
 }

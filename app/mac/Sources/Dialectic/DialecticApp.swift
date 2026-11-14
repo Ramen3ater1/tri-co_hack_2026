@@ -25,12 +25,10 @@ var SERVER_URL: String { UserDefaults.standard.string(forKey: SERVER_DEFAULTS_KE
 /// "Report a problem…" opens this GitHub issue form, as the web app's button does (CLAUDE.md, Feedback issues).
 let NEW_ISSUE_URL = "https://github.com/Ramen3ater1/tri-co_hack_2026/issues/new"
 let HOTKEY_MODIFIERS = UInt32(optionKey | shiftKey)
-let HOTKEY_ASK_KEY = UInt32(kVK_ANSI_D)
-let HOTKEY_NOTE_KEY = UInt32(kVK_ANSI_N)
-let HOTKEY_HIGHLIGHTS_KEY = UInt32(kVK_ANSI_H)
-let HOTKEY_ASK_LABEL = "⌥⇧D"
-let HOTKEY_NOTE_LABEL = "⌥⇧N"
-let HOTKEY_HIGHLIGHTS_LABEL = "⌥⇧H"
+/// The one hotkey (josue, Sat 08:55): copy the selection (or drag a box), then Ask | Note in one panel.
+let HOTKEY_KEY = UInt32(kVK_ANSI_D)
+let HOTKEY_LABEL = "⌥⇧D"
+let HOTKEY_ID: UInt32 = 1
 /// How long to wait for the front app to put the selection on the pasteboard after ⌘C.
 let COPY_WAIT_SECONDS = 0.6
 /// /api/ask searches the web and calls the LLM, so it can take a while.
@@ -44,11 +42,8 @@ let NO_USER_MESSAGE = "Pick who you are in the Dialectic menu-bar menu first."
 let NO_ACCESSIBILITY_MESSAGE =
     "Dialectic needs Accessibility access to copy your selection. Turn it on in System Settings → Privacy & Security → Accessibility, then try again."
 let NO_SCREEN_RECORDING_MESSAGE =
-    "Dialectic needs Screen Recording access to find the page you're reading (the screenshot stays on this Mac). Turn it on in System Settings → Privacy & Security → Screen Recording, restart Dialectic, then press \(HOTKEY_HIGHLIGHTS_LABEL) again."
+    "Dialectic needs Screen Recording access to find the page you're reading (the screenshot stays on this Mac). Turn it on in System Settings → Privacy & Security → Screen Recording, restart Dialectic, then try again."
 
-enum HotKey: UInt32 {
-    case ask = 1, note = 2, highlights = 3
-}
 
 // ---------- app ----------
 
@@ -78,7 +73,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             await loadUsers()
             reader.show()  // the web reader, signed in as the menu's user
         }
-        print("Dialectic running. Server: \(SERVER_URL). Hotkeys: \(HOTKEY_ASK_LABEL) ask, \(HOTKEY_NOTE_LABEL) note, \(HOTKEY_HIGHLIGHTS_LABEL) highlights.")
+        print("Dialectic running. Server: \(SERVER_URL). Hotkey: \(HOTKEY_LABEL) (ask or note).")
         print("Permissions: Accessibility \(AXIsProcessTrusted() ? "granted" : "NOT granted"), Screen Recording \(CGPreflightScreenCaptureAccess() ? "granted" : "NOT granted"). User id: \(currentUserId().map(String.init) ?? "none"). App: \(Bundle.main.bundlePath)")
     }
 
@@ -96,7 +91,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if url.scheme == "dialectic", url.host == "hotkey" {
                 let key = parts?.queryItems?.first(where: { $0.name == "key" })?.value
                 print("Hotkey by URL: \(key ?? "?")")
-                hotKeyPressed(key == "note" ? .note : key == "highlights" ? .highlights : .ask)
+                if key == "highlights" { toggleHighlights() } else { hotKeyPressed() }
                 continue
             }
             guard url.scheme == "dialectic", url.host == "login",
@@ -148,9 +143,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu(title: "Dialectic")
         menu.addItem(withTitle: "Open Dialectic", action: #selector(openReader), keyEquivalent: "o")
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Ask about selection (\(HOTKEY_ASK_LABEL))", action: #selector(askHotKey), keyEquivalent: "")
-        menu.addItem(withTitle: "Note on selection (\(HOTKEY_NOTE_LABEL))", action: #selector(noteHotKey), keyEquivalent: "")
-        let highlights = menu.addItem(withTitle: "Show classmates' highlights (\(HOTKEY_HIGHLIGHTS_LABEL))", action: #selector(highlightsHotKey), keyEquivalent: "")
+        menu.addItem(withTitle: "Ask or note on selection (\(HOTKEY_LABEL))", action: #selector(hotKeyFromMenu), keyEquivalent: "")
+        let highlights = menu.addItem(withTitle: "Show highlights", action: #selector(toggleHighlights), keyEquivalent: "")
         highlights.state = overlay.isActive ? .on : .off
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "I am:", action: nil, keyEquivalent: ""))
@@ -224,9 +218,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ]
         NSWorkspace.shared.open(parts.url!)
     }
-    @objc func askHotKey() { hotKeyPressed(.ask) }
-    @objc func noteHotKey() { hotKeyPressed(.note) }
-    @objc func highlightsHotKey() { hotKeyPressed(.highlights) }
+    @objc func hotKeyFromMenu() { hotKeyPressed() }
+    /// The overlay's on/off switch: the menu item and the panel's toggle (it has no hotkey of its own).
+    @objc func toggleHighlights() {
+        overlay.toggle()
+        rebuildMenu()
+    }
 
     // ----- hotkeys -----
 
@@ -239,39 +236,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let id = hotKeyID.id
             DispatchQueue.main.async {
                 MainActor.assumeIsolated {
-                    if let key = HotKey(rawValue: id) { AppDelegate.shared.hotKeyPressed(key) }
+                    if id == HOTKEY_ID { AppDelegate.shared.hotKeyPressed() }
                 }
             }
             return noErr
         }, 1, &spec, nil, nil)
         if handlerStatus != noErr { print("ERROR: couldn't install the hotkey handler (\(handlerStatus))") }
 
-        for (key, code, label) in [(HotKey.ask, HOTKEY_ASK_KEY, HOTKEY_ASK_LABEL), (.note, HOTKEY_NOTE_KEY, HOTKEY_NOTE_LABEL),
-                                   (.highlights, HOTKEY_HIGHLIGHTS_KEY, HOTKEY_HIGHLIGHTS_LABEL)] {
-            var ref: EventHotKeyRef?
-            let id = EventHotKeyID(signature: OSType(0x444C_4354), id: key.rawValue)  // "DLCT"
-            let status = RegisterEventHotKey(code, HOTKEY_MODIFIERS, id, GetApplicationEventTarget(), 0, &ref)
-            if status != noErr {
-                // Fail loudly: probably another app already owns this combination.
-                print("ERROR: couldn't register hotkey \(label) (\(status))")
-                showMessage("Couldn't register the hotkey \(label). Another app may be using it.")
-            }
-            hotKeyRefs.append(ref)
+        var ref: EventHotKeyRef?
+        let id = EventHotKeyID(signature: OSType(0x444C_4354), id: HOTKEY_ID)  // "DLCT"
+        let status = RegisterEventHotKey(HOTKEY_KEY, HOTKEY_MODIFIERS, id, GetApplicationEventTarget(), 0, &ref)
+        if status != noErr {
+            // Fail loudly: probably another app already owns this combination.
+            print("ERROR: couldn't register hotkey \(HOTKEY_LABEL) (\(status))")
+            showMessage("Couldn't register the hotkey \(HOTKEY_LABEL). Another app may be using it.")
+        } else {
+            print("Registered hotkey \(HOTKEY_LABEL)")
         }
+        hotKeyRefs.append(ref)
     }
 
-    func hotKeyPressed(_ key: HotKey) {
-        print("Hotkey pressed: \(key)")
-        switch key {
-        case .highlights:
-            overlay.toggle()
-            rebuildMenu()
-        case .ask, .note:
-            Task { await captureAndOpen(key) }
-        }
+    func hotKeyPressed() {
+        print("Hotkey pressed")
+        Task { await captureAndOpen() }
     }
 
-    func captureAndOpen(_ key: HotKey) async {
+    func captureAndOpen() async {
         // Asks macOS to show the Accessibility prompt the first time; the human grants it.
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
         guard AXIsProcessTrustedWithOptions(options) else {
@@ -316,28 +306,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         let context = overlay.model.active ? overlay.model.context(for: text) : nil
-        if key == .ask {
-            let model = AskModel()
-            model.quote = text
-            model.context = context
-            model.onSaved = { [weak self] in self?.overlay.refreshNow() }
-            watch(model.objectWillChange)
-            panels.show(AskView(model: model, users: users))
-        } else {
-            let model = NoteModel()
-            model.quote = text
-            model.context = context
-            model.onSaved = { [weak self] in self?.overlay.refreshNow() }
-            watch(model.objectWillChange)
-            panels.show(NoteView(model: model))
-        }
+        let composer = ComposerModel(quote: text, context: context, onSaved: { [weak self] in self?.overlay.refreshNow() })
+        watch(composer)
+        panels.show(ComposerView(model: composer, ask: composer.ask, note: composer.note, overlay: overlay.model, users: users))
     }
 
     /// Re-fit the panel whenever its content changes (an answer arriving makes it taller).
-    func watch(_ publisher: ObservableObjectPublisher) {
-        watching = publisher.sink { [weak self] _ in
-            DispatchQueue.main.async { self?.panels.refit() }
-        }
+    func watch(_ composer: ComposerModel) {
+        watching = Publishers.Merge3(composer.objectWillChange, composer.ask.objectWillChange, composer.note.objectWillChange)
+            .sink { [weak self] _ in
+                DispatchQueue.main.async { self?.panels.refit() }
+            }
     }
 
     /// Simulate ⌘C in the front app, read the text, then put the old pasteboard back.
@@ -405,7 +384,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 enum DialecticMain {
     static func main() {
-        if isatty(STDOUT_FILENO) == 0 {
+        if isatty(STDOUT_FILENO) == 0 && !CommandLine.arguments.contains("--render") {
             // Opened from Finder or `open`: there's no terminal, so keep the log in a file.
             freopen(LOG_PATH, "a", stdout)
             freopen(LOG_PATH, "a", stderr)

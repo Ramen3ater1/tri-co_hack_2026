@@ -311,8 +311,11 @@ struct StatusPill: View {
                 Text("Classmates' highlights").font(.system(size: 12.5, weight: .semibold)).foregroundColor(Theme.ink)
                 Text("· \(model.place)").font(.system(size: 12.5)).foregroundColor(Theme.muted)
             }
-            KeyCap(label: HOTKEY_HIGHLIGHTS_LABEL)
-            Text("to hide").font(.system(size: 12)).foregroundColor(Theme.muted)
+            Text("·").foregroundColor(Theme.muted)
+            Button { AppDelegate.shared.toggleHighlights() } label: {
+                Text("Hide").font(.system(size: 12.5, weight: .medium)).foregroundColor(Theme.you)
+            }
+            .buttonStyle(.plain)
             if model.isStub {
                 // STUB: POST /api/locate pending Owen's OK
                 Text("stub data").font(.system(size: 10.5, weight: .semibold)).foregroundColor(Theme.warning)
@@ -434,10 +437,8 @@ struct LockedCard: View {
             Text(LOCKED_HINT).font(.system(size: 12.5)).foregroundColor(Theme.ink)
             HStack(spacing: 4) {
                 Text("Select the passage, then").font(.system(size: 11.5)).foregroundColor(Theme.muted)
-                KeyCap(label: HOTKEY_NOTE_LABEL)
-                Text("note or").font(.system(size: 11.5)).foregroundColor(Theme.muted)
-                KeyCap(label: HOTKEY_ASK_LABEL)
-                Text("ask").font(.system(size: 11.5)).foregroundColor(Theme.muted)
+                KeyCap(label: HOTKEY_LABEL)
+                Text("to note or ask").font(.system(size: 11.5)).foregroundColor(Theme.muted)
             }
         }
     }
@@ -508,6 +509,11 @@ struct MaybeScroll<Content: View>: View {
 
 // ---------- controller ----------
 
+/// Takes the first click even when its window isn't key (the pill's Hide).
+final class FirstClickHostingView<Content: View>: NSHostingView<Content> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+}
+
 /// A borderless window that never takes clicks.
 func passThroughWindow() -> NSWindow {
     let window = NSWindow(contentRect: .zero, styleMask: [.borderless], backing: .buffered, defer: false)
@@ -536,7 +542,8 @@ final class OverlayController {
 
     init() {
         highlightWindow.contentView = NSHostingView(rootView: HighlightLayer(model: model))
-        pillWindow.contentView = NSHostingView(rootView: StatusPill(model: model))
+        pillWindow.contentView = FirstClickHostingView(rootView: StatusPill(model: model))
+        pillWindow.ignoresMouseEvents = false  // the pill's Hide takes clicks; the box layer stays click-through
         marginPanel.isMovableByWindowBackground = false
         marginPanel.hasShadow = true
         marginPanel.contentView = NSHostingView(rootView: MarginView(model: model, refresh: { [weak self] in self?.refreshNow() }))
@@ -555,7 +562,7 @@ final class OverlayController {
             return
         }
         guard let front = NSWorkspace.shared.frontmostApplication, front.processIdentifier != getpid() else {
-            AppDelegate.shared.showMessage("Click the window you're reading in, then press \(HOTKEY_HIGHLIGHTS_LABEL).")
+            AppDelegate.shared.showMessage("Click the window you're reading in, then turn on Show highlights again.")
             return
         }
         targetPid = front.processIdentifier
