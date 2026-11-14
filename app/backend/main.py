@@ -119,6 +119,21 @@ def annotation_json(row, current_cohort):
         "created_at": row["created_at"],
         "author": {"id": row["user_id"], "name": row["name"], "role": row["role"], "cohort": row["cohort"]},
         "badge": badge(row, current_cohort),
+        "answer_summary": answer_summary(row),
+    }
+
+
+def answer_summary(row):
+    """For a question's margin card ("Answered: 1 classmate, 3 sources, AI context"): counts
+    from its saved answer, or None (not a question, or asked before answers were saved)."""
+    if row["kind"] != "question" or not row["answer_json"]:
+        return None
+    answer = json.loads(row["answer_json"])
+    return {
+        "peer": len(answer["peer"]),
+        "peer_authors": len({p["author"] for p in answer["peer"]}),
+        "sources": len(answer["sources"]),
+        "ai_answer": answer["ai_answer"] is not None,
     }
 
 
@@ -142,8 +157,25 @@ def list_users(conn=Depends(get_conn)):
 
 @app.get("/api/course")
 def course(user=Depends(current_user), conn=Depends(get_conn)):
-    readings = conn.execute("SELECT id, title, created_at FROM readings ORDER BY id").fetchall()
-    return {"course": get_course(conn), "readings": [dict(r) for r in readings], "user": user}
+    """Each reading carries what its card shows: file name, pages, and how many notes and
+    questions you can see on it (top level only; locked ones count too, they're there)."""
+    readings = conn.execute(
+        f"""SELECT r.id, r.title, r.pdf_path, r.created_at,
+                   (SELECT COUNT(*) FROM reading_pages p WHERE p.reading_id = r.id) AS page_count,
+                   (SELECT COUNT(*) FROM annotations a JOIN users u ON u.id = a.user_id
+                     WHERE a.reading_id = r.id AND a.parent_id IS NULL AND a.kind = 'note' AND {db.VISIBLE_SQL}) AS note_count,
+                   (SELECT COUNT(*) FROM annotations a JOIN users u ON u.id = a.user_id
+                     WHERE a.reading_id = r.id AND a.kind = 'question' AND {db.VISIBLE_SQL}) AS question_count
+            FROM readings r ORDER BY r.id""",
+        db.visibility_params(conn, user),
+    ).fetchall()
+    cards = []
+    for r in readings:
+        card = dict(r)
+        # Uploads are saved as "<timestamp>-<name>.pdf": show the name the professor uploaded.
+        card["filename"] = re.sub(r"^\d+-", "", Path(card.pop("pdf_path")).name)
+        cards.append(card)
+    return {"course": get_course(conn), "readings": cards, "user": user}
 
 
 @app.post("/api/readings")
@@ -189,6 +221,12 @@ def list_annotations(reading_id: int, user=Depends(current_user), conn=Depends(g
     ).fetchall()
     current_cohort = get_course(conn)["current_cohort"]
     full_ids = db.full_view_ids(conn, user, reading_id)
+    # One lock card per cluster of nearby locked notes, with how many classmates wrote them.
+    groups = db.locked_groups([
+        {"id": r["id"], "user_id": r["user_id"], "page": r["page"],
+         "rects": json.loads(r["rects_json"]) if r["rects_json"] else None}
+        for r in rows if r["id"] not in full_ids and r["parent_id"] is None
+    ])
     by_id = {}
     top_level = []
     for row in rows:
@@ -198,7 +236,8 @@ def list_annotations(reading_id: int, user=Depends(current_user), conn=Depends(g
         else:
             # Engagement lock (SPEC §3.4): position only. No author, cohort or text leaves the server.
             item = {"id": row["id"], "parent_id": row["parent_id"], "page": row["page"],
-                    "rects": json.loads(row["rects_json"]) if row["rects_json"] else None, "locked": True}
+                    "rects": json.loads(row["rects_json"]) if row["rects_json"] else None, "locked": True,
+                    **groups.get(row["id"], {})}
         item["replies"] = []
         by_id[item["id"]] = item
     for item in by_id.values():
@@ -214,7 +253,7 @@ def list_annotations(reading_id: int, user=Depends(current_user), conn=Depends(g
     top_level.reverse()
     for item in top_level:
         if item["locked"]:
-            del item["parent_id"]  # the locked shape is exactly {id, page, rects, locked} (SPEC §6)
+            del item["parent_id"]  # the locked shape is exactly {id, page, rects, locked, group...} (SPEC §6)
             del item["replies"]
     return top_level
 
@@ -249,6 +288,22 @@ def create_annotation(reading_id: int, new: NewAnnotation, user=Depends(current_
     )
     conn.commit()
     return load_annotation(conn, annotation_id)
+
+
+@app.get("/api/questions/{question_id}/answer")
+def saved_answer(question_id: int, user=Depends(current_user), conn=Depends(get_conn)):
+    """Reopen a question's answer card: the /ask response saved when it was asked.
+    TODO(edge): peers and sources are as they were then (a deleted note still shows here)."""
+    row = conn.execute(
+        f"""SELECT a.* FROM annotations a JOIN users u ON u.id = a.user_id
+            WHERE a.id = :id AND a.kind = 'question' AND {db.VISIBLE_SQL}""",
+        {"id": question_id, **db.visibility_params(conn, user)},
+    ).fetchone()
+    if row is None or row["id"] not in db.full_view_ids(conn, user, row["reading_id"]):
+        raise HTTPException(404, f"No question {question_id} you can see")
+    if not row["answer_json"]:
+        raise HTTPException(404, f"Question {question_id} has no saved answer (asked before answers were saved)")
+    return json.loads(row["answer_json"])
 
 
 @app.delete("/api/annotations/{annotation_id}")
@@ -530,8 +585,9 @@ def dismiss_charter_gap(dismissal: GapDismissal, user=Depends(current_user), con
 def list_sources(user=Depends(current_user), conn=Depends(get_conn)):
     rows = conn.execute(
         """SELECT s.id, s.title, s.url, s.found_by, s.created_at, s.first_question_id,
-                  q.body AS first_question
+                  q.body AS first_question, qu.name AS first_question_author
            FROM sources s LEFT JOIN annotations q ON q.id = s.first_question_id
+           LEFT JOIN users qu ON qu.id = q.user_id
            ORDER BY s.id DESC"""
     ).fetchall()
     return [dict(r) for r in rows]
@@ -574,8 +630,9 @@ def search_repository(q: str, user=Depends(current_user), conn=Depends(get_conn)
     if match is None:
         return {"annotations": [], "pages": []}
     annotations = conn.execute(
-        f"""SELECT a.id AS annotation_id, a.reading_id, r.title AS reading_title, a.page, a.kind,
-                   u.name AS author, snippet(annotations_fts, -1, '[[', ']]', '…', 20) AS snippet
+        f"""SELECT a.id AS annotation_id, a.reading_id, r.title AS reading_title, a.page, a.kind, a.via,
+                   u.id AS author_id, u.name AS author, u.role, u.cohort,
+                   snippet(annotations_fts, -1, '[[', ']]', '…', 20) AS snippet
             FROM annotations_fts f
             JOIN annotations a ON a.id = f.rowid
             JOIN users u ON u.id = a.user_id
@@ -594,11 +651,15 @@ def search_repository(q: str, user=Depends(current_user), conn=Depends(get_conn)
     # Locked annotations never appear: search is not a way around the engagement lock (SPEC §3.8).
     full_ids = {}
     unlocked = []
+    current_cohort = get_course(conn)["current_cohort"]
     for r in annotations:
         if r["reading_id"] not in full_ids:
             full_ids[r["reading_id"]] = db.full_view_ids(conn, user, r["reading_id"])
         if r["annotation_id"] in full_ids[r["reading_id"]]:
-            unlocked.append(dict(r))
+            result = dict(r)
+            result["badge"] = badge(r, current_cohort)
+            del result["role"]
+            unlocked.append(result)
     return {"annotations": unlocked, "pages": [dict(r) for r in pages]}
 
 

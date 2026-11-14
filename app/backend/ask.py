@@ -27,8 +27,8 @@ SAME_SECTION_BOOST = SAME_PAGE_BOOST  # with sections (SPEC §3.10) the boost is
 STAGE_LABELS = {
     "peer": "Looking for classmates' answers…",
     "charter": "Checking the charter…",
-    "sources": "Finding sources…",
-    "ai_answer": "Writing an explanation…",
+    "sources": "Finding sources your charter permits…",
+    "ai_answer": "Writing a short explanation…",
 }
 FRAGMENT_WORDS = 5     # long sentences link as textStart,textEnd with this many words each
 
@@ -307,17 +307,20 @@ def answer_steps(conn, reading, user, page, quote, rects, question, via="web"):
             no_sources = {"layer": "ai_answer", "by": "no_sources", "label": NO_SOURCES_LABEL}
             blocked.append(no_sources)
             yield {"event": "blocked", "blocked": [no_sources]}
-    conn.commit()
     yield {"event": "ai_answer", "ai_answer": ai_answer}
 
-    yield {"event": "done", "result": {
+    result = {
         "question_id": question_id,
         "peer": peer,
         "sources": public_sources(sources),
         "ai_answer": ai_answer,
         "skipped_sources": skipped_sources,
         "blocked": blocked,
-    }}
+    }
+    # Saved with the question, so anyone can reopen this answer card later (GET /questions/{id}/answer).
+    conn.execute("UPDATE annotations SET answer_json = ? WHERE id = ?", (json.dumps(result), question_id))
+    conn.commit()
+    yield {"event": "done", "result": result}
 
 
 def explain_layer(conn, charter, reading, ai_user_id, page, quote, question, question_id, sources, via):

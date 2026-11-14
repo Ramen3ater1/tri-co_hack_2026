@@ -83,6 +83,7 @@ CREATE TABLE IF NOT EXISTS annotations (
   body TEXT NOT NULL,
   cited_source_ids TEXT,
   share_with_future INTEGER NOT NULL DEFAULT 1,
+  answer_json TEXT,  -- questions only: the finished /ask response, so the answer card can reopen
   created_at TEXT NOT NULL
 );
 
@@ -218,6 +219,36 @@ def is_near(page_a, extent_a, page_b, extent_b):
         return False
     gap = max(extent_a[0], extent_b[0]) - min(extent_a[1], extent_b[1])  # negative if they overlap
     return gap <= NEAR_DISTANCE
+
+
+def locked_groups(locked):
+    """Cluster locked top-level annotations that sit near each other, for one lock card each.
+
+    locked: [{"id", "user_id", "page", "rects"}]. Returns {id: {"group", "group_notes",
+    "group_authors"}}, where group is the smallest id in the cluster and group_authors counts
+    distinct authors ("2 classmates annotated near here") without saying who they are.
+    """
+    group_of = {a["id"]: a["id"] for a in locked}
+
+    def root(i):
+        while group_of[i] != i:
+            i = group_of[i]
+        return i
+    extents = {a["id"]: vertical_extent(a["rects"]) for a in locked}
+    for a in locked:
+        for b in locked:
+            if a["id"] < b["id"] and is_near(a["page"], extents[a["id"]], b["page"], extents[b["id"]]):
+                ra, rb = root(a["id"]), root(b["id"])
+                group_of[max(ra, rb)] = min(ra, rb)
+    members = {}
+    for a in locked:
+        members.setdefault(root(a["id"]), []).append(a)
+    out = {}
+    for group, items in members.items():
+        authors = len({a["user_id"] for a in items})
+        for a in items:
+            out[a["id"]] = {"group": group, "group_notes": len(items), "group_authors": authors}
+    return out
 
 
 def full_view_ids(conn, user, reading_id):

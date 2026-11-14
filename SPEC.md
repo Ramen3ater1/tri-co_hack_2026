@@ -83,7 +83,7 @@ One table covers notes, questions, AI answers and replies:
 - you have engaged **near** it: you've written a note **or asked a question** whose highlight is near its highlight. A question counts as engagement: we trust students, and when someone has a question, their classmates' annotations are the best answers to it, so withholding them would be perverse;
 - it's a reply, or an AI answer, under an annotation you can see in full.
 
-Otherwise it's **locked**: the API returns it as `{"id", "page", "rects", "locked": true}` with no author, cohort or text, so nothing leaks through the browser. The UI shows locked ones only as a count (§3.3).
+Otherwise it's **locked**: the API returns it as `{"id", "page", "rects", "locked": true}` plus its lock-card group (§6), with no author, cohort or text, so nothing leaks through the browser. The UI shows locked ones only as a count (§3.3): one card per group of nearby locked notes, "N classmates annotated near here", where N is the number of **distinct authors** in the group (the server counts them; it never says who).
 
 **Near** means roughly "the same paragraph", measured by position rather than exact matching. Two highlights are near if they're on the same page and the vertical gap between their bounding boxes is at most `NEAR_DISTANCE` (a constant in `db.py`, start at `0.08` of the page height, about a paragraph; tune it on the demo PDF). With the S1 paragraph fallback, near means the same paragraph or the one either side. `TODO(edge)`: passages that run across a page break.
 
@@ -102,7 +102,9 @@ Otherwise it's **locked**: the API returns it as `{"id", "page", "rects", "locke
 
 **Engagement lock and Ask:** the question is saved before the peer layer runs, so it already unlocks the annotations **near the asked passage**. Peer matches **elsewhere** in the reading are **shown in full in the Ask panel** too: asking is engagement, so any classmate's answer to the question is fair game. They stay locked in the margin where they are (no unlock is stored), unless the student engages near them there.
 
-**Staged panel (§8 #8, built server side):** `POST /readings/{id}/ask/stream` (and `POST /ask/stream` for the hotkey) runs the same steps but sends each result as soon as it's ready, one JSON object per line (§6), with a `status` line before each slow step ("Checking the charter…", "Finding sources…", "Writing an explanation…"). Classmates' answers arrive in well under a second; sources after about 15 s; the explanation last. The plain `/ask` routes still return everything at once.
+**Staged panel (§8 #8, built server side):** `POST /readings/{id}/ask/stream` (and `POST /ask/stream` for the hotkey) runs the same steps but sends each result as soon as it's ready, one JSON object per line (§6), with a `status` line before each slow step ("Checking the charter…", "Finding sources your charter permits…", "Writing a short explanation…"). Classmates' answers arrive in well under a second; sources after about 15 s; the explanation last. The plain `/ask` routes still return everything at once.
+
+**Reopening an answer:** the finished response is saved with the question (`annotations.answer_json`). A question's margin card shows a summary from it ("Answered: 2 classmates, 1 source, AI context") and clicking it reopens the answer card with `GET /questions/{id}/answer`, for anyone who can see the question in full. It's the answer as it was when asked.
 
 **When a step fails** (the AI service or Kagi is down, or a bug): an AI step that throws doesn't sink the whole answer. It becomes a `blocked` entry with `by: "error"` and the real error as its `reason`, the source layer falls back to the course library, and the rest still arrives. Anything else that fails (saving the question, the peer layer) fails the request: a 500 with the real message, or a final `error` line on the stream. The panel keeps what it already has and shows the error.
 
@@ -301,6 +303,7 @@ CREATE TABLE annotations (
   body TEXT NOT NULL,
   cited_source_ids TEXT,          -- JSON array, ai_answer only
   share_with_future INTEGER NOT NULL DEFAULT 1,
+  answer_json TEXT,               -- questions only: the finished /ask response (reopening the answer card)
   created_at TEXT NOT NULL
 );
 
@@ -348,11 +351,12 @@ All routes are under `/api`; all except `/users` need `X-User-Id`. Professor-onl
 | Method | Path | Who | Purpose |
 | --- | --- | --- | --- |
 | GET | `/users` | anyone | Log-in-as list |
-| GET | `/course` | all | Course, readings list, current user |
+| GET | `/course` | all | Course, readings list (with what each reading card shows), current user |
 | POST | `/readings` | prof | Multipart upload: title + PDF; extracts pages with `pypdf` |
 | GET | `/readings/{id}` | all | Metadata + page count |
 | GET | `/readings/{id}/pdf` | all | The PDF file |
-| GET | `/readings/{id}/annotations` | all | Visible annotations (with replies), all pages. Locked ones (§3.4) as `{id, page, rects, locked: true}` only |
+| GET | `/readings/{id}/annotations` | all | Visible annotations (with replies), all pages. Locked ones (§3.4) as `{id, page, rects, locked: true, group, group_notes, group_authors}` only |
+| GET | `/questions/{id}/answer` | all | A question's saved `/ask` response, to reopen its answer card. 404 if you can't see the question in full, or it was asked before answers were saved |
 | POST | `/readings/{id}/annotations` | all | Create note or reply |
 | DELETE | `/annotations/{id}` | author | Delete own annotation (and its replies) |
 | PATCH | `/annotations/{id}` | author | `{share_with_future}`: opt one annotation in or out; returns it |
@@ -407,9 +411,14 @@ Annotation shape (`GET /readings/{id}/annotations` returns a list of these, newe
  "quote": "...", "rects": [{"x": 0.12, "y": 0.66, "w": 0.43, "h": 0.015}], "body": "...",
  "cited_source_ids": null, "share_with_future": true, "created_at": "2026-11-14T01:25:52",
  "author": {"id": 4, "name": "Sam", "role": "student", "cohort": "Spring 2026"},
- "badge": "Spring 2026",
+ "badge": "Spring 2026", "locked": false,
+ "answer_summary": null,
  "replies": [ /* same shape, oldest first; replies to replies are flattened here */ ]}
 ```
+
+`answer_summary` is set on questions with a saved answer, for the margin card: `{"peer": 3, "peer_authors": 2, "sources": 1, "ai_answer": true}` ("Answered: 2 classmates, 1 source, AI context"); otherwise `null`.
+
+A locked annotation is `{"id": 4, "page": 2, "rects": [...], "locked": true, "group": 4, "group_notes": 2, "group_authors": 2}`. Locked annotations near each other (same page, within `NEAR_DISTANCE`) share a `group` (the smallest id in it): draw **one lock card per group**, "`group_authors` classmates annotated near here".
 
 **Streamed ask** (`/readings/{id}/ask/stream`, `/ask/stream`): `Content-Type: application/x-ndjson`, one JSON object per line, read with `fetch` and a stream reader (not `EventSource`, which can't POST). Each line has an `event`:
 
@@ -420,9 +429,9 @@ Annotation shape (`GET /readings/{id}/annotations` returns a list of these, newe
 {"event": "peer", "peer": [...]}
 {"event": "status", "stage": "charter", "label": "Checking the charter…"}
 {"event": "blocked", "blocked": [...]}                      // 0 or more times; add to what you have
-{"event": "status", "stage": "sources", "label": "Finding sources…"}
+{"event": "status", "stage": "sources", "label": "Finding sources your charter permits…"}
 {"event": "sources", "sources": [...], "skipped_sources": [...]}
-{"event": "status", "stage": "ai_answer", "label": "Writing an explanation…"}
+{"event": "status", "stage": "ai_answer", "label": "Writing a short explanation…"}
 {"event": "ai_answer", "ai_answer": {...} | null}
 {"event": "done", "result": { /* exactly the /ask response */ }}
 {"event": "error", "detail": "RuntimeError: ..."}           // instead of what's left, if the request crashed
@@ -433,12 +442,13 @@ Annotation shape (`GET /readings/{id}/annotations` returns a list of these, newe
 Other response shapes:
 
 - `GET /charter` (and `PUT`, `POST /charter/comments`, which return the updated charter): every `charter` column (toggles as booleans) plus `"comments": [{"id", "body", "created_at", "author", "author_role"}]`. `PUT` takes any subset of the columns.
-- `GET /sources` (and `POST`/`DELETE`, which return the updated list): `[{"id", "title", "url", "found_by", "created_at", "first_question_id", "first_question"}]`, newest first. `first_question` is the text of the question it was found for.
+- `GET /course`: `{"course": {"id", "title", "current_cohort"}, "readings": [{"id", "title", "filename", "page_count", "note_count", "question_count", "created_at"}], "user": {...}}`. The counts are top-level notes and questions you can see (locked ones included); they're for the reading card ("7 pages · 2 notes · 0 questions").
+- `GET /sources` (and `POST`/`DELETE`, which return the updated list): `[{"id", "title", "url", "found_by", "created_at", "first_question_id", "first_question", "first_question_author"}]`, newest first. `first_question` is the text of the question it was found for and `first_question_author` the asker's name ("found for Ben's question"); both `null` for sources added by hand.
 - `GET /charter/gaps` (and `POST /charter/gaps/dismiss`): `[{"kind": "journal articles", "count": 12, "examples": [{"title", "url"}]}]`, most frequent first, kinds lowercased, up to 3 examples each.
-- `GET /search?q=`: `{"annotations": [{"annotation_id", "reading_id", "reading_title", "page", "kind", "author", "snippet"}], "pages": [{"reading_id", "reading_title", "page", "snippet"}]}`. Snippets mark hits as `[[word]]`: render as text, never as HTML (annotation bodies are user input).
+- `GET /search?q=`: `{"annotations": [{"annotation_id", "reading_id", "reading_title", "page", "kind", "via", "author_id", "author", "cohort", "badge", "snippet"}], "pages": [{"reading_id", "reading_title", "page", "snippet"}]}`. Snippets mark hits as `[[word]]`: render as text, never as HTML (annotation bodies are user input).
 - **Errors:** `{"detail": "..."}` with 401 (unknown user), 403 (not allowed), 404, 422 (bad input) or 500. A 500's `detail` is the real error (e.g. a missing API key), so show it.
 
-`badge` is `"Professor"`, `"AI"`, a past cohort's name, or `null` for current classmates. Full annotations carry `"locked": false`; locked ones (§3.4) are only `{"id", "page", "rects", "locked": true}`, with no replies. `POST /readings/{id}/annotations` takes `{"page", "quote", "rects", "body", "share_with_future"}` for a note, or `{"parent_id", "body"}` for a reply (page comes from the parent). `rects` are page fractions, top-left origin.
+`badge` is `"Professor"`, `"AI"`, a past cohort's name, or `null` for current classmates. Full annotations carry `"locked": false`; locked ones (§3.4) are only `{"id", "page", "rects", "locked": true}` plus their group (above), with no replies. `POST /readings/{id}/annotations` takes `{"page", "quote", "rects", "body", "share_with_future"}` for a note, or `{"parent_id", "body"}` for a reply (page comes from the parent). `rects` are page fractions, top-left origin.
 
 ---
 

@@ -17,3 +17,12 @@ The cached answer for the hotkey demo question ("Where does the idea of a sevent
 **Done so far:** the filter is back on full effort (`FILTER_EFFORT` in `app/backend/ai.py`, 03:30 Sat; each call's effort is now a one-word constant at the top of that file). Re-asked on a dev DB at 03:35: both Encyclopedia.com entries are sources again and the explanation covers the caul and seventh-son beliefs (23 s fresh, 8 s replay). That's one run, so not proof.
 
 **Still to decide:** whether this is enough, and how we check rehearsed answers before the demo (each demo question's cached result is what plays on stage; clearing its `llm:` rows in `web_cache` and re-asking gives it a fresh run).
+
+## The Mac app doesn't say which app the text came from
+
+**Owner:** josoup (Mac app), then backend · **Status:** open · **Found:** 04:50 Sat (design frame S05)
+
+The design shows a hotkey question in the margin as "from Notability via the Mac hotkey". The server only knows `via: "hotkey"`: `POST /api/ask` takes just `{quote, question}`.
+
+**What it would take:** the Mac app sends the frontmost app's name (e.g. `NSWorkspace.shared.frontmostApplication?.localizedName`) as an optional `source_app` in `/api/ask` and `/api/ask/stream`; the server stores it on the question (a new `annotations.source_app` column) and returns it in the annotation shape (SPEC §6). Until then the card just says "via the Mac hotkey".
+
