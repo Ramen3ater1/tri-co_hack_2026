@@ -35,7 +35,9 @@ EXPLAIN_EFFORT = None
 # context-only explanation: it opens by saying which part it won't answer (and the rule), then
 # gives only the background of the phrase. False: the old behaviour, where such a question
 # blocks the explanation outright (SPEC §2 step 4 as first rehearsed).
-GATE_CONTEXT_ONLY = True
+# GATE_CONTEXT_ONLY=0 in a copy's environment turns it off there, e.g. to film the refusal version of
+# demo shot 5 (demo/video-shot-list.md) without editing this file.
+GATE_CONTEXT_ONLY = os.environ.get("GATE_CONTEXT_ONLY", "1") != "0"
 
 # Structured output: the API forces the reply into a schema. Without it, at low effort the model
 # sometimes "thinks out loud" after its JSON ("Wait, corrections needed...") and the parse fails.
