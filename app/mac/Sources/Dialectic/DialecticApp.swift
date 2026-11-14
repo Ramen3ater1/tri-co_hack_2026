@@ -30,6 +30,8 @@ let HOTKEY_LABEL = "⌃⌥D"
 let HOTKEY_ID: UInt32 = 1
 /// How long to wait for the front app to put the selection on the pasteboard after ⌘C.
 let COPY_WAIT_SECONDS = 0.6
+/// Wait at most this long for ⌃⌥ to be let go before sending ⌘C.
+let MODIFIER_RELEASE_WAIT_S = 1.0
 /// /api/ask searches the web and calls the LLM, so it can take a while.
 let ASK_TIMEOUT_SECONDS: TimeInterval = 120
 let USER_DEFAULTS_KEY = "userId"
@@ -279,7 +281,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if quote?.isEmpty ?? true {
             // Nothing copied (common in Notability with scanned or annotated PDFs): drag a box instead.
             guard CGPreflightScreenCaptureAccess() else {
-                CGRequestScreenCaptureAccess()  // macOS shows its prompt; the human grants it
+                requestScreenRecordingOnce()
                 showMessage(NO_SCREEN_RECORDING_MESSAGE)
                 return
             }
@@ -330,7 +332,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         let before = pasteboard.changeCount
 
-        let source = CGEventSource(stateID: .privateState)  // private state: ignore the ⌃⌥ still held down
+        // The hotkey fires while ⌃⌥ are still down, and some apps (Notability) read the live modifier
+        // state, so ⌘C would arrive as ⌃⌥⌘C and copy nothing. Wait for the keys to come up first.
+        let released = Date().addingTimeInterval(MODIFIER_RELEASE_WAIT_S)
+        while Date() < released && !CGEventSource.flagsState(.combinedSessionState).isDisjoint(with: [.maskControl, .maskAlternate, .maskShift]) {
+            try? await Task.sleep(nanoseconds: 20_000_000)
+        }
+        let source = CGEventSource(stateID: .privateState)  // private state: ignore any key still held down
         let down = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_ANSI_C), keyDown: true)
         let up = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_ANSI_C), keyDown: false)
         down?.flags = .maskCommand
@@ -373,6 +381,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let text = try await Task.detached { try recognizedText(image) }.value
         print("Box: read \(text.count) characters with Vision")
         return text
+    }
+
+    /// macOS's Screen Recording prompt, at most once per launch. The permission only takes effect
+    /// after a relaunch, so asking again on every press just repeats the prompt.
+    private var askedForScreenRecording = false
+    func requestScreenRecordingOnce() {
+        guard !askedForScreenRecording else { return }
+        askedForScreenRecording = true
+        CGRequestScreenCaptureAccess()  // macOS shows its prompt; the human grants it
     }
 
     func showMessage(_ text: String) {

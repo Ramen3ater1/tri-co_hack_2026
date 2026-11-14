@@ -557,7 +557,7 @@ final class OverlayController {
 
     func start() {
         guard CGPreflightScreenCaptureAccess() else {
-            CGRequestScreenCaptureAccess()  // macOS shows its prompt; the human grants it
+            AppDelegate.shared.requestScreenRecordingOnce()
             AppDelegate.shared.showMessage(NO_SCREEN_RECORDING_MESSAGE)
             return
         }
