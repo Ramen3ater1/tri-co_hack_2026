@@ -305,6 +305,7 @@ def answer_steps(conn, reading, user, page, quote, rects, question, via="web", d
 
     # 4. Pass 1: the gate, only if some AI layer is still possible.
     search_query = None
+    explain_context_only = None
     if can_find_sources or can_explain:
         yield status("charter")
         try:
@@ -325,6 +326,9 @@ def answer_steps(conn, reading, user, page, quote, rects, question, via="web", d
             if can_explain and verdict["explain"]["allowed"] is not True:
                 blocked.append(rule_block(charter, "ai_answer", verdict["explain"]))
                 can_explain = False
+            # Allowed, but only the background (ai.GATE_CONTEXT_ONLY): the explanation says what it leaves out.
+            if can_explain and ai.GATE_CONTEXT_ONLY and verdict["explain"].get("context_only") is True:
+                explain_context_only = verdict["explain"]
             search_query = verdict.get("search_query") or question
     if blocked:
         yield {"event": "blocked", "blocked": list(blocked)}
@@ -351,7 +355,8 @@ def answer_steps(conn, reading, user, page, quote, rects, question, via="web", d
     if can_explain:
         yield status("ai_answer")
         try:
-            ai_answer = explain_layer(conn, meter, charter, reading, ai_user_id, page, quote, question, question_id, sources, via)
+            ai_answer = explain_layer(conn, meter, charter, reading, ai_user_id, page, quote, question, question_id, sources, via,
+                                      context_only=explain_context_only)
         except Exception as e:
             ai_answer = None
             error = failed_block("ai_answer", e)
@@ -378,7 +383,8 @@ def answer_steps(conn, reading, user, page, quote, rects, question, via="web", d
     yield {"event": "done", "result": result}
 
 
-def explain_layer(conn, meter, charter, reading, ai_user_id, page, quote, question, question_id, sources, via):
+def explain_layer(conn, meter, charter, reading, ai_user_id, page, quote, question, question_id, sources, via,
+                  context_only=None):
     """Write the explanation from the sources with a verified sentence and save it as the AI's
     reply to the question. Returns {annotation_id, body}, or None if no source is verified."""
     verify_library_sources(conn, meter, question, quote, sources)
@@ -388,7 +394,7 @@ def explain_layer(conn, meter, charter, reading, ai_user_id, page, quote, questi
     body = ai.explain(
         conn, meter, charter["text_md"], reading["title"], quote, question,
         [{"title": s["title"], "text": s["text"], "sentence": s["quote"]} for s in grounded],
-        charter["max_explanation_words"],
+        charter["max_explanation_words"], context_only=context_only,
     )
     answer_id = db.insert_annotation(
         conn, reading["id"], ai_user_id, "ai_answer", page, None, None, body,

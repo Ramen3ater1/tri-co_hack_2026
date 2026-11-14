@@ -31,6 +31,12 @@ FILTER_EFFORT = None
 PICK_EFFORT = "low"
 EXPLAIN_EFFORT = None
 
+# The switch for interpretive questions ("why did Du Bois write X?"). True: the gate may allow a
+# context-only explanation: it opens by saying which part it won't answer (and the rule), then
+# gives only the background of the phrase. False: the old behaviour, where such a question
+# blocks the explanation outright (SPEC §2 step 4 as first rehearsed).
+GATE_CONTEXT_ONLY = True
+
 # Structured output: the API forces the reply into a schema. Without it, at low effort the model
 # sometimes "thinks out loud" after its JSON ("Wait, corrections needed...") and the parse fails.
 FILTER_DECISIONS = ["keep", "ruled_out", "not_covered", "off_topic"]
@@ -88,14 +94,30 @@ Decide, for each AI action, whether the charter allows it FOR THIS REQUEST:
 Judge what the request actually asks for, not just its wording. If a rule forbids it, say which
 rule (by its number) and why, in one plain sentence addressed to the student. When unsure, deny:
 friction is the point of this class.
-
+{explain_scope}
 Also write search_query: a short web search query (under 10 words) that would find scholarly
 sources for this question. Use only words about the topic; nothing about the student.
 
 Reply with JSON only, exactly this shape:
 {{"find_sources": {{"allowed": true, "rule": null, "reason": "..."}},
-  "explain": {{"allowed": false, "rule": "2", "reason": "..."}},
+  "explain": {{"allowed": false, "context_only": false, "rule": "2", "reason": "..."}},
   "search_query": "..."}}"""
+
+# Filled into GATE_PROMPT's {explain_scope}, by GATE_CONTEXT_ONLY.
+GATE_SCOPE_CONTEXT_ONLY = """
+Context-only explanations: if the question asks for something the charter forbids (for example
+what the author meant, or why they wrote it) but the charter allows historical or cultural
+context, and the passage has background worth knowing (where a phrase or term came from, what it
+referred to at the time, the events, people or texts it alludes to), then set explain.allowed to
+true and explain.context_only to true. The explanation will then give only that background and
+tell the student it won't answer the rest. Set rule to the rule that limits it, and reason to one
+plain sentence to the student saying which part is left out. Deny the explanation only if no
+allowed background would help. For a request the charter fully allows, context_only is false.
+"""
+GATE_SCOPE_ALL_OR_NOTHING = """
+Always set explain.context_only to false.
+"""
+
 
 FILTER_SOURCES_PROMPT = """A class only uses sources that fit this description, which they wrote together:
 
@@ -141,7 +163,7 @@ EXPLAIN_PROMPT = """You are a teaching assistant bound by this class charter:
 
 A student reading "{reading_title}" highlighted: "{quote}"
 They ask: "{question}"
-
+{context_only_note}
 Using only the numbered sources below, give historical and cultural context in at most
 {max_words} words. Cite sources as [1], [2]. Don't interpret the passage for the student and
 don't suggest a thesis. Don't end with a question, and don't suggest what they should ask or
@@ -153,6 +175,14 @@ Stay on the student's question. If a source has nothing relevant, just don't cit
 {sources}
 
 Reply with the explanation text only."""
+
+# Filled into EXPLAIN_PROMPT's {context_only_note} when the gate allowed only context.
+EXPLAIN_CONTEXT_ONLY_NOTE = """
+The charter doesn't let you answer all of this question ({rule}): {reason}
+Open with one short sentence telling the student which part you won't answer, naming the rule by
+its number. Then give only the background: where the phrase or term came from, what it referred
+to at the time, and what it alludes to. Never say what the author meant or why they wrote it.
+"""
 
 
 # ---------- the one LLM call ----------
@@ -259,6 +289,7 @@ def toggle_blocks(charter):
 def gate(conn, meter, charter_text, reading_title, quote, question):
     return chat_json(conn, meter, GATE_PROMPT.format(
         charter=charter_text, reading_title=reading_title, quote=quote, question=question,
+        explain_scope=GATE_SCOPE_CONTEXT_ONLY if GATE_CONTEXT_ONLY else GATE_SCOPE_ALL_OR_NOTHING,
     ), effort=GATE_EFFORT)
 
 
@@ -337,9 +368,10 @@ def around_sentence(text, sentence):
     return flat[max(0, at - CONTEXT_CHARS): at + len(sentence) + CONTEXT_CHARS]
 
 
-def explain(conn, meter, charter_text, reading_title, quote, question, sources, max_words):
+def explain(conn, meter, charter_text, reading_title, quote, question, sources, max_words, context_only=None):
     """sources: [{title, text, sentence}], cited as [1], [2] in this order. Each source is shown to
     the model as the text around its verified sentence, so the answer is grounded in what we checked.
+    context_only: the gate's explain verdict ({rule, reason}) when it allowed only background, else None.
     Returns the explanation, at most max_words.
 
     Cached in web_cache by the exact prompt, like chat_json: a replayed question gets the same
@@ -352,6 +384,9 @@ def explain(conn, meter, charter_text, reading_title, quote, question, sources, 
     prompt = EXPLAIN_PROMPT.format(
         charter=charter_text, reading_title=reading_title, quote=quote, question=question,
         max_words=target, sources=numbered,
+        context_only_note=EXPLAIN_CONTEXT_ONLY_NOTE.format(
+            rule=rule_label(charter_text, context_only.get("rule")), reason=context_only.get("reason") or "",
+        ) if context_only else "",
     )
     key = "llm:" + hashlib.sha256(f"explain|{EXPLAIN_EFFORT}|{prompt}".encode()).hexdigest()
     row = conn.execute("SELECT value FROM web_cache WHERE key = ?", (key,)).fetchone()
