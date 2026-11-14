@@ -188,6 +188,25 @@ At upload, each reading is split into **sections** by its headings: the PDF's ou
 
 **How a highlight finds its section** (`sections.py`): the last section starting on an earlier page, or on the same page if its heading comes before the quote in the page's text. A note's section is looked up when it's saved; a reply copies its parent's; a question gets its section when it's asked.
 
+### 3.11 Scanned PDFs: OCR at upload
+
+Professors upload what they have: phone photos of their own copy, library-scanner PDFs, old digitised editions. These often have **no text layer** or a **poor one** (the 1903 scan we seed with came with OCR that read "a vast veil" as `a,sgat,,yejl`). Everything that reads text (selecting, search, peer matching, the hotkey's locating, the AI prompt) depends on it, so **every upload is OCR'd** before it's used:
+
+1. **Find the scanned pages:** a page whose images cover most of it (≥ 80% of the page area) is a scan; a page with ordinary text and no full-page image is born-digital and is left alone.
+2. **Drop the scan pages' old text layer** (remove their text objects with `pikepdf`, keeping the images), because `ocrmypdf --redo-ocr` keeps the old layer and every letter comes out twice.
+3. **OCR:** `ocrmypdf --skip-text --output-type pdf -l eng in.pdf out.pdf` (Tesseract). Pages that still have text (born-digital) are skipped; the original images are kept, so the file stays small (the seed chapter: 280 KB → 296 KB; forcing OCR from images instead made it 13 MB).
+4. Then extract pages and sections as now, from the OCR'd file, which replaces the upload.
+
+**It's slow, so it runs in the background:** about 4–6 s per page on the droplet's one CPU (the 12-page chapter took 49 s), and a long reading would hit Cloudflare's 100 s request limit. `POST /readings` saves the file and returns at once with `"status": "processing"`; a background thread does the OCR, then sets `ready` (or `failed`, with the error, shown on the course page; fail loudly). Until `ready`, the course page shows "Reading the scan…" and the reader can't be annotated. A `status` column on `readings` holds this.
+
+**Matching text against OCR must be forgiving.** OCR text has stray punctuation, hyphenated line breaks, curly vs straight quotes and the odd misread letter ("horn" for "born"). Wherever a quote is matched to page text (`locate.quote_rects`, the hotkey's `POST /api/ask` locate, the seed), compare with whitespace, punctuation and quote style ignored and line-break hyphens joined. `TODO(edge)`: tolerating misread letters (fuzzy matching).
+
+**Needs on the server:** `ocrmypdf` and `tesseract-ocr-eng` (apt; on the droplet, and in `deploy/setup-droplet.sh`). Without `ocrmypdf` installed (a teammate's laptop), uploads skip OCR and log a loud warning.
+
+**Stretch:** photo uploads (JPG/PNG/HEIC, several at once) turned into one PDF (`img2pdf`), with `--rotate-pages --deskew` for phone photos.
+
+**Seed data:** `seed/souls-of-black-folk-ch1.pdf` is now Chapter I of the **1903 first edition** (A. C. McClurg, Chicago), from Cornell University Library's scan on the Internet Archive (`cu31924024920492`, public domain), OCR'd as above. The seed annotations quote it exactly as its OCR reads.
+
 ---
 
 ## 4. Stack and layout
@@ -503,6 +522,8 @@ When time runs short, **cut from the bottom up.** A slipped checkpoint is never 
 7. **Mac hotkey app** (independent track, §3.9), copying the selection only, plus the server's `POST /api/ask` route.
 8. **Staged Ask panel** ("Checking the charter… / Finding sources…"). Fallback: one spinner.
 
+   **Also Should: OCR at upload** (§3.11), so professors can upload real scans. Not on the demo path: the seed PDF is already OCR'd.
+
 **Could**
 
 9. Hotkey screenshot box + on-device Vision text recognition.
@@ -611,7 +632,7 @@ Cached answers (`web_cache`) cost nothing. Two layers of protection:
 
 ## 10. Seed data (DEMO)
 
-- **Reading:** Ch. 1 of *The Souls of Black Folk* (1903, public domain), from Project Gutenberg (#408) printed to PDF. Keep it short (~10 pages) so the demo loads fast.
+- **Reading:** Ch. 1 of *The Souls of Black Folk*, a real scan of the **1903 first edition** (Cornell University Library via the Internet Archive, public domain), 12 pages, OCR'd as §3.11 describes. It replaced a PDF generated from Project Gutenberg's text on Sat ~06:40; page numbers moved (the double-consciousness passage is now on page 3), so rehearsed questions and cached answers from before then are stale.
 - **Charter:** the rules in §3.7 plus the permissible-sources text in §3.6.
 - **Source library:** start **empty** for the live demo, so step 3 visibly finds sources and step 4 can show the no-AI path reusing them. Keep a `--with-sources` seed flag that preloads them (SEP "W.E.B. Du Bois", a primary text from the period, …) in case the web search fails on stage. The `web_cache` covers the normal case.
 - **Annotations:** Sam (Spring 2026) on the double-consciousness passage; Prof. Rivera on "the Veil"; two or three others spread across pages so the margin doesn't look empty.

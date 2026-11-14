@@ -53,13 +53,15 @@ PERMISSIBLE_SOURCES = (
 DEMO_ANNOTATIONS = [
     ("Sam", 1, "How does it feel to be a problem?",
      "He never answers this directly. The whole chapter is the answer, told as a story instead."),
-    ("Prof. Rivera", 2, "shut out from their world by a vast veil",
+    # The quotes are as the scan's OCR reads them. "shut out from their world by a vast veil" has marks on
+    # the scanned page and doesn't OCR cleanly, so that note sits on the words just before it.
+    ("Prof. Rivera", 2, "in heart and life and longing",
      "First appearance of the Veil, one of the book's governing images. Track where it returns in later chapters."),
-    ("Prof. Rivera", 2, "a sort of seventh son, born with a veil, and gifted with second-sight",
+    ("Prof. Rivera", 3, "the Negro is a sort of seventh son",
      "Folklore: a seventh son born with a caul (a 'veil') was said to have second sight. Du Bois turns the veil into a gift as well as a barrier."),
-    ("Sam", 2, "this double-consciousness, this sense of always looking at one’s self through the eyes of others",
+    ("Sam", 3, "this sense of always looking at one’s self through the eyes of others",
      "Our seminar read this as both a wound and a kind of insight: you see yourself as the world sees you, and also see the world more clearly. Compare the 'second-sight' line just above."),
-    ("Ben", 4, "the freedman has not yet found in freedom his promised land",
+    ("Ben", 6, "the freedman has not yet found in freedom his promised land",
      "Forty years since Emancipation, and 'promised land' - is he echoing the Israelites' forty years in the wilderness?"),
 ]
 

@@ -15,6 +15,8 @@ fi
 
 apt-get update
 apt-get install -y git curl debian-keyring debian-archive-keyring apt-transport-https gnupg
+# OCR for scanned uploads (SPEC: Scanned PDFs).
+apt-get install -y ocrmypdf tesseract-ocr-eng
 
 # Node 22 LTS (NodeSource) for building the frontend.
 curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
