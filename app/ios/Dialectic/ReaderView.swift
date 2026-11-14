@@ -20,6 +20,7 @@ final class ReaderController: NSObject, ObservableObject, WKNavigationDelegate, 
     @Published var selectionToAsk: String?
     private var signedInAs: Int?
     private var lastURL: URL?
+    private var pencil: PencilHighlighter?
 
     override init() {
         webView = ReaderWebView(frame: .zero, configuration: WKWebViewConfiguration())
@@ -28,6 +29,8 @@ final class ReaderController: NSObject, ObservableObject, WKNavigationDelegate, 
         webView.uiDelegate = self
         webView.allowsBackForwardNavigationGestures = true
         webView.onAskSelection = { [weak self] in Task { await self?.askAboutSelection() } }
+        pencil = PencilHighlighter(webView: webView)
+        pencil?.onHighlight = { [weak self] text in self?.selectionToAsk = text }
     }
 
     func open(path: String) {

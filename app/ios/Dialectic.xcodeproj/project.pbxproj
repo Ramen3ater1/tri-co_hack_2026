@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		093E9C7C7C3B4941808B314D /* SetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A1DE94B2E75C50B8E37F89B /* SetupView.swift */; };
+		498816D95E4E868276ED4593 /* PencilHighlight.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A68AE80BAC80330B52B13CE /* PencilHighlight.swift */; };
 		750EA481A988AB96FFF3A817 /* DialecticKit in Frameworks */ = {isa = PBXBuildFile; productRef = 17333180BD18F9BE0036EB13 /* DialecticKit */; };
 		A25F7D97294D599E734DE90E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2AF6633353750A0C28D0A5F5 /* Assets.xcassets */; };
 		B8DF17D585EC1190EE00BD36 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D32353D80DF3FB24DD85F37D /* RootView.swift */; };
@@ -17,6 +18,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0A68AE80BAC80330B52B13CE /* PencilHighlight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PencilHighlight.swift; sourceTree = "<group>"; };
 		2AF6633353750A0C28D0A5F5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		59A9D9CC9FF8CDDC912939E8 /* DialecticApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DialecticApp.swift; sourceTree = "<group>"; };
 		683334C0DFE44777956528BF /* ReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderView.swift; sourceTree = "<group>"; };
@@ -47,6 +49,7 @@
 				59A9D9CC9FF8CDDC912939E8 /* DialecticApp.swift */,
 				DB4B1B9CFBECDC3DFC197E47 /* Info.plist */,
 				D1568F2311C736A51B7FA822 /* Intents.swift */,
+				0A68AE80BAC80330B52B13CE /* PencilHighlight.swift */,
 				683334C0DFE44777956528BF /* ReaderView.swift */,
 				D32353D80DF3FB24DD85F37D /* RootView.swift */,
 				6A1DE94B2E75C50B8E37F89B /* SetupView.swift */,
@@ -157,6 +160,7 @@
 			files = (
 				E7E78C10353C65A6D0B5BCF5 /* DialecticApp.swift in Sources */,
 				D526101B25B3983051FA5A9F /* Intents.swift in Sources */,
+				498816D95E4E868276ED4593 /* PencilHighlight.swift in Sources */,
 				C72315730CC9C7B7CB01DCE4 /* ReaderView.swift in Sources */,
 				B8DF17D585EC1190EE00BD36 /* RootView.swift in Sources */,
 				093E9C7C7C3B4941808B314D /* SetupView.swift in Sources */,
