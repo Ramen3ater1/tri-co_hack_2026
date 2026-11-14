@@ -71,6 +71,7 @@ Teammates report problems from the dev copy (`https://dev.dialectic.space`, whic
 
 1. **List:** `gh issue list -R Ramen3ater1/tri-co_hack_2026 --label feedback --state open`. Read one with `gh issue view <n> -R Ramen3ater1/tri-co_hack_2026 --comments`.
 2. **Triage** each new one: add a label (`bug`, `design`, `idea` or `question`) and, if it isn't obvious, a one-line comment on what you think it is. Use the priorities in `SPEC.md` §8. An idea that would change the product goes in `SPEC.md` §11 as an open question (link the issue), not straight into code.
+   **Duplicates:** keep the earliest issue, add the `duplicate` label to the later one, comment `Duplicate of #<n>` with anything it adds, and close it (`gh issue close <n> --reason "not planned"`).
 3. **Claim before working:** comment "Working on this" on the issue and add a `starting:` line to `LOG.md` as usual (*Working alongside other people's agents*).
 4. **Fix on `main`** with `Fixes #<n>` in the commit message; the issue closes when it's pushed. If you decide not to fix it, comment why and close it.
 5. **Show it:** after pushing fixes, update the dev copy (`ssh root@<droplet-ip> 'bash -s -- dev' < deploy/update.sh`, if you have access; see `DEPLOY.md`) so the reporter can check. Fixes reach the judges' and public copies only when a person promotes `main` to `stable`.

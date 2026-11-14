@@ -1,8 +1,11 @@
 name: Feedback on the site
 description: Something broken, something you don't like, or an idea. The site's "Report a problem" button fills in the page for you.
-title: "Feedback: "
+title: "Feedback: <say what's wrong in a few words>"
 labels: ["feedback"]
 body:
+  - type: markdown
+    attributes:
+      value: "**Already reported?** Check [open feedback](https://github.com/Ramen3ater1/tri-co_hack_2026/issues?q=is%3Aopen+label%3Afeedback) first; if it's there, add a comment or a 👍 instead. And replace the title above with a few words, e.g. *Professor can't see locked notes*."
   - type: dropdown
     id: kind
     attributes:

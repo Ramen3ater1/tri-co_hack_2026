@@ -83,6 +83,8 @@ One table covers notes, questions, AI answers and replies:
 - you have engaged **near** it: you've written a note **or asked a question** whose highlight is near its highlight. A question counts as engagement: we trust students, and when someone has a question, their classmates' annotations are the best answers to it, so withholding them would be perverse;
 - it's a reply, or an AI answer, under an annotation you can see in full.
 
+**The lock never applies to the professor:** they see every visible annotation in full, since they need the whole class's thinking to teach from it (issue #1).
+
 Otherwise it's **locked**: the API returns it as `{"id", "page", "rects", "locked": true}` plus its lock-card group (§6), with no author, cohort or text, so nothing leaks through the browser. The UI shows locked ones only as a count (§3.3): one card per group of nearby locked notes, "N notes near here" (`group_notes`).
 
 **Near** means roughly "the same paragraph", measured by position rather than exact matching. Two highlights are near if they're on the same page and the vertical gap between their bounding boxes is at most `NEAR_DISTANCE` (a constant in `db.py`, start at `0.08` of the page height, about a paragraph; tune it on the demo PDF). With the S1 paragraph fallback, near means the same paragraph or the one either side. `TODO(edge)`: passages that run across a page break.

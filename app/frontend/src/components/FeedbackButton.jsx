@@ -15,7 +15,6 @@ function issueLink() {
   const user = me();
   const params = new URLSearchParams({
     template: 'feedback.yml',
-    title: `Feedback: ${window.location.pathname}`,
     page: window.location.href,
     user: user ? `${user.name} (${user.role})` : 'not logged in',
     browser: `${navigator.userAgent} · window ${window.innerWidth}×${window.innerHeight}`,
