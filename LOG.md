@@ -87,3 +87,4 @@ Append only, newest at the bottom. Format: `- HH:MM (Day) — what, and why. [wh
 - 05:07 (Sat) — explainers/frontend.md written from the built code: files, login/X-User-Id, reader layering and selection, margin + lock cards, polling, streamed Ask (applyEvent), answer card + notices, other pages, safety rules, where to change things, known gaps. [Owen/Claude]
 - 05:08 (Sat) — SPEC §9.1: limit notices are blocked entries with by: "limit" and the notice in label (frontend shows it as-is, no charter link). [Owen/Claude]
 - 05:09 (Sat) — starting: spending limits + WAL (SPEC §9.1, §9; 10:00 row): X-Device-Id limit, spend table + budgets, BudgetExceeded → limit blocks, AI_OFF, GET /api/spend, WAL + busy_timeout. Backend only. [Owen/Claude]
+- 05:13 (Sat) — starting: frontend side of spending limits (SPEC §9.1, 10:00 row): X-Device-Id from api.js on every request, by: "limit" notices in the Ask card. Frontend only. [Owen/Claude]
