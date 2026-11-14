@@ -1,0 +1,40 @@
+# XcodeGen spec for Dialectic on iPad and iPhone. Regenerate the project with: cd app/ios && xcodegen
+# (brew install xcodegen). Dialectic.xcodeproj is generated: edit this file, not the project.
+name: Dialectic
+options:
+  deploymentTarget:
+    iOS: "17.0"
+packages:
+  DialecticKit:
+    path: ../shared
+targets:
+  Dialectic:
+    type: application
+    platform: iOS
+    sources: [Dialectic]
+    dependencies:
+      - package: DialecticKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: space.dialectic.ios
+        PRODUCT_NAME: Dialectic
+        DEVELOPMENT_TEAM: SGL8MGZNZV
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1,2"
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Dialectic
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        SWIFT_VERSION: "5.0"
+    info:
+      path: Dialectic/Info.plist
+      properties:
+        ITSAppUsesNonExemptEncryption: false
+        UIUserInterfaceStyle: Light
+        CFBundleURLTypes:
+          - CFBundleURLName: space.dialectic.ios.links
+            CFBundleURLSchemes: [dialectic]
