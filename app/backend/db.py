@@ -273,7 +273,8 @@ def full_view_ids(conn, user, reading_id):
     """Ids of the annotations on this reading that `user` sees in full; every other visible one is locked.
 
     In full: the professor's, your own, ones near a note or question of yours, and replies or AI
-    answers under one of those. With the charter's annotate_before_peers off, everything visible.
+    answers under one of those. With the charter's annotate_before_peers off, or for the professor
+    (SPEC §3.4: the lock never applies to them), everything visible.
     """
     rows = conn.execute(
         f"""SELECT a.id, a.parent_id, a.user_id, a.page, a.rects_json, u.role
@@ -282,7 +283,7 @@ def full_view_ids(conn, user, reading_id):
         {"reading_id": reading_id, **visibility_params(conn, user)},
     ).fetchall()
     lock_on = conn.execute("SELECT annotate_before_peers FROM charter").fetchone()[0]
-    if not lock_on:
+    if not lock_on or user["role"] == "professor":
         return {r["id"] for r in rows}
 
     # Where you've engaged: your own top-level notes and questions (they carry the highlight).
