@@ -25,7 +25,11 @@ Use the `yaggy.dev` addresses: campus wifi blocks `dialectic.space`. Don't test 
 The Mac app (macOS 14+) lets you ask about or annotate a passage from wherever you read it (Preview, Notability), with hotkeys: **⌥⇧D** ask, **⌥⇧N** note, **⌥⇧H** show classmates' highlights.
 
 1. Open **[Actions → Mac app](https://github.com/Ramen3ater1/tri-co_hack_2026/actions/workflows/mac-app.yml)**, click the newest run with a green tick, and download **Dialectic-dev-mac** at the bottom of the page.
-2. Unzip it and move `Dialectic.app` somewhere (e.g. Applications). The first time, **right-click → Open** (it isn't signed by Apple).
+2. Unzip it and move `Dialectic.app` to Applications. It isn't signed with an Apple developer certificate, so macOS says it's **"damaged"** until you clear its downloaded-from-the-internet flag, once per download, in Terminal:
+   ```sh
+   xattr -dr com.apple.quarantine /Applications/Dialectic.app
+   ```
+   Then open it normally. It runs on Intel and Apple Silicon Macs.
 3. In its menu-bar menu, pick who you are, and check **Server → Dev**. Grant **Accessibility** (and **Screen Recording**, for ⌥⇧H) when macOS asks: System Settings → Privacy & Security.
 
 Details, and what each hotkey does: [`app/mac/README.md`](app/mac/README.md).

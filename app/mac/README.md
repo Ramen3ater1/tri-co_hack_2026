@@ -26,7 +26,7 @@ Menu-bar menu → **Report a problem…** opens the same GitHub feedback form as
 
 ## Download a build (no Xcode needed)
 
-Every push to `main` that touches `app/mac/` is built on GitHub's macOS runners (`.github/workflows/mac-app.yml`, ~1 min). Open the latest **Mac app** run under the repo's **Actions** tab and download **Dialectic-dev-mac** (a zip of `Dialectic.app`). That build talks to the **dev copy**, `https://dialectic-dev.yaggy.dev`, not localhost; the commit it was built from is in `Dialectic.app/Contents/Resources/version.txt`. It's ad-hoc signed, so the first time: right-click → **Open**, then grant permissions as in *First run* below. The same run's **render-check** artifact has PNGs of every screen (stub data), for reviewing UI changes without a Mac.
+Every push to `main` that touches `app/mac/` is built on GitHub's macOS runners (`.github/workflows/mac-app.yml`, ~1 min). Open the latest **Mac app** run under the repo's **Actions** tab and download **Dialectic-dev-mac** (a zip of `Dialectic.app`). That build talks to the **dev copy**, `https://dialectic-dev.yaggy.dev`, not localhost; the commit it was built from is in `Dialectic.app/Contents/Resources/version.txt`. It's a universal app (Intel and Apple Silicon), ad-hoc signed: macOS calls a downloaded copy **"damaged"** until you run `xattr -dr com.apple.quarantine /Applications/Dialectic.app` (once per download; right-click → Open no longer gets round it). Then grant permissions as in *First run* below. The same run's **render-check** artifact has PNGs of every screen (stub data), for reviewing UI changes without a Mac.
 
 ## Build and run
 

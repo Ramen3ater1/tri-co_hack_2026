@@ -51,4 +51,6 @@ codesign --force --sign - "$APP"
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$APP"
 
 lipo -info "$APP/Contents/MacOS/Dialectic"
+# Fail here, not on a teammate's Mac, if the signature is broken.
+codesign --verify --deep --strict --verbose=2 "$APP"
 echo "Built $(pwd)/$APP  (open it with: open $(pwd)/$APP)"
