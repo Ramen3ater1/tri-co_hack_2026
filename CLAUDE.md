@@ -6,9 +6,10 @@ Team hackathon project. Submission deadline: **Saturday 2026-11-14, 16:00**. Thi
 
 | Path | Holds | Rule |
 | --- | --- | --- |
+| `SPEC.md` | What we're building: the plan, API contract, priorities (§8) and **open product questions (§11)** | Change it as `Editing the spec` below says. An undecided product question ("should X work like A or B?") goes in §11, with the options and the current default. |
 | `LOG.md` | Timestamped decisions, pivots, dead ends | Append only, newest at the bottom. Never rewrite old entries. |
-| `TODO.md` | Open problems we've decided to come back to, each with an owner and status | Mark items done; don't delete them. |
-| `ideas/` | One file per idea, draft or plan: `NN-short-name.md` | Don't rewrite a superseded idea; write a new numbered file and note in it what it replaces. |
+| `TODO.md` | Open problems we've decided to come back to, each with an owner and status: things found while building (a bug, a weak demo answer), not product decisions or planned features | Mark items done; don't delete them. |
+| `ideas/` | One file per idea, draft or plan: `NN-short-name.md`. For whole alternative directions, not single questions | Don't rewrite a superseded idea; write a new numbered file and note in it what it replaces. |
 | `spikes/` | Throwaway experiments, one dir each: `spikes/HHMM-what/` | Never imported by `app/`. When a spike works, rebuild the good part properly in `app/`. |
 | `app/` | The thing we demo | Only working code that's meant to ship. |
 | `demo/` | Pitch, demo script, screenshots, submission text | |
