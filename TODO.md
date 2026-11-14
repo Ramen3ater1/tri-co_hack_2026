@@ -18,6 +18,8 @@ The cached answer for the hotkey demo question ("Where does the idea of a sevent
 
 **Still to decide:** whether this is enough, and how we check rehearsed answers before the demo (each demo question's cached result is what plays on stage; clearing its `llm:` rows in `web_cache` and re-asking gives it a fresh run).
 
+**Update (06:00):** every run since 05:00 cited both Encyclopedia.com entries plus the folklore chapter, and explanations are now cached too, so a rehearsed question replays its last answer word for word. **To close this:** after the demo copy is reseeded and each demo question has been asked once (SPEC §9 step 7), someone reads each demo question's answer once, on the demo copy. If one is weak, clear that question's `llm:` rows in `web_cache`, ask it again, and read it again. Then mark this done.
+
 ## The Mac app doesn't say which app the text came from
 
 **Owner:** josoup (Mac app) · **Status:** open, server side done 05:55 · **Found:** 04:50 Sat (design frame S05)

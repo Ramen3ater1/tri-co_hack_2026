@@ -571,7 +571,7 @@ Anyone can log in as anyone (including the professor), so participants *will* ch
      reverse_proxy 127.0.0.1:8001
    }
    ```
-7. **Before judging:** `uv run seed.py --reset` on the demo copy (it keeps `web_cache` and the spend table), run each demo question once so its answer is cached, and `cp` the database as a backup.
+7. **Before judging:** `uv run seed.py --reset` on the demo copy (it keeps `web_cache` and the spend table), run each demo question once so its answer is cached, **read each answer once** (that cached answer is exactly what plays on stage; if one is weak, clear its `llm:` rows in `web_cache` and ask again; `TODO.md`), and `cp` the database as a backup.
 8. **Laptop backup:** run `stable` locally with a copy of the demo database, in case the venue wifi or the droplet fails during our slot.
 9. **Submit `stable`** (or the last `good-…` tag before 16:00) and the demo copy's URL. GitHub shows `main` by default, so either link the submission to `stable` or fast-forward `main` to it at the end.
 
