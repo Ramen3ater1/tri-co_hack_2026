@@ -9,6 +9,7 @@ import Composer from '../components/Composer.jsx';
 import AnswerCard, { applyEvent, newAnswer, savedAnswer } from '../components/AskPanel.jsx';
 import UserMenu from '../components/UserMenu.jsx';
 import ErrorNotice from '../components/ErrorNotice.jsx';
+import { AreaIcon, TextCursorIcon } from '../components/Icons.jsx';
 
 // The core screen (S03–S11): the PDF on the left, the margin on the right. Owns the
 // annotations, polling, the current selection and the open answer card.
@@ -329,15 +330,6 @@ export default function Reader() {
           <span>{Math.round(scale * 100)}%</span>
           <button type="button" aria-label="Zoom in" onClick={() => setScale((s) => Math.min(MAX_SCALE, s + ZOOM_STEP))}>+</button>
         </div>
-        <button
-          type="button"
-          className={`box-tool${boxMode ? ' on' : ''}`}
-          aria-pressed={boxMode}
-          title="For pictures, or pages where the text won't select: drag a box around the part you mean (Esc cancels)"
-          onClick={() => { setBoxMode(!boxMode); setDraftBox(null); }}
-        >
-          {boxMode ? 'Drag a box…' : 'Select area'}
-        </button>
         <Link to="/charter" className="charter-pill">Class charter</Link>
         <UserMenu showName={false} />
       </header>
@@ -345,6 +337,29 @@ export default function Reader() {
       {error && <div style={{ padding: '12px 28px 0' }}><ErrorNotice error={error} /></div>}
 
       <div className="reader-body">
+        <div className="pdf-wrap">
+        {/* Sits over the PDF column's corner and doesn't scroll with it. Area mode is one box per
+            click (SPEC §3.3), so it flips back to Select text after a box is drawn. */}
+        <div className="select-toggle" role="radiogroup" aria-label="Selection mode">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={!boxMode}
+            title="Select words in the reading"
+            onClick={() => { setBoxMode(false); setDraftBox(null); }}
+          >
+            <TextCursorIcon />Select text
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={boxMode}
+            title="For pictures, or pages where the text won't select: drag a box around the part you mean (Esc cancels)"
+            onClick={() => { setBoxMode(true); setDraftBox(null); }}
+          >
+            <AreaIcon />Select area
+          </button>
+        </div>
         <div
           className={`pdf-column${boxMode ? ' box-mode' : ''}`}
           ref={columnRef}
@@ -405,6 +420,7 @@ export default function Reader() {
               </PdfPage>
             ))}
           </Document>
+        </div>
         </div>
 
         <Margin

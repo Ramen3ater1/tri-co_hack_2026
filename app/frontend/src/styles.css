@@ -189,8 +189,13 @@ mark { background: var(--quote); color: inherit; border-radius: 3px; padding: 0 
 .highlight.active { box-shadow: 0 0 0 2px var(--focus); }
 .highlight.pending { background: rgba(43, 91, 181, .28); }
 /* "Select area" (SPEC §3.3): drag a box instead of selecting text. */
-.box-tool { font-size: 14px; padding: 8px 12px; border-radius: 999px; border: 1px solid var(--line); background: #FFF; color: var(--ink); cursor: pointer; }
-.box-tool.on { background: var(--accent-soft); border-color: var(--focus); }
+/* The text/area toggle floats over the PDF column's top-left corner; .pdf-wrap is its anchor. */
+.pdf-wrap { position: relative; flex: 1; min-width: 0; display: flex; }
+.pdf-wrap .pdf-column { flex: 1; padding-top: 64px; } /* room for the toggle above page 1 */
+.select-toggle { position: absolute; top: 14px; left: 14px; z-index: 20; display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(255, 255, 255, .92); border: 1px solid var(--line); box-shadow: var(--shadow); backdrop-filter: blur(6px); }
+.select-toggle button { display: flex; align-items: center; gap: 6px; border: 0; border-radius: 999px; padding: 6px 12px; min-height: 32px; background: transparent; color: var(--muted); font: inherit; font-size: 13px; cursor: pointer; transition: background .15s, color .15s; }
+.select-toggle button:hover { color: var(--ink); }
+.select-toggle button[aria-checked='true'] { background: var(--accent); color: #FFF; font-weight: 600; }
 .box-mode .pdf-page { cursor: crosshair; }
 .box-mode .textLayer { pointer-events: none; }
 .box-passage { display: flex; flex-direction: column; gap: 6px; }

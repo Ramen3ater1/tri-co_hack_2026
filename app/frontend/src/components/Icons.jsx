@@ -51,3 +51,27 @@ export function ClockIcon() {
     </svg>
   );
 }
+
+// An I-beam text cursor: "Select text".
+export function TextCursorIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M9 4h2a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H9" />
+      <path d="M15 4h-2a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h2" />
+      <path d="M10 12h4" />
+    </svg>
+  );
+}
+
+// A dashed box with corner handles: "Select area".
+export function AreaIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 8V5a1 1 0 0 1 1-1h3" />
+      <path d="M16 4h3a1 1 0 0 1 1 1v3" />
+      <path d="M20 16v3a1 1 0 0 1-1 1h-3" />
+      <path d="M8 20H5a1 1 0 0 1-1-1v-3" />
+      <path d="M11 4h2M11 20h2M4 11v2M20 11v2" />
+    </svg>
+  );
+}
