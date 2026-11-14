@@ -8,6 +8,7 @@ import Reader from './pages/Reader.jsx';
 import Charter from './pages/Charter.jsx';
 import Sources from './pages/Sources.jsx';
 import Search from './pages/Search.jsx';
+import FeedbackButton from './components/FeedbackButton.jsx';
 import './styles.css';
 
 // Every page but Login needs someone "logged in" (SPEC §3.1: no passwords).
@@ -27,6 +28,7 @@ function App() {
         <Route path="/search" element={<LoggedIn><Search /></LoggedIn>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <FeedbackButton />
     </BrowserRouter>
   );
 }

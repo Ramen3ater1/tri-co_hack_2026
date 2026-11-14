@@ -1,0 +1,36 @@
+name: Feedback on the site
+description: Something broken, something you don't like, or an idea. The site's "Report a problem" button fills in the page for you.
+title: "Feedback: "
+labels: ["feedback"]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of feedback?
+      options:
+        - Broken (an error, or it doesn't do what it should)
+        - Don't like it (looks, wording, how it works)
+        - Idea (something new)
+        - Question (not sure how it's meant to work)
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what would you like instead?
+      description: Plain words are fine. Paste or drag in a screenshot if it helps.
+    validations:
+      required: true
+  - type: input
+    id: page
+    attributes:
+      label: Page
+      description: Filled in by the button. Otherwise paste the address from your browser.
+  - type: input
+    id: user
+    attributes:
+      label: Logged in as
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and screen
