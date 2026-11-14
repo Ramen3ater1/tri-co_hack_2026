@@ -117,7 +117,10 @@ struct SeminarView: View {
         VStack(spacing: 0) {
             header
             Divider().overlay(Theme.hairline)
-            if let error = model.error {
+            if state.userId == nil {
+                Text("Choose who you are first (top-left menu), then open the table.")
+                    .font(.system(size: 14)).foregroundColor(.secondary).padding(20)
+            } else if let error = model.error {
                 Text(error).font(.system(size: 14)).foregroundColor(.red).padding(20).textSelection(.enabled)
             }
             GeometryReader { geo in table(in: geo.size) }
@@ -125,7 +128,7 @@ struct SeminarView: View {
             legend
         }
         .background(Theme.ground)
-        .task { await model.load() }
+        .task { if state.userId != nil { await model.load() } }  // the API needs x-user-id
         .sheet(item: $pick) { pick in
             ScrollView { detail(pick).padding(20) }
                 .background(Theme.panel)
