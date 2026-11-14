@@ -410,6 +410,28 @@ def hotkey_ask_stream(req: HotkeyAskRequest, user=Depends(current_user), conn=De
     return stream_events(events)
 
 
+class HotkeyNoteRequest(BaseModel):
+    quote: str
+    body: str
+    share_with_future: bool = True
+
+
+@app.post("/api/note")
+def hotkey_note(req: HotkeyNoteRequest, user=Depends(current_user), conn=Depends(get_conn)):
+    """A note from the Mac hotkey (⌥⇧N): like POST /readings/{id}/annotations, but the server
+    finds the reading, page and rects from the quote, as /ask does."""
+    reading, page, rects = locate_quote(conn, req.quote)
+    section = sections.section_for(conn, reading["id"], page, req.quote)
+    annotation_id = db.insert_annotation(
+        conn, reading["id"], user["id"], "note", page, req.quote, json.dumps(rects), req.body,
+        share_with_future=req.share_with_future, section_id=section["id"] if section else None, via="hotkey",
+    )
+    conn.commit()
+    result = load_annotation(conn, annotation_id)
+    result["reader_url"] = f"/readings/{reading['id']}?page={page}&annotation={annotation_id}"
+    return result
+
+
 # ---------- routes: charter ----------
 
 CHARTER_TOGGLES = ["ai_enabled", "ai_find_sources", "ai_explanations", "show_past_cohorts", "annotate_before_peers"]

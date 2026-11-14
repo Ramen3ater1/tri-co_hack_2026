@@ -360,6 +360,7 @@ All routes are under `/api`; all except `/users` need `X-User-Id`. Professor-onl
 | POST | `/readings/{id}/ask` | all | The three-layer answer (§3.5) |
 | POST | `/readings/{id}/ask/stream` | all | The same, step by step as newline-delimited JSON (staged panel, below) |
 | POST | `/ask` | all | Hotkey ask (§3.9): `{quote, question}` only; the server locates the reading, page, section and rects, then runs the same three layers. 404 if the quote isn't in a course reading |
+| POST | `/note` | all | Hotkey note (⌥⇧N, §3.9): `{quote, body, share_with_future}`; locates like `/ask`, saves a `note` with `via: "hotkey"`, returns the annotation plus `reader_url`. 404 if the quote isn't in a course reading |
 | POST | `/ask/stream` | all | Hotkey ask, step by step (still a plain 404 if the quote isn't found) |
 | GET | `/charter` | all | Text, toggles, comments |
 | PUT | `/charter` | prof | Update text and/or toggles |
