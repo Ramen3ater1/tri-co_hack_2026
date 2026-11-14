@@ -5,21 +5,31 @@
 import json
 import re
 import time
+import traceback
 from pathlib import Path
 
 import pypdf
-from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+import ask
 import db
+import search
 import seed
 
 UPLOADS_DIR = Path(__file__).parent / "uploads"
 FRONTEND_DIST = Path(__file__).parent.parent / "frontend" / "dist"
 
 app = FastAPI(title="Dialectic")
+
+
+@app.exception_handler(Exception)
+def show_errors(request: Request, exc: Exception):
+    """Fail loudly: send the real error message to the browser (the traceback is still logged)."""
+    traceback.print_exception(exc)
+    return JSONResponse({"detail": f"{type(exc).__name__}: {exc}"}, status_code=500)
 
 
 # ---------- who is asking ----------
@@ -75,20 +85,6 @@ def create_reading(conn, title, pdf_path, uploaded_by):
         conn.execute("INSERT INTO reading_pages VALUES (?, ?, ?)", (reading_id, i, text))
         conn.execute("INSERT INTO pages_fts (text, reading_id, page) VALUES (?, ?, ?)", (text, reading_id, i))
     return reading_id
-
-
-# The visibility rule (SPEC §3.4), as SQL over `annotations a JOIN users u ON u.id = a.user_id`.
-# You see an annotation if it's from your cohort, or its author is the professor or the AI,
-# or it's from a past cohort, shared with future classes, and the charter shows past cohorts.
-VISIBLE_SQL = """(
-  u.cohort = :viewer_cohort
-  OR u.role IN ('professor', 'ai')
-  OR (a.share_with_future = 1 AND :show_past = 1)
-)"""
-
-
-def visibility_params(conn, user):
-    return {"viewer_cohort": user["cohort"], "show_past": get_charter(conn)["show_past_cohorts"]}
 
 
 def badge(row, current_cohort):
@@ -178,9 +174,9 @@ def list_annotations(reading_id: int, user=Depends(current_user), conn=Depends(g
     get_reading_or_404(conn, reading_id)
     rows = conn.execute(
         f"""SELECT a.*, u.name, u.role, u.cohort FROM annotations a JOIN users u ON u.id = a.user_id
-            WHERE a.reading_id = :reading_id AND {VISIBLE_SQL}
+            WHERE a.reading_id = :reading_id AND {db.VISIBLE_SQL}
             ORDER BY a.created_at, a.id""",
-        {"reading_id": reading_id, **visibility_params(conn, user)},
+        {"reading_id": reading_id, **db.visibility_params(conn, user)},
     ).fetchall()
     current_cohort = get_course(conn)["current_cohort"]
     by_id = {}
@@ -224,25 +220,12 @@ def create_annotation(reading_id: int, new: NewAnnotation, user=Depends(current_
         if new.page is None or not new.quote or not new.rects:
             raise HTTPException(422, "A new note needs page, quote and rects")
         page, quote, rects_json = new.page, new.quote, json.dumps(new.rects)
-    annotation_id = insert_annotation(
+    annotation_id = db.insert_annotation(
         conn, reading_id, user["id"], "note", page, quote, rects_json, new.body,
         parent_id=new.parent_id, share_with_future=new.share_with_future,
     )
     conn.commit()
     return load_annotation(conn, annotation_id)
-
-
-def insert_annotation(conn, reading_id, user_id, kind, page, quote, rects_json, body,
-                      parent_id=None, share_with_future=True, cited_source_ids=None):
-    cur = conn.execute(
-        """INSERT INTO annotations (reading_id, user_id, parent_id, kind, page, quote, rects_json, body,
-                                    cited_source_ids, share_with_future, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        (reading_id, user_id, parent_id, kind, page, quote, rects_json, body,
-         json.dumps(cited_source_ids) if cited_source_ids is not None else None,
-         int(share_with_future), db.now()),
-    )
-    return cur.lastrowid
 
 
 @app.delete("/api/annotations/{annotation_id}")
@@ -269,7 +252,157 @@ def delete_annotation(annotation_id: int, user=Depends(current_user), conn=Depen
     return {"deleted": ids}
 
 
+# ---------- routes: ask ----------
+
+class AskRequest(BaseModel):
+    page: int
+    quote: str
+    rects: list[dict]
+    question: str
+
+
+@app.post("/api/readings/{reading_id}/ask")
+def ask_question(reading_id: int, req: AskRequest, user=Depends(current_user), conn=Depends(get_conn)):
+    reading = get_reading_or_404(conn, reading_id)
+    return ask.answer(conn, reading, user, req.page, req.quote, req.rects, req.question)
+
+
+# ---------- routes: charter ----------
+
+CHARTER_TOGGLES = ["ai_enabled", "ai_find_sources", "ai_explanations", "show_past_cohorts", "annotate_before_peers"]
+
+
+@app.get("/api/charter")
+def charter(user=Depends(current_user), conn=Depends(get_conn)):
+    data = get_charter(conn)
+    for toggle in CHARTER_TOGGLES:
+        data[toggle] = bool(data[toggle])
+    comments = conn.execute(
+        """SELECT c.id, c.body, c.created_at, u.name AS author, u.role AS author_role
+           FROM charter_comments c JOIN users u ON u.id = c.user_id ORDER BY c.id"""
+    ).fetchall()
+    data["comments"] = [dict(c) for c in comments]
+    return data
+
+
+class CharterUpdate(BaseModel):
+    # Every field is optional: send only what changed.
+    text_md: str | None = None
+    permissible_sources: str | None = None
+    ai_enabled: bool | None = None
+    ai_find_sources: bool | None = None
+    ai_explanations: bool | None = None
+    max_explanation_words: int | None = None
+    show_past_cohorts: bool | None = None
+    annotate_before_peers: bool | None = None
+
+
+@app.put("/api/charter")
+def update_charter(update: CharterUpdate, user=Depends(professor), conn=Depends(get_conn)):
+    changes = update.model_dump(exclude_none=True)
+    for field, value in changes.items():
+        # Field names come from CharterUpdate, never from the request, so the f-string is safe.
+        conn.execute(f"UPDATE charter SET {field} = ?", (int(value) if isinstance(value, bool) else value,))
+    conn.execute("UPDATE charter SET updated_at = ?", (db.now(),))
+    conn.commit()
+    return charter(user, conn)
+
+
+class NewComment(BaseModel):
+    body: str
+
+
+@app.post("/api/charter/comments")
+def add_charter_comment(new: NewComment, user=Depends(current_user), conn=Depends(get_conn)):
+    conn.execute(
+        "INSERT INTO charter_comments (user_id, body, created_at) VALUES (?, ?, ?)",
+        (user["id"], new.body, db.now()),
+    )
+    conn.commit()
+    return charter(user, conn)
+
+
+# ---------- routes: the course source library ----------
+
+@app.get("/api/sources")
+def list_sources(user=Depends(current_user), conn=Depends(get_conn)):
+    rows = conn.execute(
+        """SELECT s.id, s.title, s.url, s.found_by, s.created_at, s.first_question_id,
+                  q.body AS first_question
+           FROM sources s LEFT JOIN annotations q ON q.id = s.first_question_id
+           ORDER BY s.id DESC"""
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+class NewSource(BaseModel):
+    url: str
+
+
+@app.post("/api/sources")
+def add_source(new: NewSource, user=Depends(professor), conn=Depends(get_conn)):
+    page = search.fetch_page(conn, new.url)
+    if not page["text"]:
+        raise HTTPException(422, f"Couldn't extract any text from {new.url}")
+    conn.execute(
+        """INSERT INTO sources (title, url, excerpt, found_by, created_at) VALUES (?, ?, ?, 'professor', ?)
+           ON CONFLICT (url) DO NOTHING""",
+        (page["title"], new.url, page["text"], db.now()),
+    )
+    conn.commit()
+    return list_sources(user, conn)
+
+
+@app.delete("/api/sources/{source_id}")
+def delete_source(source_id: int, user=Depends(professor), conn=Depends(get_conn)):
+    conn.execute("DELETE FROM sources WHERE id = ?", (source_id,))
+    conn.commit()
+    return list_sources(user, conn)
+
+
+# ---------- routes: repository search ----------
+
+SEARCH_LIMIT = 20
+
+
+@app.get("/api/search")
+def search_repository(q: str, user=Depends(current_user), conn=Depends(get_conn)):
+    """FTS over visible annotations and the readings' text. Snippets mark hits as [[word]]: render them as text, never as HTML."""
+    match = db.fts_query(q)
+    if match is None:
+        return {"annotations": [], "pages": []}
+    annotations = conn.execute(
+        f"""SELECT a.id AS annotation_id, a.reading_id, r.title AS reading_title, a.page, a.kind,
+                   u.name AS author, snippet(annotations_fts, -1, '[[', ']]', '…', 20) AS snippet
+            FROM annotations_fts f
+            JOIN annotations a ON a.id = f.rowid
+            JOIN users u ON u.id = a.user_id
+            JOIN readings r ON r.id = a.reading_id
+            WHERE annotations_fts MATCH :match AND {db.VISIBLE_SQL}
+            ORDER BY bm25(annotations_fts) LIMIT :limit""",
+        {"match": match, "limit": SEARCH_LIMIT, **db.visibility_params(conn, user)},
+    ).fetchall()
+    pages = conn.execute(
+        """SELECT p.reading_id, r.title AS reading_title, p.page,
+                  snippet(pages_fts, 0, '[[', ']]', '…', 20) AS snippet
+           FROM pages_fts p JOIN readings r ON r.id = p.reading_id
+           WHERE pages_fts MATCH ? ORDER BY bm25(pages_fts) LIMIT ?""",
+        (match, SEARCH_LIMIT),
+    ).fetchall()
+    return {"annotations": [dict(r) for r in annotations], "pages": [dict(r) for r in pages]}
+
+
 # ---------- the built frontend (production: one process, one port) ----------
 
 if FRONTEND_DIST.exists():
-    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
+
+    @app.get("/{path:path}")
+    def frontend(path: str):
+        """Serve built files; any other path gets index.html so react-router can handle it."""
+        if path.startswith("api/"):
+            raise HTTPException(404, f"No API route /{path}")
+        file = (FRONTEND_DIST / path).resolve()
+        if path and file.is_file() and file.is_relative_to(FRONTEND_DIST.resolve()):
+            return FileResponse(file)
+        return FileResponse(FRONTEND_DIST / "index.html")

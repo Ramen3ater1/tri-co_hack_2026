@@ -17,3 +17,7 @@ Append only, newest at the bottom. Format: `- HH:MM (Day) — what, and why. [wh
 - 01:26 (Sat) — Made the seed PDF: Gutenberg #408 Ch. 1 printed with headless Chrome (7 pages, Letter), in app/backend/seed/. [Owen/Claude]
 - 01:26 (Sat) — Seed annotations attach when the demo PDF is uploaded (it's uploaded live in step 1, so they can't be seeded before). Rects computed with pdfplumber (new dep, seed only) and checked visually. SPEC §10. [Owen/Claude]
 - 01:26 (Sat) — Backend skeleton + annotations done: /users, /course, /readings upload+pdf, annotations list/create/reply/delete with the visibility rule. Annotation JSON shape added to SPEC §6. [Owen/Claude]
+- 01:31 (Sat) — /ask done end to end (peer, toggles, gate, web sources, library fallback, AI explanation) plus /charter, /sources, /search; tested with a faked LLM + Kagi since we have no keys yet. /ask logic lives in ask.py (main.py would have passed ~400 lines). [Owen/Claude]
+- 01:31 (Sat) — Peer layer searches notes/replies only: in testing it returned the asker's own earlier questions as "answers". SPEC §3.5. [Owen/Claude]
+- 01:31 (Sat) — Gate risk to test with the real model: the demo question "what did it *mean* in 1903?" contains "mean", the word the rule-text demo uses to trigger a denial. [Owen/Claude]
+- 01:31 (Sat) — Search snippets mark hits as [[word]], not <b>, so the frontend never renders user text as HTML. 500s return the real error in "detail". SPEC §6. [Owen/Claude]

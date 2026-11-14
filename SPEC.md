@@ -76,7 +76,7 @@ One table covers notes, questions, AI answers and replies:
 `POST /api/readings/{id}/ask` with `page`, `quote`, `rects`, `question`. The server:
 
 1. Saves the question as an annotation (`kind = question`), so it's public and answerable.
-2. **Peer layer (always on, no AI):** FTS5 search over visible annotations using keywords from `quote + question`, boosted for annotations on the same page. Top 5.
+2. **Peer layer (always on, no AI):** FTS5 search over visible **notes and replies** on this reading (not other questions or AI answers, which aren't answers from your class) using keywords from `quote + question`, boosted for annotations on the same page. Top 5.
 3. **Pass 1, the gate** (only if `ai_enabled`): toggles are checked in code first; any layer whose toggle is off is blocked without asking the model. If any AI layer is still possible, one LLM call (`GATE_PROMPT`, §7) reads the charter text, the quote and the question, and returns per layer `allowed` + the `rule` it relied on + a one-line `reason`, plus a web `search_query` to use if source finding is allowed. A denied layer is blocked with that rule quoted to the student.
 4. **Pass 2, source layer:**
    - **No AI** (`ai_find_sources` off or denied): FTS5 over the course source library, which holds every source the AI has found before. Top 3. This is how the class gets less dependent on AI over time.
@@ -302,6 +302,13 @@ Annotation shape (`GET /readings/{id}/annotations` returns a list of these, newe
  "badge": "Spring 2026",
  "replies": [ /* same shape, oldest first; replies to replies are flattened here */ ]}
 ```
+
+Other response shapes:
+
+- `GET /charter` (and `PUT`, `POST /charter/comments`, which return the updated charter): every `charter` column (toggles as booleans) plus `"comments": [{"id", "body", "created_at", "author", "author_role"}]`. `PUT` takes any subset of the columns.
+- `GET /sources` (and `POST`/`DELETE`, which return the updated list): `[{"id", "title", "url", "found_by", "created_at", "first_question_id", "first_question"}]`, newest first. `first_question` is the text of the question it was found for.
+- `GET /search?q=`: `{"annotations": [{"annotation_id", "reading_id", "reading_title", "page", "kind", "author", "snippet"}], "pages": [{"reading_id", "reading_title", "page", "snippet"}]}`. Snippets mark hits as `[[word]]`: render as text, never as HTML (annotation bodies are user input).
+- **Errors:** `{"detail": "..."}` with 401 (unknown user), 403 (not allowed), 404, 422 (bad input) or 500. A 500's `detail` is the real error (e.g. a missing API key), so show it.
 
 `badge` is `"Professor"`, `"AI"`, a past cohort's name, or `null` for current classmates. `POST /readings/{id}/annotations` takes `{"page", "quote", "rects", "body", "share_with_future"}` for a note, or `{"parent_id", "body"}` for a reply (page comes from the parent). `rects` are page fractions, top-left origin.
 

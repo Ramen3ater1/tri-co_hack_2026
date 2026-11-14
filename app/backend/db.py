@@ -1,4 +1,5 @@
 """SQLite connection, schema and full-text-search helpers (SPEC §5)."""
+import json
 import re
 import sqlite3
 from datetime import datetime
@@ -146,3 +147,31 @@ def fts_query(text):
     if not keywords:
         return None
     return " OR ".join(f'"{w}"' for w in keywords)
+
+
+# The visibility rule (SPEC §3.4), as SQL over `annotations a JOIN users u ON u.id = a.user_id`.
+# You see an annotation if it's from your cohort, or its author is the professor or the AI,
+# or it's from a past cohort, shared with future classes, and the charter shows past cohorts.
+VISIBLE_SQL = """(
+  u.cohort = :viewer_cohort
+  OR u.role IN ('professor', 'ai')
+  OR (a.share_with_future = 1 AND :show_past = 1)
+)"""
+
+
+def visibility_params(conn, user):
+    show_past = conn.execute("SELECT show_past_cohorts FROM charter").fetchone()[0]
+    return {"viewer_cohort": user["cohort"], "show_past": show_past}
+
+
+def insert_annotation(conn, reading_id, user_id, kind, page, quote, rects_json, body,
+                      parent_id=None, share_with_future=True, cited_source_ids=None):
+    cur = conn.execute(
+        """INSERT INTO annotations (reading_id, user_id, parent_id, kind, page, quote, rects_json, body,
+                                    cited_source_ids, share_with_future, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (reading_id, user_id, parent_id, kind, page, quote, rects_json, body,
+         json.dumps(cited_source_ids) if cited_source_ids is not None else None,
+         int(share_with_future), now()),
+    )
+    return cur.lastrowid
