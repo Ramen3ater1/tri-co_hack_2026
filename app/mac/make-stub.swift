@@ -1,5 +1,6 @@
 import PDFKit
-// Writes app/mac/stub-locate-response.json from the seed PDF. Run: swiftc stub.swift && ./stub <pdf>
+// STUB: POST /api/locate pending Owen's OK. Writes the stub (page 2 lines + demo annotations) from the seed PDF:
+//   swift make-stub.swift ../backend/seed/souls-of-black-folk-ch1.pdf > stub-locate-response.json
 let doc = PDFDocument(url: URL(fileURLWithPath: CommandLine.arguments[1]))!
 let page = doc.page(at: 1)!
 let box = page.bounds(for: .mediaBox)
