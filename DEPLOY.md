@@ -9,8 +9,8 @@ One DigitalOcean droplet (2 GB, Ubuntu 24.04) just for the hackathon, separate f
 | Copy | URL | Who it's for | Checkout | Port | Service | Limits (`.env`) |
 | --- | --- | --- | --- | --- | --- | --- |
 | **demo** | `https://dialectic.yaggy.dev` | Judges, and us on stage | `/srv/dialectic-demo` | 8000 | `dialectic@demo` | AI $10, search $3, no device limit |
-| **sandbox** | `https://dialectic.space` | Participants (public link) | `/srv/dialectic-sandbox` | 8001 | `dialectic@sandbox` | AI $12, search $4, 10 paid Asks/device/hour |
-| **dev** | `https://dev.dialectic.space` | Teammates trying the newest work and reporting problems; may be briefly broken | `/srv/dialectic-dev` | 8002 | `dialectic@dev` | AI $3, search $1, no device limit |
+| **sandbox** | `https://dialectic-sandbox.yaggy.dev` (also `dialectic.space`) | Participants (public link) | `/srv/dialectic-sandbox` | 8001 | `dialectic@sandbox` | AI $12, search $4, 10 paid Asks/device/hour |
+| **dev** | `https://dialectic-dev.yaggy.dev` (also `dev.dialectic.space`) | Teammates trying the newest work and reporting problems; may be briefly broken | `/srv/dialectic-dev` | 8002 | `dialectic@dev` | AI $3, search $1, no device limit |
 
 How a request gets there: browser → **Cloudflare** (DNS for both domains is proxied, and Cloudflare serves the public HTTPS certificate) → **Caddy** on the droplet (`/etc/caddy/Caddyfile`, from `deploy/Caddyfile`) → the copy's **uvicorn** process on `127.0.0.1:<port>`, run by systemd from `deploy/dialectic@.service` as the `dialectic` user. FastAPI serves both the API and the built frontend (`app/frontend/dist`).
 
@@ -95,9 +95,11 @@ ssh root@IP "cp /tmp/Caddyfile /etc/caddy/ && cp /tmp/dialectic@.service /etc/sy
 
 ## Cloudflare
 
+**Swarthmore's campus DNS blocks `dialectic.space`** (it answers with `malware.swarthmore.edu`, probably because the domain is newly registered), so on campus wifi only the `yaggy.dev` names work. Share those; the `dialectic.space` names stay as aliases for when the block lifts.
+
 Both hostnames are proxied by Cloudflare (orange cloud). Cloudflare serves the public certificate; Caddy accepts both plain HTTP and HTTPS with its own internal certificate, so it works with Cloudflare SSL mode **Flexible** or **Full**.
 
-- **`yaggy.dev` is in Full (strict)**, so `dialectic.yaggy.dev` has its own **Configuration Rule** (Rules → Configuration Rules, "dialectic full ssl": hostname equals `dialectic.yaggy.dev` → SSL **Full**). Delete the rule when the droplet goes. `dialectic.space` needs nothing.
+- **`yaggy.dev` is in Full (strict)**, so `dialectic.yaggy.dev` has its own **Configuration Rule** (Rules → Configuration Rules, "dialectic full ssl": hostname is one of `dialectic.yaggy.dev`, `dialectic-sandbox.yaggy.dev`, `dialectic-dev.yaggy.dev` → SSL **Full**). Delete the rule when the droplet goes. `dialectic.space` needs nothing.
 - **Error 526** means the zone is in **Full (strict)**, which rejects Caddy's internal certificate. Either add a Cloudflare **Configuration Rule** for that hostname setting SSL to **Full**, or switch the record to **DNS only** (grey cloud) and replace that host's block in the Caddyfile with a plain `dialectic.yaggy.dev { reverse_proxy 127.0.0.1:8000 }` so Caddy gets a real Let's Encrypt certificate.
 - The Ask streams its answer (server-sent events); it was checked through Cloudflare and arrives stage by stage. Cloudflare cuts requests at 100 s; a fresh Ask takes 20–35 s.
 

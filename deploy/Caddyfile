@@ -10,13 +10,14 @@ http://dialectic.yaggy.dev, https://dialectic.yaggy.dev {
 }
 
 # Sandbox copy: the public link for participants.
-http://dialectic.space, https://dialectic.space {
+# Also on yaggy.dev: Swarthmore's campus DNS blocks the newly registered dialectic.space.
+http://dialectic.space, https://dialectic.space, http://dialectic-sandbox.yaggy.dev, https://dialectic-sandbox.yaggy.dev {
 	tls internal
 	reverse_proxy 127.0.0.1:8001
 }
 
 # Dev copy: runs `main`, for teammates to try new work and report problems.
-http://dev.dialectic.space, https://dev.dialectic.space {
+http://dev.dialectic.space, https://dev.dialectic.space, http://dialectic-dev.yaggy.dev, https://dialectic-dev.yaggy.dev {
 	tls internal
 	reverse_proxy 127.0.0.1:8002
 }
