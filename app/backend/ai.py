@@ -140,7 +140,8 @@ They ask: "{question}"
 
 Using only the numbered sources below, give historical and cultural context in at most
 {max_words} words. Cite sources as [1], [2]. Don't interpret the passage for the student and
-don't suggest a thesis. End with one question that sends them back to the text.
+don't suggest a thesis. Don't end with a question, and don't suggest what they should ask or
+think about next.
 
 Write plain text: no Markdown, no headings, no label (the app already marks this as AI).
 Stay on the student's question. If a source has nothing relevant, just don't cite it.
@@ -342,14 +343,7 @@ def explain(charter_text, reading_title, quote, question, sources, max_words):
 
 
 def cut_to_words(text, max_words):
-    """Enforce the charter's word limit, but keep the closing question that sends the
-    student back to the text: trim the explanation before it instead."""
+    """Enforce the charter's word limit by cutting the explanation short."""
     if len(text.split()) <= max_words:
         return text
-    body, closing = text, ""
-    paragraphs = text.rstrip().split("\n")
-    if paragraphs[-1].strip().endswith("?"):
-        body, closing = "\n".join(paragraphs[:-1]), paragraphs[-1].strip()
-    room = max_words - len(closing.split())
-    trimmed = " ".join(body.split()[:max(room, 0)]) + "…"
-    return f"{trimmed}\n\n{closing}" if closing else trimmed
+    return " ".join(text.split()[:max_words]) + "…"
