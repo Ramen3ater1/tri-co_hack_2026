@@ -20,6 +20,10 @@ If ⌥⇧D or ⌥⇧N copies nothing (Notability with scanned or annotated PDFs,
 
 Code: `Sources/Dialectic/` — `DialecticApp.swift` (constants, menu, hotkeys, copy selection), `Panels.swift` (Ask, Note), `Overlay.swift` (capture, Vision, page fit, overlay windows, margin, thread), `ReaderWindow.swift` (the web reader window), `Style.swift` (canvas tokens and shared pieces), `API.swift` (shapes and HTTP), `RenderCheck.swift` (the check below). Tunables are constants at the top of each file; `SERVER_URL` is in `DialecticApp.swift`.
 
+## Download a build (no Xcode needed)
+
+Every push to `main` that touches `app/mac/` is built on GitHub's macOS runners (`.github/workflows/mac-app.yml`, ~1 min). Open the latest **Mac app** run under the repo's **Actions** tab and download **Dialectic-dev-mac** (a zip of `Dialectic.app`). That build talks to the **dev copy**, `https://dialectic-dev.yaggy.dev`, not localhost; the commit it was built from is in `Dialectic.app/Contents/Resources/version.txt`. It's ad-hoc signed, so the first time: right-click → **Open**, then grant permissions as in *First run* below. The same run's **render-check** artifact has PNGs of every screen (stub data), for reviewing UI changes without a Mac.
+
 ## Build and run
 
 ```bash

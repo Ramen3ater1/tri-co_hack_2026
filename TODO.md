@@ -46,3 +46,9 @@ Re-asking an identical question replays the gate, search, filter and sentence pi
 **Owner:** anyone (backend) · **Status:** done 05:55 · **Found:** 05:23 Sat, same check
 
 Ben's Ask returned his own note ("Is this the same idea as being split in two?") under peers, alongside Sam's. SPEC §3.5 means *classmates'* answers. Small, but it reads oddly in the demo ("From your class: Ben"). **Fix:** exclude `a.user_id = <asker>` in `peer_layer`. **Done (05:55):** tested: Prof. Rivera asking about her own annotated passage now gets only Sam's note.
+
+## Mac stub data still points at the old PDF's pages
+
+**Owner:** josoup (Mac app) · **Status:** open · **Found:** 06:41 Sat, CI render check
+
+The seed reading is now the 1903 scan (SPEC §3.11, §10), and passages moved: "a sort of seventh son" and the double-consciousness line are on **page 3** now (were page 2), the freedman line on page 6. `app/mac/stub-locate-response.json` (and anything else hard-coding page 2) was generated from the old PDF, so ⌥⇧H's stub and the render check show old positions. **Fix:** `swift make-stub.swift ../backend/seed/souls-of-black-folk-ch1.pdf > stub-locate-response.json` on a Mac (or adapt make-stub to the new page), and check the render-check PNGs in the next **Mac app** Actions run.
