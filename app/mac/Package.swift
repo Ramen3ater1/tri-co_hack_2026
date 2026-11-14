@@ -5,7 +5,7 @@ import PackageDescription
 
 let package = Package(
     name: "Dialectic",
-    platforms: [.macOS(.v13)],
+    platforms: [.macOS(.v14)],
     targets: [
         .executableTarget(name: "Dialectic", path: "Sources/Dialectic")
     ]

@@ -1,0 +1,415 @@
+{
+  "_comment" : "STUB: POST \/api\/locate pending Owen's OK (design.md §3.2). Page 2 of the seed PDF, demo annotations as GET \/readings\/1\/annotations returns them for Ben.",
+  "annotations" : [
+    {
+      "author" : {
+        "cohort" : "Fall 2026",
+        "id" : 1,
+        "name" : "Prof. Rivera",
+        "role" : "professor"
+      },
+      "badge" : "Professor",
+      "body" : "Folklore: a seventh son born with a caul (a 'veil') was said to have second sight. Du Bois turns the veil into a gift as well as a barrier.",
+      "cited_source_ids" : null,
+      "created_at" : "2026-11-14T01:00:00Z",
+      "id" : 3,
+      "kind" : "note",
+      "locked" : false,
+      "page" : 2,
+      "parent_id" : null,
+      "quote" : "a sort of seventh son, born with a veil, and gifted with second-sight",
+      "reading_id" : 1,
+      "rects" : [
+        {
+          "h" : 0.016799999999999999,
+          "w" : 0.53339999999999999,
+          "x" : 0.1275,
+          "y" : 0.51490000000000002
+        }
+      ],
+      "replies" : [
+
+      ],
+      "section" : null,
+      "share_with_future" : true,
+      "via" : "web"
+    },
+    {
+      "author" : {
+        "cohort" : "Fall 2026",
+        "id" : 1,
+        "name" : "Prof. Rivera",
+        "role" : "professor"
+      },
+      "badge" : "Professor",
+      "body" : "First appearance of the Veil, one of the book's governing images. Track where it returns in later chapters.",
+      "cited_source_ids" : null,
+      "created_at" : "2026-11-14T01:00:00Z",
+      "id" : 2,
+      "kind" : "note",
+      "locked" : false,
+      "page" : 2,
+      "parent_id" : null,
+      "quote" : "shut out from their world by a vast veil",
+      "reading_id" : 1,
+      "rects" : [
+        {
+          "h" : 0.016799999999999999,
+          "w" : 0.31969999999999998,
+          "x" : 0.23050000000000001,
+          "y" : 0.13900000000000001
+        }
+      ],
+      "replies" : [
+
+      ],
+      "section" : null,
+      "share_with_future" : true,
+      "via" : "web"
+    },
+    {
+      "id" : 4,
+      "locked" : true,
+      "page" : 2,
+      "rects" : [
+        {
+          "h" : 0.016799999999999999,
+          "w" : 0.31119999999999998,
+          "x" : 0.56140000000000001,
+          "y" : 0.56040000000000001
+        },
+        {
+          "h" : 0.016799999999999999,
+          "w" : 0.43159999999999998,
+          "x" : 0.1275,
+          "y" : 0.58309999999999995
+        }
+      ]
+    },
+    {
+      "id" : 6,
+      "locked" : true,
+      "page" : 2,
+      "rects" : [
+        {
+          "h" : 0.016799999999999999,
+          "w" : 0.2457,
+          "x" : 0.62680000000000002,
+          "y" : 0.62849999999999995
+        },
+        {
+          "h" : 0.016799999999999999,
+          "w" : 0.038600000000000002,
+          "x" : 0.1275,
+          "y" : 0.65129999999999999
+        }
+      ]
+    }
+  ],
+  "lines" : [
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.0935
+      },
+      "text" : "refused my card,—refused it peremptorily, with a glance. Then it dawned upon me with a"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.1162
+      },
+      "text" : "certain suddenness that I was different from the others; or like, mayhap, in heart and life and"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.13900000000000001
+      },
+      "text" : "longing, but shut out from their world by a vast veil. I had thereafter no desire to tear down"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.16170000000000001
+      },
+      "text" : "that veil, to creep through; I held all beyond it in common contempt, and lived above it in a"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.18440000000000001
+      },
+      "text" : "region of blue sky and great wandering shadows. That sky was bluest when I could beat my"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.20710000000000001
+      },
+      "text" : "mates at examination-time, or beat them at a foot-race, or even beat their stringy heads. Alas,"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.22989999999999999
+      },
+      "text" : "with the years all this fine contempt began to fade; for the words I longed for, and all their"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.25259999999999999
+      },
+      "text" : "dazzling opportunities, were theirs, not mine. But they should not keep these prizes, I said;"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.27529999999999999
+      },
+      "text" : "some, all, I would wrest from them. Just how I would do it I could never decide: by reading"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.29809999999999998
+      },
+      "text" : "law, by healing the sick, by telling the wonderful tales that swam in my head,—some way."
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.32079999999999997
+      },
+      "text" : "With other black boys the strife was not so fiercely sunny: their youth shrunk into tasteless"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.34350000000000003
+      },
+      "text" : "sycophancy, or into silent hatred of the pale world about them and mocking distrust of"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.36620000000000003
+      },
+      "text" : "everything white; or wasted itself in a bitter cry, Why did God make me an outcast and a"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.38900000000000001
+      },
+      "text" : "stranger in mine own house? The shades of the prison-house closed round about us all: walls"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.41170000000000001
+      },
+      "text" : "strait and stubborn to the whitest, but relentlessly narrow, tall, and unscalable to sons of night"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.43440000000000001
+      },
+      "text" : "who must plod darkly on in resignation, or beat unavailing palms against the stone, or steadily,"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.37059999999999998,
+        "x" : 0.1275,
+        "y" : 0.45710000000000001
+      },
+      "text" : "half hopelessly, watch the streak of blue above."
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.49220000000000003
+      },
+      "text" : "After the Egyptian and Indian, the Greek and Roman, the Teuton and Mongolian, the Negro is"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.51490000000000002
+      },
+      "text" : "a sort of seventh son, born with a veil, and gifted with second-sight in this American world,—"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.53759999999999997
+      },
+      "text" : "a world which yields him no true self-consciousness, but only lets him see himself through the"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.56040000000000001
+      },
+      "text" : "revelation of the other world. It is a peculiar sensation, this double-consciousness, this sense of"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.58309999999999995
+      },
+      "text" : "always looking at one’s self through the eyes of others, of measuring one’s soul by the tape of"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.60580000000000001
+      },
+      "text" : "a world that looks on in amused contempt and pity. One ever feels his twoness,—an American,"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.62849999999999995
+      },
+      "text" : "a Negro; two souls, two thoughts, two unreconciled strivings; two warring ideals in one dark"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.53890000000000005,
+        "x" : 0.1275,
+        "y" : 0.65129999999999999
+      },
+      "text" : "body, whose dogged strength alone keeps it from being torn asunder."
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.68730000000000002
+      },
+      "text" : "The history of the American Negro is the history of this strife,—this longing to attain self-"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.70999999999999996
+      },
+      "text" : "conscious manhood, to merge his double self into a better and truer self. In this merging he"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.73270000000000002
+      },
+      "text" : "wishes neither of the older selves to be lost. He would not Africanize America, for America"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.75539999999999996
+      },
+      "text" : "has too much to teach the world and Africa. He would not bleach his Negro soul in a flood of"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.7782
+      },
+      "text" : "white Americanism, for he knows that Negro blood has a message for the world. He simply"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.80089999999999995
+      },
+      "text" : "wishes to make it possible for a man to be both a Negro and an American, without being"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.74509999999999998,
+        "x" : 0.1275,
+        "y" : 0.8236
+      },
+      "text" : "cursed and spit upon by his fellows, without having the doors of Opportunity closed roughly in"
+    },
+    {
+      "rect" : {
+        "h" : 0.016799999999999999,
+        "w" : 0.065299999999999997,
+        "x" : 0.1275,
+        "y" : 0.84630000000000005
+      },
+      "text" : "his face."
+    }
+  ],
+  "located" : {
+    "page" : 2,
+    "reader_url" : "\/readings\/1?page=2",
+    "reading_id" : 1,
+    "reading_title" : "The Souls of Black Folk, Ch. 1: Of Our Spiritual Strivings",
+    "section" : "Of Our Spiritual Strivings"
+  }
+}
