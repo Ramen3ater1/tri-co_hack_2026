@@ -1,0 +1,275 @@
+"""Dialectic API (SPEC §6). Run from app/backend:
+
+    uv run --env-file ../../.env uvicorn main:app --reload
+"""
+import json
+import re
+import time
+from pathlib import Path
+
+import pypdf
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+
+import db
+import seed
+
+UPLOADS_DIR = Path(__file__).parent / "uploads"
+FRONTEND_DIST = Path(__file__).parent.parent / "frontend" / "dist"
+
+app = FastAPI(title="Dialectic")
+
+
+# ---------- who is asking ----------
+
+def get_conn():
+    conn = db.connect()
+    try:
+        yield conn
+    finally:
+        conn.close()
+
+
+def current_user(x_user_id: int = Header(), conn=Depends(get_conn)):
+    """Every route except /users needs X-User-Id. TODO(edge): anyone can be anyone (SPEC §3.1)."""
+    user = conn.execute("SELECT * FROM users WHERE id = ?", (x_user_id,)).fetchone()
+    if user is None:
+        raise HTTPException(401, f"Unknown user id {x_user_id}")
+    return dict(user)
+
+
+def professor(user=Depends(current_user)):
+    if user["role"] != "professor":
+        raise HTTPException(403, "Professor only")
+    return user
+
+
+# ---------- shared helpers ----------
+
+def get_course(conn):
+    return dict(conn.execute("SELECT * FROM course").fetchone())
+
+
+def get_charter(conn):
+    return dict(conn.execute("SELECT * FROM charter").fetchone())
+
+
+def get_reading_or_404(conn, reading_id):
+    row = conn.execute("SELECT * FROM readings WHERE id = ?", (reading_id,)).fetchone()
+    if row is None:
+        raise HTTPException(404, f"No reading {reading_id}")
+    return row
+
+
+def create_reading(conn, title, pdf_path, uploaded_by):
+    """Insert a reading and its extracted page text. Used by the upload route and seed.py."""
+    cur = conn.execute(
+        "INSERT INTO readings (title, pdf_path, uploaded_by, created_at) VALUES (?, ?, ?, ?)",
+        (title, str(pdf_path), uploaded_by, db.now()),
+    )
+    reading_id = cur.lastrowid
+    for i, page in enumerate(pypdf.PdfReader(pdf_path).pages, start=1):
+        text = page.extract_text() or ""
+        conn.execute("INSERT INTO reading_pages VALUES (?, ?, ?)", (reading_id, i, text))
+        conn.execute("INSERT INTO pages_fts (text, reading_id, page) VALUES (?, ?, ?)", (text, reading_id, i))
+    return reading_id
+
+
+# The visibility rule (SPEC §3.4), as SQL over `annotations a JOIN users u ON u.id = a.user_id`.
+# You see an annotation if it's from your cohort, or its author is the professor or the AI,
+# or it's from a past cohort, shared with future classes, and the charter shows past cohorts.
+VISIBLE_SQL = """(
+  u.cohort = :viewer_cohort
+  OR u.role IN ('professor', 'ai')
+  OR (a.share_with_future = 1 AND :show_past = 1)
+)"""
+
+
+def visibility_params(conn, user):
+    return {"viewer_cohort": user["cohort"], "show_past": get_charter(conn)["show_past_cohorts"]}
+
+
+def badge(row, current_cohort):
+    """The margin badge: 'Professor', 'AI', a past cohort's name, or None for your classmates."""
+    if row["role"] == "professor":
+        return "Professor"
+    if row["role"] == "ai":
+        return "AI"
+    if row["cohort"] != current_cohort:
+        return row["cohort"]
+    return None
+
+
+def annotation_json(row, current_cohort):
+    return {
+        "id": row["id"],
+        "reading_id": row["reading_id"],
+        "parent_id": row["parent_id"],
+        "kind": row["kind"],
+        "page": row["page"],
+        "quote": row["quote"],
+        "rects": json.loads(row["rects_json"]) if row["rects_json"] else None,
+        "body": row["body"],
+        "cited_source_ids": json.loads(row["cited_source_ids"]) if row["cited_source_ids"] else None,
+        "share_with_future": bool(row["share_with_future"]),
+        "created_at": row["created_at"],
+        "author": {"id": row["user_id"], "name": row["name"], "role": row["role"], "cohort": row["cohort"]},
+        "badge": badge(row, current_cohort),
+    }
+
+
+def load_annotation(conn, annotation_id):
+    row = conn.execute(
+        "SELECT a.*, u.name, u.role, u.cohort FROM annotations a JOIN users u ON u.id = a.user_id WHERE a.id = ?",
+        (annotation_id,),
+    ).fetchone()
+    return annotation_json(row, get_course(conn)["current_cohort"])
+
+
+# ---------- routes: users, course, readings ----------
+
+@app.get("/api/users")
+def list_users(conn=Depends(get_conn)):
+    # The AI isn't someone you can log in as.
+    rows = conn.execute("SELECT * FROM users WHERE role != 'ai' ORDER BY id").fetchall()
+    return [dict(r) for r in rows]
+
+
+@app.get("/api/course")
+def course(user=Depends(current_user), conn=Depends(get_conn)):
+    readings = conn.execute("SELECT id, title, created_at FROM readings ORDER BY id").fetchall()
+    return {"course": get_course(conn), "readings": [dict(r) for r in readings], "user": user}
+
+
+@app.post("/api/readings")
+def upload_reading(title: str = Form(), file: UploadFile = File(), user=Depends(professor), conn=Depends(get_conn)):
+    UPLOADS_DIR.mkdir(exist_ok=True)
+    safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", file.filename)
+    dest = UPLOADS_DIR / f"{int(time.time())}-{safe_name}"
+    dest.write_bytes(file.file.read())
+    reading_id = create_reading(conn, title, dest, user["id"])
+    # DEMO: last year's annotations on the demo reading appear the moment it's uploaded.
+    if file.filename == seed.DEMO_PDF_NAME:
+        seed.add_demo_annotations(conn, reading_id, dest)
+    conn.commit()
+    return reading_info(reading_id, user, conn)
+
+
+@app.get("/api/readings/{reading_id}")
+def reading_info(reading_id: int, user=Depends(current_user), conn=Depends(get_conn)):
+    reading = get_reading_or_404(conn, reading_id)
+    pages = conn.execute("SELECT COUNT(*) FROM reading_pages WHERE reading_id = ?", (reading_id,)).fetchone()[0]
+    return {"id": reading["id"], "title": reading["title"], "page_count": pages, "created_at": reading["created_at"]}
+
+
+@app.get("/api/readings/{reading_id}/pdf")
+def reading_pdf(reading_id: int, user=Depends(current_user), conn=Depends(get_conn)):
+    reading = get_reading_or_404(conn, reading_id)
+    return FileResponse(reading["pdf_path"], media_type="application/pdf")
+
+
+# ---------- routes: annotations ----------
+
+@app.get("/api/readings/{reading_id}/annotations")
+def list_annotations(reading_id: int, user=Depends(current_user), conn=Depends(get_conn)):
+    """Visible top-level annotations, newest first, each with its visible replies (oldest first)."""
+    get_reading_or_404(conn, reading_id)
+    rows = conn.execute(
+        f"""SELECT a.*, u.name, u.role, u.cohort FROM annotations a JOIN users u ON u.id = a.user_id
+            WHERE a.reading_id = :reading_id AND {VISIBLE_SQL}
+            ORDER BY a.created_at, a.id""",
+        {"reading_id": reading_id, **visibility_params(conn, user)},
+    ).fetchall()
+    current_cohort = get_course(conn)["current_cohort"]
+    by_id = {}
+    top_level = []
+    for row in rows:
+        item = annotation_json(row, current_cohort)
+        item["replies"] = []
+        by_id[item["id"]] = item
+    for item in by_id.values():
+        if item["parent_id"] is None:
+            top_level.append(item)
+            continue
+        # Show nesting one level deep: a reply to a reply goes under the top-level annotation.
+        parent = by_id.get(item["parent_id"])
+        while parent is not None and parent["parent_id"] is not None:
+            parent = by_id.get(parent["parent_id"])
+        if parent is not None:  # a reply whose parent you can't see stays hidden
+            parent["replies"].append(item)
+    top_level.reverse()
+    return top_level
+
+
+class NewAnnotation(BaseModel):
+    body: str
+    parent_id: int | None = None   # set for a reply; page/quote/rects then come from the parent
+    page: int | None = None
+    quote: str | None = None
+    rects: list[dict] | None = None
+    share_with_future: bool = True
+
+
+@app.post("/api/readings/{reading_id}/annotations")
+def create_annotation(reading_id: int, new: NewAnnotation, user=Depends(current_user), conn=Depends(get_conn)):
+    get_reading_or_404(conn, reading_id)
+    if new.parent_id is not None:
+        parent = conn.execute("SELECT * FROM annotations WHERE id = ?", (new.parent_id,)).fetchone()
+        if parent is None or parent["reading_id"] != reading_id:
+            raise HTTPException(404, f"No annotation {new.parent_id} on this reading")
+        page, quote, rects_json = parent["page"], None, None
+    else:
+        if new.page is None or not new.quote or not new.rects:
+            raise HTTPException(422, "A new note needs page, quote and rects")
+        page, quote, rects_json = new.page, new.quote, json.dumps(new.rects)
+    annotation_id = insert_annotation(
+        conn, reading_id, user["id"], "note", page, quote, rects_json, new.body,
+        parent_id=new.parent_id, share_with_future=new.share_with_future,
+    )
+    conn.commit()
+    return load_annotation(conn, annotation_id)
+
+
+def insert_annotation(conn, reading_id, user_id, kind, page, quote, rects_json, body,
+                      parent_id=None, share_with_future=True, cited_source_ids=None):
+    cur = conn.execute(
+        """INSERT INTO annotations (reading_id, user_id, parent_id, kind, page, quote, rects_json, body,
+                                    cited_source_ids, share_with_future, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (reading_id, user_id, parent_id, kind, page, quote, rects_json, body,
+         json.dumps(cited_source_ids) if cited_source_ids is not None else None,
+         int(share_with_future), db.now()),
+    )
+    return cur.lastrowid
+
+
+@app.delete("/api/annotations/{annotation_id}")
+def delete_annotation(annotation_id: int, user=Depends(current_user), conn=Depends(get_conn)):
+    row = conn.execute("SELECT * FROM annotations WHERE id = ?", (annotation_id,)).fetchone()
+    if row is None:
+        raise HTTPException(404, f"No annotation {annotation_id}")
+    if row["user_id"] != user["id"]:
+        raise HTTPException(403, "You can only delete your own annotations")
+    # The annotation and every reply under it, at any depth.
+    ids = [r[0] for r in conn.execute(
+        """WITH RECURSIVE tree(id) AS (
+             SELECT ? UNION ALL SELECT a.id FROM annotations a JOIN tree ON a.parent_id = tree.id)
+           SELECT id FROM tree""",
+        (annotation_id,),
+    )]
+    marks = ",".join("?" * len(ids))
+    # Sources found for a deleted question stay in the library; they just lose the link back.
+    conn.execute(f"UPDATE sources SET first_question_id = NULL WHERE first_question_id IN ({marks})", ids)
+    # Delete children before parents so the foreign keys hold. The FTS triggers fire per row.
+    for annotation in reversed(ids):
+        conn.execute("DELETE FROM annotations WHERE id = ?", (annotation,))
+    conn.commit()
+    return {"deleted": ids}
+
+
+# ---------- the built frontend (production: one process, one port) ----------
+
+if FRONTEND_DIST.exists():
+    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")

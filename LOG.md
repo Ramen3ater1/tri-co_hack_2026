@@ -14,3 +14,6 @@ Append only, newest at the bottom. Format: `- HH:MM (Day) — what, and why. [wh
 - 01:22 (Sat) — starting: backend (schema, seed, routes, /ask, ai.py, search.py) in app/backend/. [Owen/Claude]
 - 01:23 (Sat) — Backend env uses uv: app/backend/pyproject.toml + uv.lock, Python pinned to 3.12; .env loaded via `uv run --env-file`. SPEC §4/§9 updated (no requirements.txt). [Owen/Claude]
 - 01:24 (Sat) — Added README.md with a Development section (install uv and Node, .env, uv sync, run, uv add not pip). [Owen/Claude]
+- 01:26 (Sat) — Made the seed PDF: Gutenberg #408 Ch. 1 printed with headless Chrome (7 pages, Letter), in app/backend/seed/. [Owen/Claude]
+- 01:26 (Sat) — Seed annotations attach when the demo PDF is uploaded (it's uploaded live in step 1, so they can't be seeded before). Rects computed with pdfplumber (new dep, seed only) and checked visually. SPEC §10. [Owen/Claude]
+- 01:26 (Sat) — Backend skeleton + annotations done: /users, /course, /readings upload+pdf, annotations list/create/reply/delete with the visibility rule. Annotation JSON shape added to SPEC §6. [Owen/Claude]

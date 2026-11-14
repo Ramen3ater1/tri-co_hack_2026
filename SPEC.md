@@ -292,6 +292,19 @@ All routes are under `/api`; all except `/users` need `X-User-Id`. Professor-onl
 
 `ai_answer` is `null` when blocked or when no sources matched (no ungrounded answers).
 
+Annotation shape (`GET /readings/{id}/annotations` returns a list of these, newest first; `POST` returns one):
+
+```json
+{"id": 4, "reading_id": 1, "parent_id": null, "kind": "note", "page": 2,
+ "quote": "...", "rects": [{"x": 0.12, "y": 0.66, "w": 0.43, "h": 0.015}], "body": "...",
+ "cited_source_ids": null, "share_with_future": true, "created_at": "2026-11-14T01:25:52",
+ "author": {"id": 4, "name": "Sam", "role": "student", "cohort": "Spring 2026"},
+ "badge": "Spring 2026",
+ "replies": [ /* same shape, oldest first; replies to replies are flattened here */ ]}
+```
+
+`badge` is `"Professor"`, `"AI"`, a past cohort's name, or `null` for current classmates. `POST /readings/{id}/annotations` takes `{"page", "quote", "rects", "body", "share_with_future"}` for a note, or `{"parent_id", "body"}` for a reply (page comes from the parent). `rects` are page fractions, top-left origin.
+
 ---
 
 ## 7. AI calls (`ai.py`)
@@ -365,6 +378,8 @@ SQLite file lives at `app/backend/dialectic.db` (gitignored), backed up with `cp
 - **Annotations:** Sam (Spring 2026) on the double-consciousness passage; Prof. Rivera on "the Veil"; two or three others spread across pages so the margin doesn't look empty.
 
 Write the seed so `seed.py --reset` gives the exact starting state of demo step 1, **minus** the upload. Also add a `--with-reading` flag in case the live upload fails during the demo.
+
+Because the reading is uploaded live, the seeded annotations can't exist before it: **uploading a file named `souls-of-black-folk-ch1.pdf` adds them** (Sam's and the professor's notes, with highlight rects computed from the PDF). The PDF is in `app/backend/seed/`.
 
 ---
 
