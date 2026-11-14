@@ -209,7 +209,7 @@ Built in `app/backend/ocr.py`. Earlier OCR text often sits inside a Form XObject
 
 **Stretch:** photo uploads (JPG/PNG/HEIC, several at once) turned into one PDF (`img2pdf`), with `--rotate-pages --deskew` for phone photos.
 
-**Seed data:** `seed/souls-of-black-folk-ch1.pdf` is now Chapter I of the **1903 first edition** (A. C. McClurg, Chicago), from Cornell University Library's scan on the Internet Archive (`cu31924024920492`, public domain), OCR'd as above. The seed annotations quote it exactly as its OCR reads.
+**Seed data:** `seed/souls-of-black-folk-ch1.pdf` is now Chapter I of the **1903 first edition** (A. C. McClurg, Chicago), from Cornell University Library's scan on the Internet Archive (`cu31924024920492`, public domain), OCR'd as above. **Page 4** comes from another first-edition copy (Northwestern University Library, IA `duboissoulsofblackfolk`, leaf 26, Public Domain Mark), cropped and scaled to match: Cornell's image of that page lost the horizontal strokes of every letter (in their original files too), so nobody could read it, OCR included. The seed annotations quote it exactly as its OCR reads.
 
 ---
 
