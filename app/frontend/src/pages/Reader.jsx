@@ -269,7 +269,8 @@ export default function Reader() {
       await askStream(`/readings/${id}/ask/stream`, { page: asked.page, quote: asked.quote, rects: asked.rects, question }, (event) => {
         setAnswer((current) => (current ? applyEvent(current, event) : current));
         // The question is saved before anything else runs: show it in the margin now.
-        if (event.event === 'question' || event.event === 'done') loadAnnotations();
+        // 'peer' too: classmates' answers shown here unlock their threads in the margin (SPEC §3.5).
+        if (event.event === 'question' || event.event === 'peer' || event.event === 'done') loadAnnotations();
       });
     } catch (e) {
       setAnswer((current) => (current ? { ...current, error: e, done: true } : current));
@@ -287,7 +288,7 @@ export default function Reader() {
   }
 
   function goToPeer(peer) {
-    // Peers elsewhere may still be locked in the margin: scroll there either way.
+    // Seeing a peer here unlocks its thread in the margin (SPEC §3.5), so this lands on its card.
     scrollToPage(peer.page);
     focusAnnotation(peer.parent_id || peer.annotation_id);
   }

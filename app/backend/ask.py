@@ -291,6 +291,13 @@ def answer_steps(conn, reading, user, page, quote, rects, question, via="web", d
     yield status("peer")
     peer = peer_layer(conn, reading["id"], user["id"], page, section["id"] if section else None, quote, question,
                       db.visibility_params(conn, user))
+    # Saved now, not only at the end: the peers shown here unlock their threads in the asker's margin
+    # (db.full_view_ids reads them from answer_json), and the sources take ~15 s more. The other
+    # layers stay empty until the full answer overwrites this.
+    conn.execute("UPDATE annotations SET answer_json = ? WHERE id = ?", (json.dumps({
+        "question_id": question_id, "peer": peer, "sources": [], "ai_answer": None,
+        "skipped_sources": [], "blocked": []}), question_id))
+    conn.commit()
     yield {"event": "peer", "peer": peer}
 
     # 3. Pass 0: toggles, in code. A layer the toggles rule out never reaches the model.

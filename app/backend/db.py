@@ -286,12 +286,12 @@ def locked_groups(locked):
 def full_view_ids(conn, user, reading_id):
     """Ids of the annotations on this reading that `user` sees in full; every other visible one is locked.
 
-    In full: the professor's, your own, ones near a note or question of yours, and replies or AI
-    answers under one of those. With the charter's annotate_before_peers off, or for the professor
+    In full: the professor's, your own, ones near a note or question of yours, threads holding a
+    classmate's answer your Ask showed you (SPEC §11 #9), and replies or AI answers under one of those. With the charter's annotate_before_peers off, or for the professor
     (SPEC §3.4: the lock never applies to them), everything visible.
     """
     rows = conn.execute(
-        f"""SELECT a.id, a.parent_id, a.user_id, a.page, a.rects_json, u.role
+        f"""SELECT a.id, a.parent_id, a.user_id, a.page, a.rects_json, a.answer_json, u.role
             FROM annotations a JOIN users u ON u.id = a.user_id
             WHERE a.reading_id = :reading_id AND {VISIBLE_SQL}""",
         {"reading_id": reading_id, **visibility_params(conn, user)},
@@ -314,8 +314,18 @@ def full_view_ids(conn, user, reading_id):
             row = by_id[row["parent_id"]]
         return row
 
+    # Seen through Ask: classmates' answers shown in full in your Ask panel unlock their whole thread
+    # in the margin too, so a click from the answer card never lands on a lock card. Read from the
+    # answers saved with your questions, so no extra table.
+    seen_tops = set()
+    for r in rows:
+        if r["user_id"] == user["id"] and r["answer_json"]:
+            for peer in json.loads(r["answer_json"])["peer"]:
+                if peer["annotation_id"] in by_id:
+                    seen_tops.add(top_level_of(by_id[peer["annotation_id"]])["id"])
+
     def top_level_unlocked(row):
-        if row["role"] == "professor" or row["user_id"] == user["id"]:
+        if row["role"] == "professor" or row["user_id"] == user["id"] or row["id"] in seen_tops:
             return True
         extent = vertical_extent(json.loads(row["rects_json"]) if row["rects_json"] else None)
         return any(is_near(page, mine, row["page"], extent) for page, mine in engaged)
