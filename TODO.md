@@ -52,3 +52,9 @@ Ben's Ask returned his own note ("Is this the same idea as being split in two?")
 **Owner:** josoup (Mac app) · **Status:** open · **Found:** 06:41 Sat, CI render check
 
 The seed reading is now the 1903 scan (SPEC §3.11, §10), and passages moved: "a sort of seventh son" and the double-consciousness line are on **page 3** now (were page 2), the freedman line on page 6. `app/mac/stub-locate-response.json` (and anything else hard-coding page 2) was generated from the old PDF, so ⌥⇧H's stub and the render check show old positions. **Fix:** `swift make-stub.swift ../backend/seed/souls-of-black-folk-ch1.pdf > stub-locate-response.json` on a Mac (or adapt make-stub to the new page), and check the render-check PNGs in the next **Mac app** Actions run.
+
+## Page 4 of the seed scan OCRs to gibberish
+
+**Owner:** anyone · **Status:** open · **Found:** 07:10 Sat, while fixing section headings
+
+Page 4 of `seed/souls-of-black-folk-ch1.pdf` comes out as noise ("4 COTA Mes RL ER: Oy ee 2) RL DY", "Via diary it hee Vinrtana…"), both from the seeded OCR and from re-running it. So that page can't be searched, selected sensibly, located by the hotkey or quoted to the AI. No seeded note or rehearsed question is on it, so the demo path is fine. Probably a faint or skewed page in the Cornell scan. **To try:** look at the page image; OCR just that page with `--deskew --clean` or at a higher DPI.

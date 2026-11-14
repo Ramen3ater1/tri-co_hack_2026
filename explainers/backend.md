@@ -177,7 +177,7 @@ Then:
 
 ## Sections
 
-At upload, `sections.add_sections` takes the PDF's bookmarks if it has any, otherwise lines that look like headings: short, on their own line, Title Case or ALL CAPS, with a number line like "I." joined to the line after it. Lines that repeat on several pages (running headers) don't count. Fewer than two headings means one section per page, titled "Page N": that's what the demo chapter gets, since its only heading is "I. Of Our Spiritual Strivings".
+At upload, `sections.add_sections` takes the PDF's bookmarks if it has any, otherwise lines that look like headings: short, on their own line, Title Case or ALL CAPS, with a number line like "I." joined to the line after it. Running headers don't count: a line in the top three of a page whose text, minus a page number at either end, also tops another page ("OF OUR SPIRITUAL STRIVINGS 3", "6 THE SOULS OF BLACK FOLK"; OCR misreads the number as "T" or "il", so any one- or two-character end word counts as one). Neither does OCR noise: a heading needs three letters, no stray symbols, and a vowel in every word. Fewer than two headings means one section per page, titled "Page N". The demo scan gets the book title on page 1 plus "1 OF OUR SPIRITUAL STRIVINGS", which every seeded note falls in.
 
 `sections.section_for` places a highlight: the last section that starts on an earlier page, or on the same page with its heading before the quote in the page's text. Notes (web or hotkey), questions and the seeded annotations look it up when saved; replies copy their parent's.
 
