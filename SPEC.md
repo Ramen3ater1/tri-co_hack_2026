@@ -315,6 +315,8 @@ A full AI answer is four calls: gate → filter results → pick sentences → e
 
 Checkpoints are the times things must work by. If a checkpoint slips by more than 45 minutes, cut the next stretch item, not the demo path.
 
+**At every checkpoint, promote to `stable`** (see `CLAUDE.md`, *Branches*): click through the demo steps that work so far, then `git push origin main:stable` and tag it `good-HHMM`. Also promote whenever something you'd hate to lose starts working.
+
 | By | What | Notes |
 | --- | --- | --- |
 | 01:30 | **S1 spike:** `react-pdf` + text-layer selection → page-fraction rects → redraw boxes | In `spikes/`, timeboxed to 1 h. **Fallback if it fights us:** render each page's extracted text as HTML paragraphs and annotate whole paragraphs (store `page` + paragraph index). |
@@ -336,7 +338,7 @@ Stretch, in order: search page → charter comments → `annotate_before_peers` 
 
 ## 9. Deployment (existing DigitalOcean droplet)
 
-1. `git pull` on the droplet; `python -m venv .venv && pip install -r app/backend/requirements.txt`.
+1. **The droplet deploys only from `stable`** (`git checkout stable && git pull`), so the live URL always shows something that works. To roll back, check out the previous `good-…` tag there; never rewrite `stable`. Then `python -m venv .venv && pip install -r app/backend/requirements.txt`.
 2. `cd app/frontend && npm ci && npm run build`.
 3. `.env` on the droplet only (never in git).
 4. Run `uvicorn main:app --host 127.0.0.1 --port 8000` under a small **systemd** unit (`Restart=always`).
@@ -349,6 +351,7 @@ Stretch, in order: search page → charter comments → `annotate_before_peers` 
    ```
    HTTPS matters here: text-fragment links and the PWA manifest both behave better on a secure origin.
 7. Reseed with `python seed.py --reset` before the demo (it keeps `web_cache`).
+8. **Submit `stable`** (or the last `good-…` tag before 16:00). GitHub shows `main` by default, so either link the submission to `stable` or fast-forward `main` to it at the end.
 
 SQLite file lives at `app/backend/dialectic.db` (gitignored), backed up with `cp` before the demo.
 

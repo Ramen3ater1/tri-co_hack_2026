@@ -54,3 +54,10 @@ Several people, each with their own Claude sessions, share one `main`. Keep it s
 2. Make the edit in the spec's existing style. Don't reformat or reword sections you weren't asked about.
 3. If the change conflicts with something already in the spec, or would move a checkpoint in §8, say so and ask before writing it.
 4. Show the person a short summary of what changed (in plain language, not a diff), then log it in `LOG.md`, commit and push.
+
+## Branches
+
+- **`main`** is where everyone works: push small changes here often (see above). It may be briefly broken.
+- **`stable`** is always the best version we could submit right now. It only moves forward, by fast-forward from `main`, and has no commits of its own. The droplet deploys only from `stable`, and we submit `stable`.
+- **Agents never push to `stable`, never promote and never deploy.** Promotion is a human's call, made after clicking through the demo path: `git push origin main:stable`, then tag it `good-HHMM` and push the tag. If your human asks you to run those commands, that's fine; just don't decide to on your own.
+- If `stable` turns out to be broken, don't rewrite it: fix it on `main` and promote again, or redeploy the previous `good-…` tag.
