@@ -51,7 +51,10 @@ CREATE TABLE IF NOT EXISTS readings (
   title TEXT NOT NULL,
   pdf_path TEXT NOT NULL,
   uploaded_by INTEGER NOT NULL REFERENCES users(id),
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  -- OCR runs in the background after upload (SPEC §3.11): processing → ready, or failed with `error`.
+  status TEXT NOT NULL DEFAULT 'ready' CHECK (status IN ('processing','ready','failed')),
+  error TEXT
 );
 
 CREATE TABLE IF NOT EXISTS reading_pages (

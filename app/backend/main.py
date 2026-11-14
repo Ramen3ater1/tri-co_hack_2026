@@ -4,6 +4,7 @@
 """
 import json
 import re
+import threading
 import time
 import traceback
 from datetime import datetime, timedelta
@@ -18,6 +19,7 @@ from pydantic import BaseModel
 import ask
 import db
 import locate
+import ocr
 import search
 import sections
 import seed
@@ -77,19 +79,59 @@ def get_reading_or_404(conn, reading_id):
     return row
 
 
-def create_reading(conn, title, pdf_path, uploaded_by):
-    """Insert a reading and its extracted page text. Used by the upload route and seed.py."""
+def get_ready_reading(conn, reading_id):
+    """Like get_reading_or_404, but 409 while the scan is still being OCR'd (SPEC §3.11)."""
+    reading = get_reading_or_404(conn, reading_id)
+    if reading["status"] != "ready":
+        raise HTTPException(409, "This reading is still being processed. Try again in a minute."
+                            if reading["status"] == "processing" else f"This reading failed to process: {reading['error']}")
+    return reading
+
+
+def create_reading(conn, title, pdf_path, uploaded_by, status="ready"):
+    """Insert a reading. With status 'ready' (seed.py), also extract its pages and sections now."""
     cur = conn.execute(
-        "INSERT INTO readings (title, pdf_path, uploaded_by, created_at) VALUES (?, ?, ?, ?)",
-        (title, str(pdf_path), uploaded_by, db.now()),
+        "INSERT INTO readings (title, pdf_path, uploaded_by, created_at, status) VALUES (?, ?, ?, ?, ?)",
+        (title, str(pdf_path), uploaded_by, db.now(), status),
     )
     reading_id = cur.lastrowid
+    if status == "ready":
+        extract_pages(conn, reading_id, pdf_path)
+    return reading_id
+
+
+def extract_pages(conn, reading_id, pdf_path):
+    """Page text (for search, peers, the hotkey's locate, the AI prompt) and sections."""
     page_texts = [page.extract_text() or "" for page in pypdf.PdfReader(pdf_path).pages]
     for i, text in enumerate(page_texts, start=1):
         conn.execute("INSERT INTO reading_pages VALUES (?, ?, ?)", (reading_id, i, text))
         conn.execute("INSERT INTO pages_fts (text, reading_id, page) VALUES (?, ?, ?)", (text, reading_id, i))
     sections.add_sections(conn, reading_id, pdf_path, page_texts)
-    return reading_id
+
+
+def process_upload(reading_id, pdf_path, is_demo_pdf):
+    """Background thread (SPEC §3.11): OCR, extract pages, then mark the reading ready or failed."""
+    # TODO(edge): a server restart mid-OCR leaves the reading "processing" for good; upload it again.
+    conn = db.connect()  # its own connection: the request's is closed by now
+    try:
+        # DEMO: the seed PDF is already OCR'd (and its seeded quotes match that OCR exactly),
+        # so the live upload on stage doesn't wait ~50 s to redo it.
+        if not is_demo_pdf:
+            print(ocr.ocr_in_place(pdf_path), flush=True)
+        extract_pages(conn, reading_id, pdf_path)
+        # DEMO: last year's annotations on the demo reading appear the moment it's ready.
+        if is_demo_pdf:
+            seed.add_demo_annotations(conn, reading_id, pdf_path)
+        conn.execute("UPDATE readings SET status = 'ready' WHERE id = ?", (reading_id,))
+        conn.commit()
+    except Exception as exc:
+        conn.rollback()
+        traceback.print_exc()
+        conn.execute("UPDATE readings SET status = 'failed', error = ? WHERE id = ?",
+                     (f"{type(exc).__name__}: {exc}", reading_id))
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def badge(row, current_cohort):
@@ -162,7 +204,7 @@ def course(user=Depends(current_user), conn=Depends(get_conn)):
     """Each reading carries what its card shows: file name, pages, and how many notes and
     questions you can see on it (top level only; locked ones count too, they're there)."""
     readings = conn.execute(
-        f"""SELECT r.id, r.title, r.pdf_path, r.created_at,
+        f"""SELECT r.id, r.title, r.pdf_path, r.created_at, r.status, r.error,
                    (SELECT COUNT(*) FROM reading_pages p WHERE p.reading_id = r.id) AS page_count,
                    (SELECT COUNT(*) FROM annotations a JOIN users u ON u.id = a.user_id
                      WHERE a.reading_id = r.id AND a.parent_id IS NULL AND a.kind = 'note' AND {db.VISIBLE_SQL}) AS note_count,
@@ -186,11 +228,12 @@ def upload_reading(title: str = Form(), file: UploadFile = File(), user=Depends(
     safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", file.filename)
     dest = UPLOADS_DIR / f"{int(time.time())}-{safe_name}"
     dest.write_bytes(file.file.read())
-    reading_id = create_reading(conn, title, dest, user["id"])
-    # DEMO: last year's annotations on the demo reading appear the moment it's uploaded.
-    if file.filename == seed.DEMO_PDF_NAME:
-        seed.add_demo_annotations(conn, reading_id, dest)
+    # OCR takes ~5 s a page, longer than Cloudflare's 100 s request limit for a long reading,
+    # so return at once with status "processing" and do the work in a thread (SPEC §3.11).
+    reading_id = create_reading(conn, title, dest, user["id"], status="processing")
     conn.commit()
+    threading.Thread(target=process_upload, args=(reading_id, dest, file.filename == seed.DEMO_PDF_NAME),
+                     daemon=True).start()
     return reading_info(reading_id, user, conn)
 
 
@@ -198,7 +241,8 @@ def upload_reading(title: str = Form(), file: UploadFile = File(), user=Depends(
 def reading_info(reading_id: int, user=Depends(current_user), conn=Depends(get_conn)):
     reading = get_reading_or_404(conn, reading_id)
     pages = conn.execute("SELECT COUNT(*) FROM reading_pages WHERE reading_id = ?", (reading_id,)).fetchone()[0]
-    return {"id": reading["id"], "title": reading["title"], "page_count": pages, "created_at": reading["created_at"]}
+    return {"id": reading["id"], "title": reading["title"], "page_count": pages, "created_at": reading["created_at"],
+            "status": reading["status"], "error": reading["error"]}
 
 
 @app.get("/api/readings/{reading_id}/pdf")
@@ -271,7 +315,7 @@ class NewAnnotation(BaseModel):
 
 @app.post("/api/readings/{reading_id}/annotations")
 def create_annotation(reading_id: int, new: NewAnnotation, user=Depends(current_user), conn=Depends(get_conn)):
-    get_reading_or_404(conn, reading_id)
+    get_ready_reading(conn, reading_id)
     if new.parent_id is not None:
         parent = conn.execute("SELECT * FROM annotations WHERE id = ?", (new.parent_id,)).fetchone()
         if parent is None or parent["reading_id"] != reading_id:
@@ -370,7 +414,7 @@ class AskRequest(BaseModel):
 @app.post("/api/readings/{reading_id}/ask")
 def ask_question(reading_id: int, req: AskRequest, user=Depends(current_user), conn=Depends(get_conn),
                  x_device_id: str | None = Header(None)):
-    reading = get_reading_or_404(conn, reading_id)
+    reading = get_ready_reading(conn, reading_id)
     return ask.answer(conn, reading, user, req.page, req.quote, req.rects, req.question, device_id=x_device_id)
 
 
@@ -394,7 +438,7 @@ def stream_events(events):
 def ask_question_stream(reading_id: int, req: AskRequest, user=Depends(current_user), conn=Depends(get_conn),
                         x_device_id: str | None = Header(None)):
     """The same answer as /ask, sent step by step so the Ask panel can show its stages."""
-    reading = dict(get_reading_or_404(conn, reading_id))
+    reading = dict(get_ready_reading(conn, reading_id))
 
     def events():
         # Its own connection: the stream runs after this route returns, in another thread.

@@ -199,6 +199,8 @@ Professors upload what they have: phone photos of their own copy, library-scanne
 3. **OCR:** `ocrmypdf --skip-text --output-type pdf -l eng in.pdf out.pdf` (Tesseract). Pages that still have text (born-digital) are skipped; the original images are kept, so the file stays small (the seed chapter: 280 KB → 296 KB; forcing OCR from images instead made it 13 MB).
 4. Then extract pages and sections as now, from the OCR'd file, which replaces the upload.
 
+Built in `app/backend/ocr.py`. Earlier OCR text often sits inside a Form XObject (ocrmypdf's does), so step 2 strips text from those too. **DEMO:** uploading the seed PDF skips OCR (it's already OCR'd and the seeded quotes match that text exactly), so the live upload is ready in a second instead of ~50 s.
+
 **It's slow, so it runs in the background:** about 4–6 s per page on the droplet's one CPU (the 12-page chapter took 49 s), and a long reading would hit Cloudflare's 100 s request limit. `POST /readings` saves the file and returns at once with `"status": "processing"`; a background thread does the OCR, then sets `ready` (or `failed`, with the error, shown on the course page; fail loudly). Until `ready`, the course page shows "Reading the scan…" and the reader can't be annotated. A `status` column on `readings` holds this.
 
 **Matching text against OCR must be forgiving.** OCR text has stray punctuation, hyphenated line breaks, curly vs straight quotes and the odd misread letter ("horn" for "born"). Wherever a quote is matched to page text (`locate.quote_rects`, the hotkey's `POST /api/ask` locate, the seed), compare with whitespace, punctuation and quote style ignored and line-break hyphens joined. `TODO(edge)`: tolerating misread letters (fuzzy matching).
@@ -295,7 +297,9 @@ CREATE TABLE readings (
   title TEXT NOT NULL,
   pdf_path TEXT NOT NULL,
   uploaded_by INTEGER NOT NULL REFERENCES users(id),
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'ready',  -- 'processing' | 'ready' | 'failed' (OCR, §3.11)
+  error TEXT                             -- why it failed
 );
 
 CREATE TABLE reading_pages (      -- extracted text, for search and AI context
@@ -386,8 +390,8 @@ All routes are under `/api`; all except `/users` and `/spend` need `X-User-Id`. 
 | --- | --- | --- | --- |
 | GET | `/users` | anyone | Log-in-as list |
 | GET | `/course` | all | Course, readings list (with what each reading card shows), current user |
-| POST | `/readings` | prof | Multipart upload: title + PDF; extracts pages with `pypdf` |
-| GET | `/readings/{id}` | all | Metadata + page count |
+| POST | `/readings` | prof | Multipart upload: title + PDF. Returns at once with `"status": "processing"`; OCR (§3.11), then page extraction with `pypdf`, run in the background |
+| GET | `/readings/{id}` | all | Metadata + page count + `status`, `error` |
 | GET | `/readings/{id}/pdf` | all | The PDF file |
 | GET | `/readings/{id}/annotations` | all | Visible annotations (with replies), all pages. Locked ones (§3.4) as `{id, page, rects, locked: true, group, group_notes}` only |
 | GET | `/questions/{id}/answer` | all | A question's saved `/ask` response, to reopen its answer card. 404 if you can't see the question in full, or it was asked before answers were saved |
@@ -477,7 +481,7 @@ A locked annotation is `{"id": 4, "page": 2, "rects": [...], "locked": true, "gr
 Other response shapes:
 
 - `GET /charter` (and `PUT`, `POST /charter/comments`, which return the updated charter): every `charter` column (toggles as booleans) plus `"comments": [{"id", "body", "created_at", "author", "author_role"}]`. `PUT` takes any subset of the columns.
-- `GET /course`: `{"course": {"id", "title", "current_cohort"}, "readings": [{"id", "title", "filename", "page_count", "note_count", "question_count", "created_at"}], "user": {...}}`. The counts are top-level notes and questions you can see (locked ones included); they're for the reading card ("7 pages · 2 notes · 0 questions").
+- `GET /course`: `{"course": {"id", "title", "current_cohort"}, "readings": [{"id", "title", "filename", "page_count", "note_count", "question_count", "created_at", "status", "error"}], "user": {...}}`. The counts are top-level notes and questions you can see (locked ones included); they're for the reading card ("7 pages · 2 notes · 0 questions"). While a reading's `status` isn't `ready` (§3.11), its notes and asks return **409** with the reason, and it has no pages yet.
 - `GET /sources` (and `POST`/`DELETE`, which return the updated list): `[{"id", "title", "url", "found_by", "created_at", "first_question_id", "first_question", "first_question_author"}]`, newest first. `first_question` is the text of the question it was found for and `first_question_author` the asker's name ("found for Ben's question"); both `null` for sources added by hand.
 - `GET /charter/gaps` (and `POST /charter/gaps/dismiss`): `[{"kind": "journal articles", "count": 12, "examples": [{"title", "url"}]}]`, most frequent first, kinds lowercased, up to 3 examples each.
 - `GET /search?q=`: `{"annotations": [{"annotation_id", "reading_id", "reading_title", "page", "kind", "via", "author_id", "author", "cohort", "badge", "snippet"}], "pages": [{"reading_id", "reading_title", "page", "snippet"}]}`. Snippets mark hits as `[[word]]`: render as text, never as HTML (annotation bodies are user input).

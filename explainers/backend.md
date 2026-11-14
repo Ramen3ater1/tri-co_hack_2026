@@ -28,6 +28,7 @@ In production the same process also serves the built React app (`app/frontend/di
 | `ai.py` | ~365 | Everything that talks to the LLM: the four prompts, each call's effort and the model's prices (constants at the top), `chat()`, and the charter toggle checks. |
 | `db.py` | ~310 | The schema (all `CREATE TABLE`s), `connect()`, the **visibility rule**, the **engagement lock**, `insert_annotation()`, and `fts_query()`, which turns free text into a search query. |
 | `spend.py` | ~100 | Spending limits (SPEC §9.1): the per-device limit, the budgets, `AI_OFF`, and recording what each paid call cost. |
+| `ocr.py` | ~105 | OCRs every upload (SPEC §3.11): finds scanned pages, strips their old text layer with `pikepdf`, runs `ocrmypdf --skip-text`. Run in a background thread by `POST /readings`. |
 | `sections.py` | ~120 | Splits a reading into sections by its headings at upload, and finds which section a highlight is in. |
 | `search.py` | ~120 | Kagi web search and fetching pages' main text (several at once), all cached in the database. |
 | `locate.py` | ~85 | For the Mac hotkey: finds which reading and page a copied passage is from, and its highlight boxes in the PDF. |
@@ -35,7 +36,7 @@ In production the same process also serves the built React app (`app/frontend/di
 | `seed/souls-of-black-folk-ch1.pdf` | | The demo reading (Gutenberg #408, Ch. 1, printed with Chrome). |
 | `pyproject.toml`, `uv.lock` | | Dependencies, managed with uv. |
 
-Dependencies: `fastapi` + `uvicorn` (web server), `python-multipart` (PDF upload), `pypdf` (page text and bookmarks), `pdfplumber` (character positions, for highlight boxes), `httpx` (HTTP calls), `trafilatura` (extract an article's text from a web page).
+Dependencies: `fastapi` + `uvicorn` (web server), `python-multipart` (PDF upload), `pypdf` (page text and bookmarks), `pikepdf` (strip a scan's old text layer before OCR), `pdfplumber` (character positions, for highlight boxes), `httpx` (HTTP calls), `trafilatura` (extract an article's text from a web page).
 
 ## The routes at a glance
 
@@ -74,7 +75,7 @@ All under `/api`, all in `main.py`. The exact request and response shapes are in
   - `via` is `web` or `hotkey` (asked or noted from the Mac app); `source_app` is the app the hotkey text came from (e.g. "Notability"), if the Mac app sent it.
   - `share_with_future`: whether later classes may see it. Its author can change it at any time.
   - `answer_json` (questions only): the finished `/ask` response, so the answer card can be reopened.
-- **readings** + **reading_pages** + **reading_sections**: the uploaded PDF's path, each page's extracted text (for search, locating quotes and sections), and the headings found at upload.
+- **readings** + **reading_pages** + **reading_sections**: the uploaded PDF's path, each page's extracted text (for search, locating quotes and sections), and the headings found at upload. `readings.status` is `processing` while the upload is being OCR'd in the background, then `ready` (or `failed`, with `error`); until `ready` the reading has no pages and its notes/asks return 409.
 - **charter**: one row holding the rules text, the permissible-sources description and the toggles. **charter_comments**: students' proposals.
 - **sources**: the **course source library**. Every web page the AI used, plus any the professor added by hand.
 - **charter_gaps**: search results the source filter skipped because the charter doesn't mention their kind (URL, title, kind; never who asked), for the charter page's gaps list.
@@ -186,7 +187,7 @@ The functions in `ai.py` only take **strings**: charter text, the quote, the que
 
 ## DEMO shortcuts (on purpose)
 
-- **Seed annotations appear on upload.** The demo starts with the professor uploading the reading live, so last year's annotations can't exist beforehand. `POST /readings` checks the file name, and if it's `souls-of-black-folk-ch1.pdf`, it calls `seed.add_demo_annotations()`. The highlight boxes are computed from the real PDF with pdfplumber.
+- **Seed annotations appear on upload.** The demo starts with the professor uploading the reading live, so last year's annotations can't exist beforehand. `POST /readings` checks the file name, and if it's `souls-of-black-folk-ch1.pdf`, the background thread skips OCR (the seed PDF is already OCR'd) and calls `seed.add_demo_annotations()`. The highlight boxes are computed from the real PDF with pdfplumber.
 - **`seed.py --reset --with-reading`** sets up the same state without the live upload, in case it fails on stage.
 - **`seed.py --reset --with-sources`** preloads the library with the SEP entry on Du Bois and Wikipedia's "Double consciousness", in case web search fails on stage. Add both flags to get everything.
 - **Anyone can be anyone:** `X-User-Id` is trusted as is.

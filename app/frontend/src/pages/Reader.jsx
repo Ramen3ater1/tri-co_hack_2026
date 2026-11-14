@@ -227,6 +227,19 @@ export default function Reader() {
 
   // ---------- render ----------
 
+  // Still being OCR'd, or failed (SPEC §3.11): nothing to annotate yet. The course page shows progress.
+  if (reading && reading.status !== 'ready') {
+    return (
+      <div className="page-body">
+        <ErrorNotice
+          error={new Error(reading.status === 'processing' ? 'Still reading the scan. Try again in a minute.' : reading.error)}
+          title={reading.status === 'processing' ? 'Not ready yet' : "Couldn't read this file"}
+        />
+        <p><Link to="/">Back to readings</Link></p>
+      </div>
+    );
+  }
+
   const fullAnnotations = annotations.filter((a) => !a.locked);
 
   return (

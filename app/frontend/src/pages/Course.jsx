@@ -6,6 +6,9 @@ import ErrorNotice from '../components/ErrorNotice.jsx';
 
 // S02: course home. Reading cards, the professor's upload card, the charter and library cards.
 
+// While a reading's scan is being OCR'd (SPEC §3.11), refresh the course this often.
+const PROCESSING_POLL_MS = 3000;
+
 // The charter switches shown as pills on the charter card, in this order.
 const CHARTER_PILLS = [
   { key: 'ai_find_sources', on: 'AI finds sources', off: 'AI finds no sources' },
@@ -60,7 +63,7 @@ function UploadCard({ onUploaded }) {
         <input id="file" className="visually-hidden" type="file" accept="application/pdf" required onChange={(e) => setFile(e.target.files[0] || null)} />
         <button type="submit" className="btn dark" disabled={busy || !file || !title.trim()}>{busy ? 'Uploading…' : 'Upload'}</button>
       </div>
-      <span className="muted small">We extract the text of each page so the class can search it and ask about it.</span>
+      <span className="muted small">We read the text of each page (scans too) so the class can search it and ask about it.</span>
       <ErrorNotice error={error} title="Upload failed" />
     </form>
   );
@@ -78,6 +81,14 @@ export default function Course() {
     get('/sources').then(setSources).catch(setError);
   }
   useEffect(load, []);
+
+  // Uploads come back "processing" while the server OCRs them; poll until they're ready or failed.
+  const processing = course?.readings.some((r) => r.status === 'processing');
+  useEffect(() => {
+    if (!processing) return undefined;
+    const timer = setInterval(() => get('/course').then(setCourse).catch(setError), PROCESSING_POLL_MS);
+    return () => clearInterval(timer);
+  }, [processing]);
 
   const professor = isProfessor();
 
@@ -101,7 +112,20 @@ export default function Course() {
                     {professor ? 'Upload a PDF to start.' : "Your professor hasn't added a reading yet."}
                   </div>
                 )}
-                {course.readings.map((reading) => (
+                {course.readings.map((reading) => reading.status !== 'ready' ? (
+                  // Not openable yet: still being OCR'd, or it failed (show the error; fail loudly).
+                  <div key={reading.id} className="card reading-card">
+                    <span className="pdf-thumb">PDF</span>
+                    <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <strong>{reading.title}</strong>
+                      <span className="muted" style={{ fontSize: 13 }}>
+                        {reading.filename} · {reading.status === 'processing'
+                          ? 'Reading the scan… (about 5 s a page)'
+                          : <span style={{ color: 'var(--danger)' }}>Couldn't read this file: {reading.error}</span>}
+                      </span>
+                    </span>
+                  </div>
+                ) : (
                   <Link key={reading.id} to={`/readings/${reading.id}`} className="card reading-card">
                     <span className="pdf-thumb">PDF</span>
                     <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
