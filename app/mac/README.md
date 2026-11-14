@@ -20,6 +20,10 @@ If ⌥⇧D or ⌥⇧N copies nothing (Notability with scanned or annotated PDFs,
 
 Code: `Sources/Dialectic/` — `DialecticApp.swift` (constants, menu, hotkeys, copy selection), `Panels.swift` (Ask, Note), `Overlay.swift` (capture, Vision, page fit, overlay windows, margin, thread), `ReaderWindow.swift` (the web reader window), `Style.swift` (canvas tokens and shared pieces), `API.swift` (shapes and HTTP), `RenderCheck.swift` (the check below). Tunables are constants at the top of each file; `SERVER_URL` is in `DialecticApp.swift`.
 
+## Report a problem
+
+Menu-bar menu → **Report a problem…** opens the same GitHub feedback form as the web app's button (`CLAUDE.md`, *Feedback issues*), prefilled with "Mac app", the server, the page open in the reader window, who you are, the app's build (`version.txt` in CI builds) and the macOS version.
+
 ## Download a build (no Xcode needed)
 
 Every push to `main` that touches `app/mac/` is built on GitHub's macOS runners (`.github/workflows/mac-app.yml`, ~1 min). Open the latest **Mac app** run under the repo's **Actions** tab and download **Dialectic-dev-mac** (a zip of `Dialectic.app`). That build talks to the **dev copy**, `https://dialectic-dev.yaggy.dev`, not localhost; the commit it was built from is in `Dialectic.app/Contents/Resources/version.txt`. It's ad-hoc signed, so the first time: right-click → **Open**, then grant permissions as in *First run* below. The same run's **render-check** artifact has PNGs of every screen (stub data), for reviewing UI changes without a Mac.
@@ -31,7 +35,7 @@ Every push to `main` that touches `app/mac/` is built on GitHub's macOS runners 
 open app/mac/build/Dialectic.app
 ```
 
-Needs Xcode or the Command Line Tools (Swift 5.9+), **macOS 14+** (ScreenCaptureKit screenshots). `SERVER_URL` defaults to `http://localhost:8000`; point it at the deployed site for the demo and rebuild. Logs: run `app/mac/build/Dialectic.app/Contents/MacOS/Dialectic` from a terminal.
+Needs Xcode or the Command Line Tools (Swift 5.9+), **macOS 14+** (ScreenCaptureKit screenshots). **Pick the server in the menu-bar menu → Server** (Dev, Demo, Sandbox or This Mac); the pick is remembered and the user list, reader window and highlights follow it. A fresh install starts on `DEFAULT_SERVER_URL` (top of `DialecticApp.swift`): `localhost:8000` in a local build, the dev copy in a CI build. Logs: run `app/mac/build/Dialectic.app/Contents/MacOS/Dialectic` from a terminal.
 
 **Render check (no permissions, no server):** `app/mac/build/Dialectic.app/Contents/MacOS/Dialectic --render /tmp/dialectic-render` draws every screen with stub data to PNGs, and runs the real Vision + page-fit code on a rendered copy of page 2, printing the fit next to the right answer. (Text boxes, checkboxes and native buttons show as yellow placeholders there; that's ImageRenderer, not the app.)
 
