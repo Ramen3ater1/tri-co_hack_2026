@@ -1,0 +1,16 @@
+# Both hosts are proxied by Cloudflare, which serves the public HTTPS certificate.
+# Caddy accepts plain HTTP (Cloudflare SSL mode "Flexible") and HTTPS with its own
+# internal certificate (mode "Full"). Mode "Full (strict)" would need a Cloudflare origin cert.
+# Streaming responses (the Ask's server-sent events) are flushed through automatically.
+
+# Demo copy: the judges and us on stage.
+http://dialectic.yaggy.dev, https://dialectic.yaggy.dev {
+	tls internal
+	reverse_proxy 127.0.0.1:8000
+}
+
+# Sandbox copy: the public link for participants.
+http://dialectic.space, https://dialectic.space {
+	tls internal
+	reverse_proxy 127.0.0.1:8001
+}

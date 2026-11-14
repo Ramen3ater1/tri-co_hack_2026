@@ -5,6 +5,7 @@ A collaborative reading platform for college courses. Students annotate course t
 - **What we're building and why:** [`SPEC.md`](SPEC.md)
 - **How we work** (logging, commits, branches; written for agents, useful for people): [`CLAUDE.md`](CLAUDE.md)
 - **What's happened so far:** [`LOG.md`](LOG.md)
+- **Deploying, and the live copies:** [`DEPLOY.md`](DEPLOY.md)
 
 ## Development
 

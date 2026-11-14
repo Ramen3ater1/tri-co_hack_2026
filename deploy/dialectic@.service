@@ -1,0 +1,18 @@
+# One instance per copy: dialectic@demo (port 8000) and dialectic@sandbox (port 8001).
+# Installed to /etc/systemd/system/ by setup-droplet.sh. See DEPLOY.md.
+[Unit]
+Description=Dialectic (%i copy)
+After=network.target
+
+[Service]
+User=dialectic
+EnvironmentFile=/etc/dialectic/%i.port
+WorkingDirectory=/srv/dialectic-%i/app/backend
+ExecStart=/home/dialectic/.local/bin/uv run --env-file ../../.env uvicorn main:app --host 127.0.0.1 --port ${PORT}
+Restart=always
+RestartSec=2
+# Keep one copy from starving the other or the machine.
+MemoryMax=600M
+
+[Install]
+WantedBy=multi-user.target

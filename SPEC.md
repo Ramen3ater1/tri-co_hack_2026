@@ -544,6 +544,8 @@ Agree the API shapes in §6 first; the frontend can stub `/ask` with the JSON ab
 
 ## 9. Deployment (a new droplet, two copies)
 
+**Live since 05:45 Sat.** How-to (deploy, roll back, reset, spending, logs, Cloudflare): `DEPLOY.md`; scripts and config in `deploy/`. Demo copy: `dialectic.yaggy.dev`; sandbox: `dialectic.space`. Both are proxied by Cloudflare, so the Caddy setup below differs (see `DEPLOY.md`).
+
 **A new small droplet just for the hackathon** (2 GB, Ubuntu, in the existing DigitalOcean account), not the existing one: it keeps Owen's other API completely isolated, and DigitalOcean bills only while it exists (a weekend is about a dollar). Destroy it after the debrief. If we do end up on the existing droplet, give each Dialectic service `MemoryMax=500M` and `CPUQuota=50%` in its systemd unit so a spike can't take the other API down.
 
 **Two copies of the app** on the droplet, each its own checkout of `stable` with its own database, uploads and budget:
