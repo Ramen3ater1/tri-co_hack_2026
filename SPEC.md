@@ -590,6 +590,8 @@ Cached answers (`web_cache`) cost nothing. Two layers of protection:
 - The `spend` table **survives `seed.py --reset`** (like `web_cache`), so reseeding never resets a budget.
 - `GET /api/spend` returns each service's total against its budget, for a quick check from a phone. It's read-only and shows nothing per-device.
 
+**How limits appear in an Ask response:** as ordinary `blocked` entries with **`"by": "limit"`**, `layer` set as usual, and `label` holding the full notice text (device limit, budget used up, or *"AI is switched off on this copy of Dialectic."* for `AI_OFF`). No `reason`. The UI shows `label` as-is with no link to the charter, since the charter didn't cause it.
+
 **Emergency stop:** `AI_OFF=1` in a copy's `.env`, then restart its service. It blocks all paid calls server-wide. The charter's `ai_enabled` switch isn't enough, because anyone can log in as the professor and turn it back on.
 
 ## 10. Seed data (DEMO)
