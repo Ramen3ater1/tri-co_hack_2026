@@ -55,6 +55,6 @@ The seed reading is now the 1903 scan (SPEC §3.11, §10), and passages moved: "
 
 ## Page 4 of the seed scan OCRs to gibberish
 
-**Owner:** anyone · **Status:** open · **Found:** 07:10 Sat, while fixing section headings
+**Owner:** Owen · **Status:** in progress · **Found:** 07:10 Sat, while fixing section headings
 
 Page 4 of `seed/souls-of-black-folk-ch1.pdf` comes out as noise ("4 COTA Mes RL ER: Oy ee 2) RL DY", "Via diary it hee Vinrtana…"), both from the seeded OCR and from re-running it. So that page can't be searched, selected sensibly, located by the hotkey or quoted to the AI. No seeded note or rehearsed question is on it, so the demo path is fine. Probably a faint or skewed page in the Cornell scan. **To try:** look at the page image; OCR just that page with `--deskew --clean` or at a higher DPI.
