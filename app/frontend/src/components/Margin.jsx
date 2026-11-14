@@ -74,8 +74,19 @@ function AuthorLine({ annotation }) {
   );
 }
 
-function Reply({ reply, onDelete }) {
+// The AI explanation is a reply under the question, but it stays collapsed here like in the
+// answer card ("Still stuck?"): showing it in full would skip that step.
+const AI_REPLY_BUTTON = 'Show the AI explanation';
+
+function Reply({ reply, onDelete, onShowAi }) {
   const mine = reply.author.id === me().id;
+  if (reply.kind === 'ai_answer') {
+    return (
+      <button type="button" className="link-button small" style={{ alignSelf: 'flex-start' }} onClick={(e) => { e.stopPropagation(); onShowAi(); }}>
+        <span className="pill ai">AI</span> {AI_REPLY_BUTTON}
+      </button>
+    );
+  }
   return (
     <div className="reply">
       <Avatar person={reply.author} size="tiny" />
@@ -122,7 +133,7 @@ function AnnotationCard({ annotation, active, cardRef, onSelect, onReply, onDele
             <button type="button" className="link-button danger" onClick={(e) => { e.stopPropagation(); onDelete(annotation); }}>Delete</button>
           </span>
         )}
-        {annotation.replies.map((r) => <Reply key={r.id} reply={r} onDelete={onDelete} />)}
+        {annotation.replies.map((r) => <Reply key={r.id} reply={r} onDelete={onDelete} onShowAi={() => onOpenAnswer(annotation, { showAi: true })} />)}
         {replying || annotation.replies.length > 0 ? (
           <form className="reply-form" onSubmit={sendReply} onClick={(e) => e.stopPropagation()}>
             <label htmlFor={`reply-${annotation.id}`} className="visually-hidden">Reply to {annotation.author.name}</label>

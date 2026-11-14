@@ -277,10 +277,10 @@ export default function Reader() {
     }
   }
 
-  async function openSavedAnswer(question) {
+  async function openSavedAnswer(question, { showAi = false } = {}) {
     try {
       const result = await get(`/questions/${question.id}/answer`);
-      setAnswer(savedAnswer({ page: question.page, rects: question.rects, question: question.body, questionId: question.id, result }));
+      setAnswer({ ...savedAnswer({ page: question.page, rects: question.rects, question: question.body, questionId: question.id, result }), showAi });
       scrollToPage(question.page);
     } catch (e) {
       setError(e);
@@ -408,7 +408,7 @@ export default function Reader() {
                 {!selection && answer?.page === n && (
                   <div className="page-overlay" style={overlayStyle(answer.rects, ANSWER_WIDTH)}>
                     <AnswerCard
-                      key={`${answer.page}-${answer.question}`}
+                      key={`${answer.page}-${answer.question}-${answer.showAi ? 'ai' : ''}`}
                       answer={answer}
                       aiReplies={aiReplies}
                       onClose={() => setAnswer(null)}

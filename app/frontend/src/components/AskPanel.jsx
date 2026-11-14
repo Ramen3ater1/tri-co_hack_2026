@@ -242,7 +242,7 @@ function Progress({ answer }) {
 // ---------- the card ----------
 
 export default function AnswerCard({ answer, aiReplies, onClose, onAskAgain, onPeerClick, onReplyToAi }) {
-  const [aiOpen, setAiOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(Boolean(answer.showAi)); // showAi: opened from the margin's AI button
   const [reply, setReply] = useState('');
 
   const sourceBlocks = answer.blocked.filter((b) => b.layer === 'sources_ai');
