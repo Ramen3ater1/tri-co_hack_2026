@@ -102,6 +102,10 @@ Otherwise it's **locked**: the API returns it as `{"id", "page", "rects", "locke
 
 **Engagement lock and Ask:** the question is saved before the peer layer runs, so it already unlocks the annotations **near the asked passage**. Peer matches **elsewhere** in the reading are **shown in full in the Ask panel** too: asking is engagement, so any classmate's answer to the question is fair game. They stay locked in the margin where they are (no unlock is stored), unless the student engages near them there.
 
+**Staged panel (§8 #8, built server side):** `POST /readings/{id}/ask/stream` (and `POST /ask/stream` for the hotkey) runs the same steps but sends each result as soon as it's ready, one JSON object per line (§6), with a `status` line before each slow step ("Checking the charter…", "Finding sources…", "Writing an explanation…"). Classmates' answers arrive in well under a second; sources after about 15 s; the explanation last. The plain `/ask` routes still return everything at once.
+
+**When a step fails** (the AI service or Kagi is down, or a bug): an AI step that throws doesn't sink the whole answer. It becomes a `blocked` entry with `by: "error"` and the real error as its `reason`, the source layer falls back to the course library, and the rest still arrives. Anything else that fails (saving the question, the peer layer) fails the request: a 500 with the real message, or a final `error` line on the stream. The panel keeps what it already has and shows the error.
+
 **How a response is shown** (web Ask panel and Mac panel alike):
 - **Always in this order: peers → sources → AI explanation**, whatever loads first. A layer that arrives early waits for its slot.
 - **Empty layers aren't shown.** A layer blocked by the charter shows its one-line notice in its usual place instead.
@@ -134,6 +138,10 @@ One charter per course: Markdown rules text, a plain-language permissible-source
 | `annotate_before_peers` | **on** | The engagement lock (§3.4): classmates' annotations stay locked until you've written a note or asked a question near them. Professor annotations are always visible. Off: everything visible is shown in full. |
 
 **Enforcement is two-pass.** Toggles are hard limits, checked in code before any call. The charter **text** is enforced by the gate (pass 1), which decides per layer whether the request is allowed and names the rule; it's also included in the pass-2 prompts so the answer itself stays within the rules (e.g. context, not interpretation). Rules are numbered in the text so the gate can cite them.
+
+**Charter gaps (§8 #12, built server side):** every search result the source filter skips as `not_covered` is remembered (`charter_gaps`: the URL, title and kind of source, never who asked). `GET /charter/gaps` lists the kinds seen in the last 7 days, most frequent first, with a few examples, for a section on the charter page (`ideas/01-charter-gaps.md`). Anyone can dismiss a kind; changing the permissible-sources text clears the list, since it was judged against the old text.
+
+**Opting out (§8 #11, built server side):** an author can turn `share_with_future` off or on for one annotation (`PATCH /annotations/{id}`) or for everything they've written (`PUT /me/sharing`), which is how a past student opts out.
 
 **Seed charter text (DEMO):**
 > 1. We read first and ask each other second. AI comes last.
@@ -168,11 +176,13 @@ A small macOS menu-bar app (`app/mac/`). The web reader stays as it is; this is 
 
 ### 3.10 Sections
 
-**Could-have (§8 priority #10).** Until it's built, `section_id` stays `null`, `located.section` is `null`, and every "same section" rule means **same page**. Nothing else waits on it.
+**Could-have (§8 priority #10), built server side (Sat 04:20).** Readings uploaded before then have no sections: their `section_id` and `located.section` stay `null`, and "same section" means **same page** for them.
 
 At upload, each reading is split into **sections** by its headings: the PDF's outline (bookmarks) if it has one, otherwise lines that look like headings (short, on their own line, Title Case or ALL CAPS, or numbered like `I.`). Each annotation stores the section it falls in. The peer layer boosts matches in the same section, and the hotkey shows "Ch. 1 › Of Our Spiritual Strivings"-style breadcrumbs.
 
-**Fallback:** a reading with fewer than two headings is split **one section per page**. The demo chapter is a single titled chapter, so in the demo this behaves like the old "same page" boost unless we seed sub-headings.
+**Fallback:** a reading with fewer than two headings is split **one section per page**, titled "Page N". The demo chapter is a single titled chapter, so in the demo this behaves like the old "same page" boost, and the hotkey shows "Page 2" as the section, unless we seed sub-headings.
+
+**How a highlight finds its section** (`sections.py`): the last section starting on an earlier page, or on the same page if its heading comes before the quote in the page's text. A note's section is looked up when it's saved; a reply copies its parent's; a question gets its section when it's asked.
 
 ---
 
@@ -300,6 +310,15 @@ CREATE TABLE sources (             -- the course source library
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE charter_gaps (        -- results skipped as not_covered by the charter (§3.7); no user or question
+  id INTEGER PRIMARY KEY,
+  kind TEXT NOT NULL,              -- the filter's label, e.g. 'journal articles'
+  url TEXT NOT NULL UNIQUE,
+  title TEXT NOT NULL,
+  last_seen TEXT NOT NULL,
+  dismissed INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE web_cache (           -- DEMO safety: replay search results and fetched pages
   key TEXT PRIMARY KEY,            -- 'search:<query>' or 'page:<url>'
   value TEXT NOT NULL,
@@ -332,11 +351,17 @@ All routes are under `/api`; all except `/users` need `X-User-Id`. Professor-onl
 | GET | `/readings/{id}/annotations` | all | Visible annotations (with replies), all pages. Locked ones (§3.4) as `{id, page, rects, locked: true}` only |
 | POST | `/readings/{id}/annotations` | all | Create note or reply |
 | DELETE | `/annotations/{id}` | author | Delete own annotation (and its replies) |
+| PATCH | `/annotations/{id}` | author | `{share_with_future}`: opt one annotation in or out; returns it |
+| PUT | `/me/sharing` | all | `{share_with_future}` for everything you've written (past-student opt-out); returns `{updated, share_with_future}` |
 | POST | `/readings/{id}/ask` | all | The three-layer answer (§3.5) |
+| POST | `/readings/{id}/ask/stream` | all | The same, step by step as newline-delimited JSON (staged panel, below) |
 | POST | `/ask` | all | Hotkey ask (§3.9): `{quote, question}` only; the server locates the reading, page, section and rects, then runs the same three layers. 404 if the quote isn't in a course reading |
+| POST | `/ask/stream` | all | Hotkey ask, step by step (still a plain 404 if the quote isn't found) |
 | GET | `/charter` | all | Text, toggles, comments |
 | PUT | `/charter` | prof | Update text and/or toggles |
 | POST | `/charter/comments` | all | Student proposal/comment |
+| GET | `/charter/gaps` | all | Kinds of source skipped as not covered by the charter (§3.7) |
+| POST | `/charter/gaps/dismiss` | all | `{kind}`: hide that kind from the list; returns the list |
 | GET | `/sources` | all | The course source library |
 | POST · DELETE | `/sources`, `/sources/{id}` | prof | Add by URL (fetched + extracted) / remove |
 | GET | `/search?q=` | all | FTS over visible annotations + reading text |
@@ -364,7 +389,7 @@ All routes are under `/api`; all except `/users` need `X-User-Id`. Professor-onl
 
 `ai_answer` is `null` when blocked or when no sources matched (no ungrounded answers).
 
-`blocked[].by` is `toggle` (a charter toggle is off), `rule` (the gate denied it; `reason` explains why) or `no_sources` (allowed, but nothing to ground an explanation in).
+`blocked[].by` is `toggle` (a charter toggle is off), `rule` (the gate denied it; `reason` explains why), `no_sources` (allowed, but nothing to ground an explanation in) or `error` (the step failed; `reason` is the real error message, so show it).
 
 `skipped_sources[].why` is `not_permitted` (the charter rules it out: show it, but **don't link it**), `not_covered` (the charter doesn't mention this kind of source: show it, don't link it; the class can amend the charter, see `ideas/01-charter-gaps.md`), `unreachable` (permitted, but we couldn't open or read it) or `no_answer` (permitted and read, but nothing in it answered the question). **Link the last two** so the student can read them themselves.
 
@@ -381,10 +406,30 @@ Annotation shape (`GET /readings/{id}/annotations` returns a list of these, newe
  "replies": [ /* same shape, oldest first; replies to replies are flattened here */ ]}
 ```
 
+**Streamed ask** (`/readings/{id}/ask/stream`, `/ask/stream`): `Content-Type: application/x-ndjson`, one JSON object per line, read with `fetch` and a stream reader (not `EventSource`, which can't POST). Each line has an `event`:
+
+```json
+{"event": "question", "question_id": 41, "section": "Page 2"}
+{"event": "located", "located": {...}}                      // hotkey only, same as below
+{"event": "status", "stage": "peer", "label": "Looking for classmates' answers…"}
+{"event": "peer", "peer": [...]}
+{"event": "status", "stage": "charter", "label": "Checking the charter…"}
+{"event": "blocked", "blocked": [...]}                      // 0 or more times; add to what you have
+{"event": "status", "stage": "sources", "label": "Finding sources…"}
+{"event": "sources", "sources": [...], "skipped_sources": [...]}
+{"event": "status", "stage": "ai_answer", "label": "Writing an explanation…"}
+{"event": "ai_answer", "ai_answer": {...} | null}
+{"event": "done", "result": { /* exactly the /ask response */ }}
+{"event": "error", "detail": "RuntimeError: ..."}           // instead of what's left, if the request crashed
+```
+
+`status` lines for steps that don't run (e.g. the charter check when `ai_enabled` is off) are skipped. Show the latest `status` label as the panel's progress line; `done` ends it (and its `result` can replace everything shown so far).
+
 Other response shapes:
 
 - `GET /charter` (and `PUT`, `POST /charter/comments`, which return the updated charter): every `charter` column (toggles as booleans) plus `"comments": [{"id", "body", "created_at", "author", "author_role"}]`. `PUT` takes any subset of the columns.
 - `GET /sources` (and `POST`/`DELETE`, which return the updated list): `[{"id", "title", "url", "found_by", "created_at", "first_question_id", "first_question"}]`, newest first. `first_question` is the text of the question it was found for.
+- `GET /charter/gaps` (and `POST /charter/gaps/dismiss`): `[{"kind": "journal articles", "count": 12, "examples": [{"title", "url"}]}]`, most frequent first, kinds lowercased, up to 3 examples each.
 - `GET /search?q=`: `{"annotations": [{"annotation_id", "reading_id", "reading_title", "page", "kind", "author", "snippet"}], "pages": [{"reading_id", "reading_title", "page", "snippet"}]}`. Snippets mark hits as `[[word]]`: render as text, never as HTML (annotation bodies are user input).
 - **Errors:** `{"detail": "..."}` with 401 (unknown user), 403 (not allowed), 404, 422 (bad input) or 500. A 500's `detail` is the real error (e.g. a missing API key), so show it.
 
@@ -394,7 +439,7 @@ Other response shapes:
 
 ## 7. AI calls (`ai.py`)
 
-One function, `chat(system, user) -> str`, using `httpx` against the DO endpoint, `temperature=0.2`, with a 30 s timeout and no retries (fail loudly). The prompts are constants at the top of `ai.py`. Calls that return JSON ask for JSON only and are parsed with `json.loads`; a parse failure is a loud error. Their parsed replies are cached in `web_cache` by the exact prompt (§3.6).
+One function, `chat(system, user) -> str`, using `httpx` against the DO endpoint, `temperature=0.2`, with a 30 s timeout and no retries (fail loudly), except one: an **empty reply** (seen about once in 20 structured calls) is asked again once (`EMPTY_REPLY_RETRIES`). The prompts are constants at the top of `ai.py`. Calls that return JSON ask for JSON only and are parsed with `json.loads`; a parse failure is a loud error. Their parsed replies are cached in `web_cache` by the exact prompt (§3.6).
 
 **Speed (measured 03:00 Sat):** by default the model reasons in ~700–1,300 hidden tokens before answering. The sentence-picking call runs with `reasoning_effort: "low"`, and it and the filter use **structured output** (`response_format` with a JSON schema, which DO supports), so sentence picking takes 2–3 s. The filter runs at full effort (~8 s): at low effort (~4 s) it dropped allowed sources 1 run in 3. Each call's effort is a constant at the top of `ai.py`. The schema matters: at low effort without it the model sometimes "thinks out loud" after its JSON and the parse fails (about 1 call in 15). The gate and the explanation keep the default effort, for judgement and writing quality. A first-time question takes about 22–25 s, mostly the gate and the explanation; a rehearsed one about 7 s.
 

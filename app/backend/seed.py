@@ -15,6 +15,7 @@ from pathlib import Path
 
 import db
 import locate
+import sections
 
 BACKEND_DIR = Path(__file__).parent
 UPLOADS_DIR = BACKEND_DIR / "uploads"
@@ -79,11 +80,9 @@ def user_id(conn, name):
 def add_demo_annotations(conn, reading_id, pdf_path):
     for author, page, quote, body in DEMO_ANNOTATIONS:
         rects = locate.quote_rects(pdf_path, page, quote)
-        conn.execute(
-            """INSERT INTO annotations (reading_id, user_id, kind, page, quote, rects_json, body, created_at)
-               VALUES (?, ?, 'note', ?, ?, ?, ?, ?)""",
-            (reading_id, user_id(conn, author), page, quote, json.dumps(rects), body, db.now()),
-        )
+        section = sections.section_for(conn, reading_id, page, quote)
+        db.insert_annotation(conn, reading_id, user_id(conn, author), "note", page, quote, json.dumps(rects), body,
+                             section_id=section["id"] if section else None)
 
 
 def add_demo_reading(conn):

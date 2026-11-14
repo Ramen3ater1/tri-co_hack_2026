@@ -96,6 +96,17 @@ CREATE TABLE IF NOT EXISTS sources (
   created_at TEXT NOT NULL
 );
 
+-- Search results the source filter skipped because the charter doesn't mention their kind
+-- (SPEC §3.7 charter gaps). One row per URL; no user or question, on purpose.
+CREATE TABLE IF NOT EXISTS charter_gaps (
+  id INTEGER PRIMARY KEY,
+  kind TEXT NOT NULL,          -- the filter's label, e.g. "journal articles"
+  url TEXT NOT NULL UNIQUE,
+  title TEXT NOT NULL,
+  last_seen TEXT NOT NULL,
+  dismissed INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS web_cache (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,

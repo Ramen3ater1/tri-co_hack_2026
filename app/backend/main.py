@@ -6,11 +6,12 @@ import json
 import re
 import time
 import traceback
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pypdf
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -18,6 +19,7 @@ import ask
 import db
 import locate
 import search
+import sections
 import seed
 
 UPLOADS_DIR = Path(__file__).parent / "uploads"
@@ -81,10 +83,11 @@ def create_reading(conn, title, pdf_path, uploaded_by):
         (title, str(pdf_path), uploaded_by, db.now()),
     )
     reading_id = cur.lastrowid
-    for i, page in enumerate(pypdf.PdfReader(pdf_path).pages, start=1):
-        text = page.extract_text() or ""
+    page_texts = [page.extract_text() or "" for page in pypdf.PdfReader(pdf_path).pages]
+    for i, text in enumerate(page_texts, start=1):
         conn.execute("INSERT INTO reading_pages VALUES (?, ?, ?)", (reading_id, i, text))
         conn.execute("INSERT INTO pages_fts (text, reading_id, page) VALUES (?, ?, ?)", (text, reading_id, i))
+    sections.add_sections(conn, reading_id, pdf_path, page_texts)
     return reading_id
 
 
@@ -238,7 +241,8 @@ def create_annotation(reading_id: int, new: NewAnnotation, user=Depends(current_
         if new.page is None or not new.quote or not new.rects:
             raise HTTPException(422, "A new note needs page, quote and rects")
         page, quote, rects_json = new.page, new.quote, json.dumps(new.rects)
-        section_id = None  # TODO: look up the section once sections exist (SPEC §3.10)
+        section = sections.section_for(conn, reading_id, page, quote)
+        section_id = section["id"] if section else None
     annotation_id = db.insert_annotation(
         conn, reading_id, user["id"], "note", page, quote, rects_json, new.body,
         parent_id=new.parent_id, share_with_future=new.share_with_future, section_id=section_id,
@@ -271,6 +275,32 @@ def delete_annotation(annotation_id: int, user=Depends(current_user), conn=Depen
     return {"deleted": ids}
 
 
+class SharingUpdate(BaseModel):
+    share_with_future: bool
+
+
+@app.patch("/api/annotations/{annotation_id}")
+def update_sharing(annotation_id: int, update: SharingUpdate, user=Depends(current_user), conn=Depends(get_conn)):
+    """Opt one of your annotations in or out of being shown to future classes."""
+    row = conn.execute("SELECT * FROM annotations WHERE id = ?", (annotation_id,)).fetchone()
+    if row is None:
+        raise HTTPException(404, f"No annotation {annotation_id}")
+    if row["user_id"] != user["id"]:
+        raise HTTPException(403, "You can only change your own annotations")
+    conn.execute("UPDATE annotations SET share_with_future = ? WHERE id = ?", (int(update.share_with_future), annotation_id))
+    conn.commit()
+    return load_annotation(conn, annotation_id)
+
+
+@app.put("/api/me/sharing")
+def update_all_sharing(update: SharingUpdate, user=Depends(current_user), conn=Depends(get_conn)):
+    """Opt every annotation you've written in or out at once (the past-student opt-out)."""
+    cur = conn.execute("UPDATE annotations SET share_with_future = ? WHERE user_id = ?",
+                       (int(update.share_with_future), user["id"]))
+    conn.commit()
+    return {"updated": cur.rowcount, "share_with_future": update.share_with_future}
+
+
 # ---------- routes: ask ----------
 
 class AskRequest(BaseModel):
@@ -286,29 +316,98 @@ def ask_question(reading_id: int, req: AskRequest, user=Depends(current_user), c
     return ask.answer(conn, reading, user, req.page, req.quote, req.rects, req.question)
 
 
+def stream_events(events):
+    """Send events as newline-delimited JSON, one line each as soon as it's ready (SPEC §6).
+
+    Once streaming has started the HTTP status is already 200, so a crash becomes a last
+    {"event": "error", "detail": ...} line; the panel keeps what it has and shows the error.
+    """
+    def lines():
+        try:
+            for event in events():
+                yield json.dumps(event) + "\n"
+        except Exception as e:
+            traceback.print_exception(e)
+            yield json.dumps({"event": "error", "detail": f"{type(e).__name__}: {e}"}) + "\n"
+    return StreamingResponse(lines(), media_type="application/x-ndjson")
+
+
+@app.post("/api/readings/{reading_id}/ask/stream")
+def ask_question_stream(reading_id: int, req: AskRequest, user=Depends(current_user), conn=Depends(get_conn)):
+    """The same answer as /ask, sent step by step so the Ask panel can show its stages."""
+    reading = dict(get_reading_or_404(conn, reading_id))
+
+    def events():
+        # Its own connection: the stream runs after this route returns, in another thread.
+        stream_conn = db.connect()
+        try:
+            yield from ask.answer_steps(stream_conn, reading, user, req.page, req.quote, req.rects, req.question)
+        finally:
+            stream_conn.close()
+    return stream_events(events)
+
+
 class HotkeyAskRequest(BaseModel):
     quote: str
     question: str
 
 
-@app.post("/api/ask")
-def hotkey_ask(req: HotkeyAskRequest, user=Depends(current_user), conn=Depends(get_conn)):
-    """The Mac hotkey (SPEC §3.9): only the text, so find the reading, page and highlight first."""
-    found = locate.find_page(conn, req.quote)
+def locate_quote(conn, quote):
+    """The Mac hotkey only sends text: find its reading, page and highlight boxes. 404 if it's in none."""
+    found = locate.find_page(conn, quote)
     if found is None:
         raise HTTPException(404, "This passage isn't in a course reading.")
     reading_id, page = found
-    reading = get_reading_or_404(conn, reading_id)
-    rects = locate.quote_rects(reading["pdf_path"], page, req.quote)
-    result = ask.answer(conn, reading, user, page, req.quote, rects, req.question, via="hotkey")
-    result["located"] = {
-        "reading_id": reading_id,
+    reading = dict(get_reading_or_404(conn, reading_id))
+    rects = locate.quote_rects(reading["pdf_path"], page, quote)
+    return reading, page, rects
+
+
+def located_json(reading, page, question_event):
+    return {
+        "reading_id": reading["id"],
         "reading_title": reading["title"],
         "page": page,
-        "section": None,  # TODO: sections (SPEC §3.10)
-        "reader_url": f"/readings/{reading_id}?page={page}&annotation={result['question_id']}",
+        "section": question_event["section"],
+        "reader_url": f"/readings/{reading['id']}?page={page}&annotation={question_event['question_id']}",
     }
-    return result
+
+
+def hotkey_steps(conn, reading, user, page, rects, req):
+    """answer_steps with a `located` event right after the question is saved, and `located` in the result."""
+    located = None
+    for event in ask.answer_steps(conn, reading, user, page, req.quote, rects, req.question, via="hotkey"):
+        if event["event"] == "question":
+            located = located_json(reading, page, event)
+            yield event
+            yield {"event": "located", "located": located}
+            continue
+        if event["event"] == "done":
+            event["result"]["located"] = located
+        yield event
+
+
+@app.post("/api/ask")
+def hotkey_ask(req: HotkeyAskRequest, user=Depends(current_user), conn=Depends(get_conn)):
+    """The Mac hotkey (SPEC §3.9), all at once."""
+    reading, page, rects = locate_quote(conn, req.quote)
+    for event in hotkey_steps(conn, reading, user, page, rects, req):
+        if event["event"] == "done":
+            return event["result"]
+
+
+@app.post("/api/ask/stream")
+def hotkey_ask_stream(req: HotkeyAskRequest, user=Depends(current_user), conn=Depends(get_conn)):
+    """The Mac hotkey, step by step. Locating happens first, so a passage in no reading is still a plain 404."""
+    reading, page, rects = locate_quote(conn, req.quote)
+
+    def events():
+        stream_conn = db.connect()
+        try:
+            yield from hotkey_steps(stream_conn, reading, user, page, rects, req)
+        finally:
+            stream_conn.close()
+    return stream_events(events)
 
 
 # ---------- routes: charter ----------
@@ -344,6 +443,9 @@ class CharterUpdate(BaseModel):
 @app.put("/api/charter")
 def update_charter(update: CharterUpdate, user=Depends(professor), conn=Depends(get_conn)):
     changes = update.model_dump(exclude_none=True)
+    if "permissible_sources" in changes:
+        # Gaps were judged against the old description: start the list again.
+        conn.execute("DELETE FROM charter_gaps")
     for field, value in changes.items():
         # Field names come from CharterUpdate, never from the request, so the f-string is safe.
         conn.execute(f"UPDATE charter SET {field} = ?", (int(value) if isinstance(value, bool) else value,))
@@ -364,6 +466,40 @@ def add_charter_comment(new: NewComment, user=Depends(current_user), conn=Depend
     )
     conn.commit()
     return charter(user, conn)
+
+
+GAPS_DAYS = 7          # the charter page lists gaps seen in the last week
+GAPS_EXAMPLES = 3      # example sources shown per kind
+
+
+@app.get("/api/charter/gaps")
+def charter_gaps(user=Depends(current_user), conn=Depends(get_conn)):
+    """Kinds of source the AI skipped because the charter doesn't mention them, most often first
+    (SPEC §3.7, ideas/01-charter-gaps.md). Grouped by the filter's label, ignoring case."""
+    rows = conn.execute(
+        """SELECT kind, url, title FROM charter_gaps
+           WHERE dismissed = 0 AND last_seen >= ? ORDER BY last_seen DESC""",
+        ((datetime.now() - timedelta(days=GAPS_DAYS)).isoformat(timespec="seconds"),),
+    ).fetchall()
+    groups = {}
+    for r in rows:
+        group = groups.setdefault(r["kind"].lower(), {"kind": r["kind"].lower(), "count": 0, "examples": []})
+        group["count"] += 1
+        if len(group["examples"]) < GAPS_EXAMPLES:
+            group["examples"].append({"title": r["title"], "url": r["url"]})
+    return sorted(groups.values(), key=lambda g: -g["count"])
+
+
+class GapDismissal(BaseModel):
+    kind: str
+
+
+@app.post("/api/charter/gaps/dismiss")
+def dismiss_charter_gap(dismissal: GapDismissal, user=Depends(current_user), conn=Depends(get_conn)):
+    """Hide a kind from the gaps list (the [Dismiss] button). Anyone can: it changes no rule."""
+    conn.execute("UPDATE charter_gaps SET dismissed = 1 WHERE lower(kind) = lower(?)", (dismissal.kind,))
+    conn.commit()
+    return charter_gaps(user, conn)
 
 
 # ---------- routes: the course source library ----------

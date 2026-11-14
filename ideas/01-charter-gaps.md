@@ -1,6 +1,6 @@
 # 01: Show the class what its charter doesn't cover
 
-**Status:** exploring (a could-have; not scheduled). Replaces nothing.
+**Status:** backend built Sat 04:20 (`charter_gaps` table, `GET /charter/gaps`, dismiss; SPEC §3.7); the charter-page section isn't built yet. Replaces nothing.
 
 ## The problem
 

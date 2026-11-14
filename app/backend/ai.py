@@ -13,6 +13,7 @@ import httpx
 
 TEMPERATURE = 0.2
 TIMEOUT_S = 30
+EMPTY_REPLY_RETRIES = 1  # see chat()
 CONTEXT_CHARS = 1500  # the explanation sees this much text either side of each verified sentence
 EXPLAIN_WORD_MARGIN = 20  # ask the model for this many words fewer than the charter's maximum
 # Reasoning effort per call: None = the model's default (full reasoning), or "low" (DO's
@@ -153,7 +154,19 @@ Reply with the explanation text only."""
 
 def chat(system, user, effort=None, schema=None):
     """One chat completion. effort: None (the model's default) or a reasoning_effort like "low".
-    schema: a JSON schema the reply must follow (structured output)."""
+    schema: a JSON schema the reply must follow (structured output).
+
+    The model very occasionally replies with nothing at all (about 1 in 20 structured calls on
+    Saturday), so an empty reply is retried once. Nothing else is retried: errors raise."""
+    for attempt in range(1 + EMPTY_REPLY_RETRIES):
+        text = chat_once(system, user, effort, schema)
+        if text:
+            return text
+        print(f"empty reply from the model (attempt {attempt + 1}), asking again")
+    raise RuntimeError(f"The model returned an empty reply {1 + EMPTY_REPLY_RETRIES} times")
+
+
+def chat_once(system, user, effort, schema):
     url = os.environ.get("DO_INFERENCE_URL")
     key = os.environ.get("DO_INFERENCE_KEY")
     model = os.environ.get("DO_MODEL")
@@ -176,7 +189,7 @@ def chat(system, user, effort=None, schema=None):
         timeout=TIMEOUT_S,
     )
     resp.raise_for_status()
-    return resp.json()["choices"][0]["message"]["content"].strip()
+    return (resp.json()["choices"][0]["message"]["content"] or "").strip()
 
 
 def chat_json(conn, prompt, effort=None, schema=None):
@@ -272,9 +285,11 @@ def filter_sources(conn, permissible_sources, reading_title, question, results):
         if item["decision"] == "keep":
             keep.append((USEFULNESS.index(item["usefulness"]), index))
         elif item["decision"] == "ruled_out":
-            skipped.append({"index": index, "why": "not_permitted", "reason": RULED_OUT_REASON.format(kind=item["kind"])})
+            skipped.append({"index": index, "why": "not_permitted", "kind": item["kind"],
+                            "reason": RULED_OUT_REASON.format(kind=item["kind"])})
         elif item["decision"] == "not_covered":
-            skipped.append({"index": index, "why": "not_covered", "reason": NOT_COVERED_REASON.format(kind=item["kind"])})
+            skipped.append({"index": index, "why": "not_covered", "kind": item["kind"],
+                            "reason": NOT_COVERED_REASON.format(kind=item["kind"])})
     return {"keep": [index for _, index in sorted(keep)], "skipped": skipped}
 
 
