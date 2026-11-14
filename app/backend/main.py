@@ -24,6 +24,7 @@ import ocr
 import search
 import sections
 import seed
+import seed_dubois
 import semantic
 import spend
 
@@ -123,19 +124,32 @@ def extract_pages(conn, reading_id, pdf_path):
     sections.add_sections(conn, reading_id, pdf_path, page_texts)
 
 
-def process_upload(reading_id, pdf_path, is_demo_pdf):
+# DEMO: the seeds whose demo PDF, uploaded into their demo course, gets seeded notes (SPEC §10).
+# seed.py is the philosophy seed; seed_dubois.py is the original Du Bois one, kept runnable.
+DEMO_SEEDS = [seed, seed_dubois]
+
+
+def demo_seed_for(filename, course_title):
+    """The seed module whose demo PDF this upload is, or None."""
+    for demo_seed in DEMO_SEEDS:
+        if filename == demo_seed.DEMO_PDF_NAME and course_title == demo_seed.COURSE_TITLE:
+            return demo_seed
+    return None
+
+
+def process_upload(reading_id, pdf_path, demo_seed):
     """Background thread (SPEC §3.11): OCR, extract pages, then mark the reading ready or failed."""
     # TODO(edge): a server restart mid-OCR leaves the reading "processing" for good; upload it again.
     conn = db.connect()  # its own connection: the request's is closed by now
     try:
         # DEMO: the seed PDF is already OCR'd (and its seeded quotes match that OCR exactly),
         # so the live upload on stage doesn't wait ~50 s to redo it.
-        if not is_demo_pdf:
+        if demo_seed is None:
             print(ocr.ocr_in_place(pdf_path), flush=True)
         extract_pages(conn, reading_id, pdf_path)
         # DEMO: last year's annotations on the demo reading appear the moment it's ready.
-        if is_demo_pdf:
-            seed.add_demo_annotations(conn, reading_id, pdf_path)
+        if demo_seed is not None:
+            demo_seed.add_demo_annotations(conn, reading_id, pdf_path)
         conn.execute("UPDATE readings SET status = 'ready' WHERE id = ?", (reading_id,))
         conn.commit()
     except Exception as exc:
@@ -250,9 +264,8 @@ def upload_reading(title: str = Form(), file: UploadFile = File(), user=Depends(
     reading_id = create_reading(conn, user["course_id"], title, dest, user["id"], status="processing")
     conn.commit()
     # DEMO: only the demo course's upload of the demo PDF gets the shortcut and seeded notes (SPEC §10).
-    is_demo_pdf = (file.filename == seed.DEMO_PDF_NAME
-                   and get_course(conn, user["course_id"])["title"] == seed.COURSE_TITLE)
-    threading.Thread(target=process_upload, args=(reading_id, dest, is_demo_pdf), daemon=True).start()
+    demo_seed = demo_seed_for(file.filename, get_course(conn, user["course_id"])["title"])
+    threading.Thread(target=process_upload, args=(reading_id, dest, demo_seed), daemon=True).start()
     return reading_info(reading_id, user, conn)
 
 

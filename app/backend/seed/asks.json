@@ -1,0 +1,1291 @@
+{
+ "asks": [
+  {
+   "ask": [
+    "PHIL 247",
+    "Week 1",
+    "Ana",
+    3,
+    "the savage people in many parts of America have no government at all",
+    "What did Europeans in 1651 actually know about how Indigenous American societies were governed?",
+    12
+   ],
+   "result": {
+    "question_id": 198,
+    "peer": [
+     {
+      "annotation_id": 18,
+      "author": "Prof. Rivera",
+      "cohort": "Fall 2026",
+      "page": 3,
+      "quote": "the savage people in many parts of America have no government at all",
+      "body": "This is a European claim about Indigenous peoples, and a false one. Worth asking what the argument needs it for and whether it survives without it.",
+      "parent_id": null
+     },
+     {
+      "annotation_id": 13,
+      "author": "Nora",
+      "cohort": "Fall 2026",
+      "page": 2,
+      "quote": "what constitutes bad weather is not a rain-shower or two but an inclination to rain through many days together",
+      "body": "Best analogy in the reading.",
+      "parent_id": null
+     },
+     {
+      "annotation_id": 1,
+      "author": "Prof. Rivera",
+      "cohort": "Fall 2026",
+      "page": 1,
+      "quote": "Nature has made men so equal in their physical and mental capacities",
+      "body": "Start here: Hobbes's argument for war begins from equality, not from people being wicked.",
+      "parent_id": null
+     }
+    ],
+    "sources": [
+     {
+      "source_id": 1,
+      "title": "Parliamentary Culture and Indigenous Traditions of Assembly in the Americas and South and East Asia, c.1500–1700: Comparative Perspectives | Transactions of the Royal Historical Society | Cambridge Core",
+      "url": "https://www.cambridge.org/core/journals/transactions-of-the-royal-historical-society/article/parliamentary-culture-and-indigenous-traditions-of-assembly-in-the-americas-and-south-and-east-asia-c15001700-comparative-perspectives/8373433286EA62C9B2C8C06D9ED1AD28#:~:text=As%20well%20as%20comparing%20their,sought%20to%20exploit%20or%20suppress.",
+      "quote": "As well as comparing their own, and their neighbours’, institutions with those back in Europe, settlers were also appraising the Indigenous modes of assembly which they variously sought to exploit or suppress."
+     }
+    ],
+    "ai_answer": {
+     "annotation_id": 199,
+     "body": "Colonists in the Americas observed Indigenous assemblies at first hand. A modern survey of c.1500-1700 says settlers living near or fighting Indigenous neighbours appraised Indigenous modes of assembly, which they sought to exploit or suppress, and often described them through parliamentary analogies [1]. Some Indigenous people learned colonists' language and government and joined meetings blending European and Indigenous procedures [1]. The source does not say how much readers in England knew in 1651."
+    },
+    "skipped_sources": [
+     {
+      "url": "https://ratical.org/many_worlds/6Nations/EoL/chp1.html",
+      "title": "Chp 1: Vox Americana, Colonial characterizations of native liberty, \"Exemplar Of Liberty\"",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention online book chapters on a personal/advocacy website"
+     },
+     {
+      "url": "https://ratical.org/many_worlds/6Nations/EoL/chp4.html",
+      "title": "Chp 4: Ennobling `Savages', Native America in European natural-rights philosophy, \"Exemplar Of Liberty\"",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention online book chapters on a personal/advocacy website"
+     },
+     {
+      "url": "https://ratical.org/many_worlds/6Nations/EoL/intro.html",
+      "title": "Introduction: \"Exemplar Of Liberty, Native America and the Evolution of Democracy\"",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention online book chapters on a personal/advocacy website"
+     },
+     {
+      "url": "https://www.khanacademy.org/humanities/ap-us-history/period-1/cultural-interactions-between-europeans-native-americans-and-africans/a/cultural-interactions-between-europeans-native-americans-and-africans-in-early-colonial-america",
+      "title": "Cultural interactions between Europeans, Native ...",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention educational test-prep sites"
+     },
+     {
+      "url": "https://www.britannica.com/topic/Native-American/Native-Americans-and-colonization-the-16th-and-17th-centuries",
+      "title": "Native American - Colonization, 16th-17th Centuries",
+      "why": "unreachable",
+      "reason": "Couldn't open this page"
+     },
+     {
+      "url": "https://www.britannica.com/topic/Native-American/Native-American-history",
+      "title": "Native American - Tribes, Culture, History | Britannica",
+      "why": "unreachable",
+      "reason": "Couldn't open this page"
+     },
+     {
+      "url": "https://smarthistory.org/1607-1754-in-north-america-colonies-slavery-and-war/",
+      "title": "1607–1754 in North America: colonies, slavery, and war",
+      "why": "unreachable",
+      "reason": "Couldn't open this page"
+     },
+     {
+      "url": "https://www.cambridge.org/core/books/cambridge-history-of-the-native-peoples-of-the-americas/native-people-and-european-settlers-in-eastern-north-america-16001783/5BFE4E6567E61A017198AC558CEE88CE",
+      "title": "7 - Native people and European settlers in eastern North America, 1600–1783",
+      "why": "no_answer",
+      "reason": "Couldn't find a passage here that answers the question"
+     }
+    ],
+    "blocked": []
+   },
+   "peers": [
+    {
+     "author": "Prof. Rivera",
+     "body": "This is a European claim about Indigenous peoples, and a false one. Worth asking what the argument needs it for and whether it survives without it.",
+     "parent": null
+    },
+    {
+     "author": "Nora",
+     "body": "Best analogy in the reading.",
+     "parent": null
+    },
+    {
+     "author": "Prof. Rivera",
+     "body": "Start here: Hobbes's argument for war begins from equality, not from people being wicked.",
+     "parent": null
+    }
+   ],
+   "cited_urls": [
+    "https://www.cambridge.org/core/journals/transactions-of-the-royal-historical-society/article/parliamentary-culture-and-indigenous-traditions-of-assembly-in-the-americas-and-south-and-east-asia-c15001700-comparative-perspectives/8373433286EA62C9B2C8C06D9ED1AD28"
+   ],
+   "source_urls": [
+    "https://www.cambridge.org/core/journals/transactions-of-the-royal-historical-society/article/parliamentary-culture-and-indigenous-traditions-of-assembly-in-the-americas-and-south-and-east-asia-c15001700-comparative-perspectives/8373433286EA62C9B2C8C06D9ED1AD28"
+   ]
+  },
+  {
+   "ask": [
+    "PHIL 247",
+    "Week 1",
+    "Leah",
+    2,
+    "it is a war of every man against every man",
+    "What was happening in England while Hobbes was writing Leviathan?",
+    11
+   ],
+   "result": {
+    "question_id": 200,
+    "peer": [
+     {
+      "annotation_id": 10,
+      "author": "Ben",
+      "cohort": "Fall 2026",
+      "page": 2,
+      "quote": "it is a war of every man against every man",
+      "body": "Does he mean actual fighting all the time?",
+      "parent_id": null
+     },
+     {
+      "annotation_id": 12,
+      "author": "Prof. Rivera",
+      "cohort": "Fall 2026",
+      "page": 2,
+      "quote": null,
+      "body": "Right. 'War' is a climate, not a storm. That matters for Locke and Rousseau too.",
+      "parent_id": 10
+     },
+     {
+      "annotation_id": 26,
+      "author": "Marco",
+      "cohort": "Fall 2026",
+      "page": 4,
+      "quote": "every man has a right to everything—even to someone else’s body",
+      "body": "A right to everything is a right to nothing you can count on.",
+      "parent_id": null
+     },
+     {
+      "annotation_id": 1,
+      "author": "Prof. Rivera",
+      "cohort": "Fall 2026",
+      "page": 1,
+      "quote": "Nature has made men so equal in their physical and mental capacities",
+      "body": "Start here: Hobbes's argument for war begins from equality, not from people being wicked.",
+      "parent_id": null
+     },
+     {
+      "annotation_id": 5,
+      "author": "Ana",
+      "cohort": "Fall 2026",
+      "page": 1,
+      "quote": "there is no greater sign that something is equally distributed than that every man is contented with his share",
+      "body": "He's joking, but it's also an argument: everyone thinks they got enough wisdom.",
+      "parent_id": null
+     }
+    ],
+    "sources": [
+     {
+      "source_id": 2,
+      "title": "Hobbes, Thomas: Moral and Political Philosophy | Internet Encyclopedia of Philosophy",
+      "url": "https://iep.utm.edu/hobmoral/#:~:text=As%20the%20scene%20was%20being,France%20from%201640%20to%201651.&text=that%20would%20lead%20to%20the,and%20lived%20in%20France%20from",
+      "quote": "As the scene was being set for the Civil Wars of 1642-46 and 1648-51—wars that would lead to the King being executed and a republic being declared—Hobbes felt forced to leave the country for his personal safety, and lived in France from 1640 to 1651."
+     }
+    ],
+    "ai_answer": {
+     "annotation_id": 201,
+     "body": "Hobbes wrote Leviathan (published 1651) during a period of upheaval, sharper than any England has since known [1]. The Civil Wars of 1642-46 and 1648-51 led to the King's execution and the declaration of a republic [1]. Hobbes felt forced to leave for his personal safety and lived in France from 1640 to 1651 [1]. The rich and powerful were divided over the King's powers of taxation, Parliament was divided over its own powers, and society was split by religion, wealth, and region [1]. Radical sects such as the Levellers and Diggers emerged [1]."
+    },
+    "skipped_sources": [
+     {
+      "url": "https://www.sparknotes.com/philosophy/leviathan/context/",
+      "title": "Leviathan: Thomas Hobbes and Leviathan Background | SparkNotes",
+      "why": "not_permitted",
+      "reason": "Your charter rules out study-guide sites"
+     },
+     {
+      "url": "https://www.sparknotes.com/philosophy/hobbes/context/",
+      "title": "Thomas Hobbes (1588–1679): Background on Thomas Hobbes and Leviathan ...",
+      "why": "not_permitted",
+      "reason": "Your charter rules out study-guide sites"
+     },
+     {
+      "url": "https://en.wikipedia.org/wiki/English_Civil_War",
+      "title": "English Civil War - Wikipedia",
+      "why": "not_permitted",
+      "reason": "Your charter rules out Wikipedia articles used for interpretation"
+     },
+     {
+      "url": "https://en.wikipedia.org/wiki/Thomas_Hobbes",
+      "title": "Thomas Hobbes - Wikipedia",
+      "why": "not_permitted",
+      "reason": "Your charter rules out Wikipedia articles used for interpretation"
+     },
+     {
+      "url": "https://en.wikipedia.org/wiki/Leviathan_(Hobbes_book)",
+      "title": "Leviathan (Hobbes book) - Wikipedia",
+      "why": "not_permitted",
+      "reason": "Your charter rules out Wikipedia articles used for interpretation"
+     },
+     {
+      "url": "https://en.wikipedia.org/wiki/Behemoth_(Hobbes_book)",
+      "title": "Behemoth (Hobbes book) - Wikipedia",
+      "why": "not_permitted",
+      "reason": "Your charter rules out Wikipedia articles used for interpretation"
+     },
+     {
+      "url": "https://sumsumsum.com/book/leviathan/context",
+      "title": "Leviathan — Context | Book Analysis | SumSumSum",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention book-analysis websites"
+     },
+     {
+      "url": "https://literarycontext.org/book/historical-context/the-turbulent-era-shaping-hobbess-leviathan/",
+      "title": "The Turbulent Era Shaping Hobbes’s Leviathan - LC",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention literary context websites"
+     },
+     {
+      "url": "https://www.ebsco.com/research-starters/political-science/hobbes-publishes-leviathan/",
+      "title": "Hobbes Publishes Leviathan | Political Science | Research Starters | EBSCOhost",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention research-starter reference sites"
+     },
+     {
+      "url": "https://www.litcharts.com/lit/leviathan",
+      "title": "Leviathan Study Guide | Literature Guide | LitCharts",
+      "why": "not_permitted",
+      "reason": "Your charter rules out study-guide sites"
+     },
+     {
+      "url": "https://www.legal-tools.org/doc/5f5837/pdf/",
+      "title": "Historical Context for Leviathan - Legal Tools",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention legal-tools websites"
+     },
+     {
+      "url": "https://kar.kent.ac.uk/id/document/143",
+      "title": "Curran, Eleanor (2002) A Very Peculiar Royalist. Hobbes in the Context",
+      "why": "unreachable",
+      "reason": "Couldn't read any text on this page"
+     },
+     {
+      "url": "https://www.britannica.com/topic/Leviathan-by-Hobbes",
+      "title": "Leviathan | Thomas Hobbes, Summary, Social Contract, Sovereign ...",
+      "why": "unreachable",
+      "reason": "Couldn't open this page"
+     },
+     {
+      "url": "https://www.britannica.com/biography/Thomas-Hobbes",
+      "title": "Thomas Hobbes | Biography, Philosophy, Beliefs, Leviathan, Legacy ...",
+      "why": "unreachable",
+      "reason": "Couldn't open this page"
+     }
+    ],
+    "blocked": []
+   },
+   "peers": [
+    {
+     "author": "Ben",
+     "body": "Does he mean actual fighting all the time?",
+     "parent": null
+    },
+    {
+     "author": "Prof. Rivera",
+     "body": "Right. 'War' is a climate, not a storm. That matters for Locke and Rousseau too.",
+     "parent": {
+      "author": "Ben",
+      "body": "Does he mean actual fighting all the time?"
+     }
+    },
+    {
+     "author": "Marco",
+     "body": "A right to everything is a right to nothing you can count on.",
+     "parent": null
+    },
+    {
+     "author": "Prof. Rivera",
+     "body": "Start here: Hobbes's argument for war begins from equality, not from people being wicked.",
+     "parent": null
+    },
+    {
+     "author": "Ana",
+     "body": "He's joking, but it's also an argument: everyone thinks they got enough wisdom.",
+     "parent": null
+    }
+   ],
+   "cited_urls": [
+    "https://iep.utm.edu/hobmoral/"
+   ],
+   "source_urls": [
+    "https://iep.utm.edu/hobmoral/"
+   ]
+  },
+  {
+   "ask": [
+    "PHIL 101",
+    "Week 1",
+    "Kemi",
+    3,
+    "the judicious Hooker",
+    "Who was Richard Hooker, and why would Locke quote him here?",
+    13
+   ],
+   "result": {
+    "question_id": 202,
+    "peer": [
+     {
+      "annotation_id": 41,
+      "author": "Asha",
+      "cohort": "Fall 2026",
+      "page": 3,
+      "quote": null,
+      "body": "Richard Hooker, Elizabethan theologian. Quoting him makes Locke sound safely Anglican.",
+      "parent_id": 40
+     },
+     {
+      "annotation_id": 35,
+      "author": "Aiden",
+      "cohort": "Fall 2026",
+      "page": 2,
+      "quote": "a state of perfect freedom to order their actions",
+      "body": "Compare Hobbes: Locke's state of nature starts as freedom, not war.",
+      "parent_id": null
+     },
+     {
+      "annotation_id": 33,
+      "author": "Prof. Okafor",
+      "cohort": "Fall 2026",
+      "page": 2,
+      "quote": null,
+      "body": "Keep that in mind: 'property' for Locke will turn out to include life and liberty.",
+      "parent_id": 31
+     },
+     {
+      "annotation_id": 60,
+      "author": "Ethan",
+      "cohort": "Fall 2026",
+      "page": 7,
+      "quote": "self-love will make men partial to themselves and their friends",
+      "body": "The best objection to Locke, and he states it himself.",
+      "parent_id": null
+     },
+     {
+      "annotation_id": 30,
+      "author": "Aaliyah",
+      "cohort": "Fall 2026",
+      "page": 1,
+      "quote": "the product only of force and violence",
+      "body": "Locke's worry is the same as Rousseau's next week: is government just force with better branding?",
+      "parent_id": null
+     }
+    ],
+    "sources": [
+     {
+      "source_id": 3,
+      "title": "Richard Hooker and John Locke : political theory in perspective",
+      "url": "https://scholarship.richmond.edu/honors-theses/598/#:~:text=John%20Locke%20in%20his%20Second,Hooker%27s%20Laws%20of%20Ecclesiastical%20Polity.",
+      "quote": "John Locke in his Second Treatise on Civil Government quoted extensively from Richard Hooker's Laws of Ecclesiastical Polity."
+     }
+    ],
+    "ai_answer": {
+     "annotation_id": 203,
+     "body": "Under Rule 2, I won't say why Locke quotes Hooker here or what the passage means. For background, the source I found identifies Hooker as the author of the Laws of Ecclesiastical Polity, a work Locke quotes extensively in the Second Treatise [1]. It also notes that later readers have often treated Hooker as a precursor of Locke's political theory, and that a 1969 history thesis examines the relationship between the two writers [1]. The source gives no further biographical detail."
+    },
+    "skipped_sources": [
+     {
+      "url": "https://en.wikipedia.org/wiki/Richard_Hooker",
+      "title": "Richard Hooker - Wikipedia",
+      "why": "not_permitted",
+      "reason": "Your charter rules out Wikipedia articles"
+     },
+     {
+      "url": "https://archive.org/details/lawsecclesiasti02hookgoog",
+      "title": "The Laws of Ecclesiastical Polity : Richard Hooker : Free Download ...",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention later-edition book scans (1888)"
+     },
+     {
+      "url": "https://archive.org/details/bwb_P9-BIB-071",
+      "title": "Of The laws of ecclesiastical polity : Richard Hooker : Free Download ...",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention undated Internet Archive book scans"
+     },
+     {
+      "url": "https://archive.org/details/oflawsofecclesia00hook",
+      "title": "Of the laws of ecclesiastical polity : Hooker, Richard, 1553 or 4-1600 : Free Download, Borrow, and Streaming : Internet Archive",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention modern critical editions on Internet Archive"
+     },
+     {
+      "url": "https://archive.org/stream/oflawsofecclesi01hookuoft/oflawsofecclesi01hookuoft_djvu.txt",
+      "title": "Full text of \"Of the laws of ecclesiastical polity\"",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention modern critical edition full texts"
+     },
+     {
+      "url": "https://archive.org/details/ofthelawsofecclesiasticalpolitybook2_2503_librivox",
+      "title": "Of the Laws of Ecclesiastical Polity, Book 2 : Richard Hooker",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention audiobook recordings"
+     },
+     {
+      "url": "https://archive.org/stream/oflawsofeccles00hook/oflawsofeccles00hook_djvu.txt",
+      "title": "Full text of \"Of the laws of Ecclesiastical polity, the fifth book;\"",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention later annotated editions"
+     },
+     {
+      "url": "https://www.litcharts.com/lit/second-treatise-of-government/characters/sir-richard-hooker",
+      "title": "Sir Richard Hooker Character Analysis in Second Treatise ...",
+      "why": "not_permitted",
+      "reason": "Your charter rules out study-guide sites"
+     },
+     {
+      "url": "https://mammana.org/misc/hooker_laws.pdf",
+      "title": "Of the Laws of Ecclesiastical Polity By Richard Hooker, 1594-1597",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention personal-site PDFs"
+     },
+     {
+      "url": "https://www.nlnrac.org/classical/richard-hooker/educational-materials.html",
+      "title": "Study Guide on Richard Hooker",
+      "why": "not_permitted",
+      "reason": "Your charter rules out study-guide sites"
+     },
+     {
+      "url": "https://www.nlnrac.org/classical/late-medieval-transformations/documents/ecclesiastical-polity.html",
+      "title": "Of the Laws of Ecclesiastical Polity (Excerpts)",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention educational-site text excerpts"
+     },
+     {
+      "url": "http://nlnrac.org/classical/richard-hooker.html",
+      "title": "Richard Hooker | Natural Law, Natural Rights, and American Constitutionalism",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention educational-project essays"
+     },
+     {
+      "url": "https://anglicanhistory.org/hooker/1/",
+      "title": "Hooker's Laws - Anglican History",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention church history websites"
+     }
+    ],
+    "blocked": []
+   },
+   "peers": [
+    {
+     "author": "Asha",
+     "body": "Richard Hooker, Elizabethan theologian. Quoting him makes Locke sound safely Anglican.",
+     "parent": {
+      "author": "Ari",
+      "body": "Who is Hooker and why does Locke keep quoting him?"
+     }
+    },
+    {
+     "author": "Aiden",
+     "body": "Compare Hobbes: Locke's state of nature starts as freedom, not war.",
+     "parent": null
+    },
+    {
+     "author": "Prof. Okafor",
+     "body": "Keep that in mind: 'property' for Locke will turn out to include life and liberty.",
+     "parent": {
+      "author": "Abdul",
+      "body": "Definition first. Notice 'only for the public good' at the end of the paragraph."
+     }
+    },
+    {
+     "author": "Ethan",
+     "body": "The best objection to Locke, and he states it himself.",
+     "parent": null
+    },
+    {
+     "author": "Aaliyah",
+     "body": "Locke's worry is the same as Rousseau's next week: is government just force with better branding?",
+     "parent": null
+    }
+   ],
+   "cited_urls": [
+    "https://scholarship.richmond.edu/honors-theses/598/"
+   ],
+   "source_urls": [
+    "https://scholarship.richmond.edu/honors-theses/598/"
+   ]
+  },
+  {
+   "ask": [
+    "PHIL 101",
+    "Week 2",
+    "Caleb",
+    7,
+    "His usual method of reasoning is to establish right by fact",
+    "Who was Grotius, and why does Rousseau keep arguing with him?",
+    5
+   ],
+   "result": {
+    "question_id": 204,
+    "peer": [
+     {
+      "annotation_id": 99,
+      "author": "Prof. Okafor",
+      "cohort": "Fall 2026",
+      "page": 7,
+      "quote": "His usual method of reasoning is to establish right by fact",
+      "body": "The is/ought point. Grotius describes what happens and calls it right.",
+      "parent_id": null
+     },
+     {
+      "annotation_id": 180,
+      "author": "Quinn",
+      "cohort": "Fall 2026",
+      "page": 18,
+      "quote": "the truth is no road to fortune",
+      "body": "Shade at Grotius for flattering Louis XIII.",
+      "parent_id": null
+     },
+     {
+      "annotation_id": 100,
+      "author": "Rafael",
+      "cohort": "Fall 2026",
+      "page": 7,
+      "quote": null,
+      "body": "Hume makes this famous a few years earlier, right?",
+      "parent_id": 99
+     },
+     {
+      "annotation_id": 80,
+      "author": "Prof. Okafor",
+      "cohort": "Fall 2026",
+      "page": 6,
+      "quote": "With men as they are and with laws as they could be",
+      "body": "The method in one phrase: take people as they are, imagine the laws as they could be.",
+      "parent_id": null
+     },
+     {
+      "annotation_id": 181,
+      "author": "Rafael",
+      "cohort": "Fall 2026",
+      "page": 19,
+      "quote": "the general will is always in the right",
+      "body": "'Always in the right' vs 'always right'. See translator's note.",
+      "parent_id": null
+     }
+    ],
+    "sources": [
+     {
+      "source_id": 4,
+      "title": "Grotius' Doctrine of the Social Contract | Netherlands International Law Review | Cambridge Core",
+      "url": "https://www.cambridge.org/core/journals/netherlands-international-law-review/article/abs/grotius-doctrine-of-the-social-contract/057AB78695275CEB53A05A4C0724D45F#:~:text=Daraus%20resultiert%20die%20h%C3%A4ufige%20Verwechslung,schon%20Rousseau%E2%80%A6%20scharf%20beanstandet%20hat.",
+      "quote": "Daraus resultiert die häufige Verwechslung von Faktum und Recht die schon Rousseau… scharf beanstandet hat."
+     },
+     {
+      "source_id": 5,
+      "title": "Grotius, Hugo | Internet Encyclopedia of Philosophy",
+      "url": "https://iep.utm.edu/grotius/#:~:text=Hugo%20Grotius%20was%20a%20Dutch,moral%20theories%20of%20the%20Enlightenment.",
+      "quote": "Hugo Grotius was a Dutch humanist and jurist whose philosophy of natural law had a major impact on the development of seventeenth century political thought and on the moral theories of the Enlightenment."
+     }
+    ],
+    "ai_answer": {
+     "annotation_id": 205,
+     "body": "I won't explain why Rousseau argues with Grotius or what this sentence means, because Rule 2 bars interpreting the text. Hugo Grotius (1583-1645) was a Dutch humanist and jurist, born in Delft while the Dutch Republic fought Hapsburg rule [2]. His major work, De Jure Belli ac Pacis (The Rights of War and Peace), led later theorists to call him father of international law. He is also remembered for influencing theories of natural rights and the social contract [2]."
+    },
+    "skipped_sources": [
+     {
+      "url": "http://www.grkarelawlibrary.yolasite.com/resources/LLM-LT-1-Aleesha.pdf",
+      "title": "A CRITICAL APPRECIATION OF THE SOCIAL CONTRACT THEORY",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention law-school lecture notes"
+     },
+     {
+      "url": "https://www.academia.edu/8076613/Hugo_Grotius_Natural_Law_and_Social_Contract_Theory",
+      "title": "Hugo Grotius - Natural Law and Social Contract Theory",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention Academia.edu uploads"
+     },
+     {
+      "url": "https://www.academia.edu/9882884/Hugo_Grotius_and_Natural_Law_A_Reinterpretation",
+      "title": "Hugo Grotius and Natural Law: A Reinterpretation - Academia",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention Academia.edu uploads"
+     },
+     {
+      "url": "https://www.litcharts.com/lit/the-social-contract/characters/hugo-grotius",
+      "title": "Hugo Grotius Character Analysis in The Social Contract",
+      "why": "not_permitted",
+      "reason": "Your charter rules out study-guide sites"
+     },
+     {
+      "url": "https://escholarship.org/content/qt3tc8s334/qt3tc8s334.pdf",
+      "title": "UC Berkeley UC Berkeley Electronic Theses and Dissertations Title",
+      "why": "unreachable",
+      "reason": "Couldn't open this page"
+     },
+     {
+      "url": "https://www.sciencedirect.com/science/article/abs/pii/S0191659910000136",
+      "title": "Rousseau, Pufendorf and the eighteenth-century natural law tradition - ScienceDirect",
+      "why": "unreachable",
+      "reason": "Couldn't open this page"
+     },
+     {
+      "url": "https://www.researchgate.net/publication/272593613_Hugo_Grotius_on_Ethics_and_War",
+      "title": "(PDF) Hugo Grotius on Ethics and War",
+      "why": "unreachable",
+      "reason": "Couldn't open this page"
+     },
+     {
+      "url": "https://jolas.ro/wp-content/uploads/2016/05/jolas5a9.pdf",
+      "title": "Social Contract Theory and the Theory of Separation of ...",
+      "why": "unreachable",
+      "reason": "Couldn't read any text on this page"
+     },
+     {
+      "url": "https://www.researchgate.net/publication/281892653_Grotius'_theory_of_natural_law",
+      "title": "(PDF) Grotius’ theory of natural law - researchgate.net",
+      "why": "unreachable",
+      "reason": "Couldn't open this page"
+     },
+     {
+      "url": "https://www.researchgate.net/publication/254760203_Grotius_the_Social_Contract_and_Political_Resistance_A_Study_of_the_Unpublished_Theses_LVI",
+      "title": "Grotius, the Social Contract and Political Resistance A Study of the ...",
+      "why": "unreachable",
+      "reason": "Couldn't open this page"
+     },
+     {
+      "url": "https://www.cambridge.org/core/books/rethinking-capital-punishment/state-of-nature-and-the-social-contract/E56AA9CCB7512E873337A8612CAC49BB",
+      "title": "The State of Nature and the Social Contract (Chapter 6)",
+      "why": "no_answer",
+      "reason": "Couldn't find a passage here that answers the question"
+     },
+     {
+      "url": "https://www.cambridge.org/core/books/abs/rethinking-capital-punishment/state-of-nature-and-the-social-contract/E56AA9CCB7512E873337A8612CAC49BB",
+      "title": "The State of Nature and the Social Contract (Chapter 6) - Rethinking Capital Punishment",
+      "why": "no_answer",
+      "reason": "Couldn't find a passage here that answers the question"
+     }
+    ],
+    "blocked": []
+   },
+   "peers": [
+    {
+     "author": "Prof. Okafor",
+     "body": "The is/ought point. Grotius describes what happens and calls it right.",
+     "parent": null
+    },
+    {
+     "author": "Quinn",
+     "body": "Shade at Grotius for flattering Louis XIII.",
+     "parent": null
+    },
+    {
+     "author": "Rafael",
+     "body": "Hume makes this famous a few years earlier, right?",
+     "parent": {
+      "author": "Prof. Okafor",
+      "body": "The is/ought point. Grotius describes what happens and calls it right."
+     }
+    },
+    {
+     "author": "Prof. Okafor",
+     "body": "The method in one phrase: take people as they are, imagine the laws as they could be.",
+     "parent": null
+    },
+    {
+     "author": "Rafael",
+     "body": "'Always in the right' vs 'always right'. See translator's note.",
+     "parent": null
+    }
+   ],
+   "cited_urls": [
+    "https://www.cambridge.org/core/journals/netherlands-international-law-review/article/abs/grotius-doctrine-of-the-social-contract/057AB78695275CEB53A05A4C0724D45F",
+    "https://iep.utm.edu/grotius/"
+   ],
+   "source_urls": [
+    "https://www.cambridge.org/core/journals/netherlands-international-law-review/article/abs/grotius-doctrine-of-the-social-contract/057AB78695275CEB53A05A4C0724D45F",
+    "https://iep.utm.edu/grotius/"
+   ]
+  },
+  {
+   "ask": [
+    "PHIL 101",
+    "Week 2",
+    "Jordan",
+    8,
+    "The Greeks imprisoned in the cave of the Cyclops",
+    "What happens in the Cyclops episode of the Odyssey?",
+    4
+   ],
+   "result": {
+    "question_id": 206,
+    "peer": [
+     {
+      "annotation_id": 114,
+      "author": "Yusuf",
+      "cohort": "Fall 2026",
+      "page": 8,
+      "quote": null,
+      "body": "The Odyssey, the Cyclops eats Odysseus's men one by one.",
+      "parent_id": 113
+     },
+     {
+      "annotation_id": 99,
+      "author": "Prof. Okafor",
+      "cohort": "Fall 2026",
+      "page": 7,
+      "quote": "His usual method of reasoning is to establish right by fact",
+      "body": "The is/ought point. Grotius describes what happens and calls it right.",
+      "parent_id": null
+     }
+    ],
+    "sources": [],
+    "ai_answer": null,
+    "skipped_sources": [
+     {
+      "url": "https://www.litcharts.com/lit/the-odyssey/book-9",
+      "title": "The Odyssey Book 9 Summary & Analysis | LitCharts",
+      "why": "not_permitted",
+      "reason": "Your charter rules out study-guide sites"
+     },
+     {
+      "url": "https://www.litcharts.com/lit/the-odyssey/book-10",
+      "title": "Book 10",
+      "why": "not_permitted",
+      "reason": "Your charter rules out study-guide sites"
+     },
+     {
+      "url": "https://www.litcharts.com/lit/the-odyssey/book-8",
+      "title": "Book 8",
+      "why": "not_permitted",
+      "reason": "Your charter rules out study-guide sites"
+     },
+     {
+      "url": "https://www.litcharts.com/about",
+      "title": "About",
+      "why": "not_permitted",
+      "reason": "Your charter rules out study-guide sites"
+     },
+     {
+      "url": "https://www.sparknotes.com/lit/odyssey/section5/",
+      "title": "The Odyssey Book 9 Summary & Analysis",
+      "why": "not_permitted",
+      "reason": "Your charter rules out study-guide sites"
+     },
+     {
+      "url": "https://www.classicalquest.com/blog/odyssey-episode-3-summary-cyclops",
+      "title": "The Cyclops in the Odyssey: Book 9 Summary | Classical Quest Blog",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention blog posts"
+     },
+     {
+      "url": "https://www.cliffsnotes.com/literature/o/the-odyssey/summary-and-analysis/book-9",
+      "title": "Summary and Analysis Book 9 - The Odyssey",
+      "why": "not_permitted",
+      "reason": "Your charter rules out study-guide sites"
+     },
+     {
+      "url": "https://www.reddit.com/r/AYearOfMythology/comments/10thpuq/books_9_10_reading_discussion/",
+      "title": "Books 9 & 10 Reading Discussion : r/AYearOfMythology",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention online forum threads"
+     },
+     {
+      "url": "https://www.supersummary.com/the-odyssey/books-9-12/",
+      "title": "The Odyssey Books 9-12 Summary & Analysis",
+      "why": "not_permitted",
+      "reason": "Your charter rules out study-guide sites"
+     },
+     {
+      "url": "https://www.scribd.com/doc/39348481/Book-9-Guided-Reading",
+      "title": "Summary of The Odyssey Book 9 | PDF | Odysseus",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention user-uploaded documents"
+     },
+     {
+      "url": "https://www.scribd.com/document/117467869/The-Odyssey-Book-9-Summary",
+      "title": "Odysseus and Polyphemus: Book 9 Summary | PDF | Odyssey - Scribd",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention user-uploaded documents"
+     },
+     {
+      "url": "https://www.scribd.com/presentation/545934894/Book-9",
+      "title": "Odysseus and Polyphemus: Book 9 Summary | PDF | Odysseus - Scribd",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention user-uploaded documents"
+     },
+     {
+      "url": "https://www.tiktok.com/@myclassicsportal/video/7437572049909992737",
+      "title": "The Odyssey Book 9 Summary: Polyphemus & The Cyclops",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention social media videos"
+     },
+     {
+      "url": "https://www.enotes.com/topics/odyssey/chapter-summaries/book-9-summary-and-analysis",
+      "title": "The Odyssey Book 9 Summary and Analysis - eNotes.com",
+      "why": "not_permitted",
+      "reason": "Your charter rules out study-guide sites"
+     },
+     {
+      "url": "https://www.poetryintranslation.com/PITBR/Greek/Odyssey9.php",
+      "title": "Homer (c.750 BC) - The Odyssey: Book IX",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention modern online translations of primary texts"
+     }
+    ],
+    "blocked": [
+     {
+      "layer": "ai_answer",
+      "by": "no_sources",
+      "label": "No sources to base an explanation on yet"
+     }
+    ]
+   },
+   "peers": [
+    {
+     "author": "Yusuf",
+     "body": "The Odyssey, the Cyclops eats Odysseus's men one by one.",
+     "parent": {
+      "author": "Wren",
+      "body": "What's this referring to?"
+     }
+    },
+    {
+     "author": "Prof. Okafor",
+     "body": "The is/ought point. Grotius describes what happens and calls it right.",
+     "parent": null
+    }
+   ],
+   "cited_urls": [],
+   "source_urls": []
+  },
+  {
+   "ask": [
+    "PHIL 101",
+    "Week 2",
+    "Priya",
+    14,
+    "each individual will be forced to be free",
+    "What does Rousseau mean by being forced to be free?",
+    2
+   ],
+   "result": {
+    "question_id": 207,
+    "peer": [
+     {
+      "annotation_id": 159,
+      "author": "Kai",
+      "cohort": "Fall 2026",
+      "page": 14,
+      "quote": "each individual will be forced to be free",
+      "body": "This sounds like a dictatorship slogan.",
+      "parent_id": null
+     },
+     {
+      "annotation_id": 158,
+      "author": "Jasmine",
+      "cohort": "Fall 2026",
+      "page": 14,
+      "quote": "each individual will be forced to be free",
+      "body": "The most controversial phrase in the book.",
+      "parent_id": null
+     },
+     {
+      "annotation_id": 165,
+      "author": "Devon",
+      "cohort": "Spring 2026",
+      "page": 14,
+      "quote": "each individual will be forced to be free",
+      "body": "Our TA: compare a law against drunk driving.",
+      "parent_id": null
+     },
+     {
+      "annotation_id": 164,
+      "author": "Prof. Okafor",
+      "cohort": "Fall 2026",
+      "page": 14,
+      "quote": null,
+      "body": "Good one for an Ask: look for SEP's entry on Rousseau and the 'forced to be free' debate.",
+      "parent_id": 163
+     },
+     {
+      "annotation_id": 157,
+      "author": "Jalen",
+      "cohort": "Fall 2026",
+      "page": 13,
+      "quote": "each individual as a man can have a particular will",
+      "body": "Particular will vs general will inside one person. I want the free ride AND the society.",
+      "parent_id": null
+     }
+    ],
+    "sources": [
+     {
+      "source_id": 6,
+      "title": "\"General Will\" by Richard Dagger - UR Scholarship Repository",
+      "url": "https://scholarship.richmond.edu/polisci-faculty-publications/185/#:~:text=This%20general%20will%2C%20Rousseau%20insists%2C,be%20%22forced%20to%20be%20free%22.&text=This%20general%20will%2C%20Rousseau%20insists%2C,majority%20when%20votes%20are%20cast",
+      "quote": "This general will, Rousseau insists, is different from \"the will of all\"; it is always right; it is to be found on the side of the majority when votes are cast (presuming that \"the characteristics of the general will are still in the majority\"); and those who refuse to follow it must be \"forced to be free\"."
+     },
+     {
+      "source_id": 7,
+      "title": "8 - The Substantive Elements of Rousseau's General Will",
+      "url": "https://www.cambridge.org/core/books/general-will/substantive-elements-of-rousseaus-general-will/535BE5EFE08FD4249CE928D9CE06455C#:~:text=They%20are%20finally%20free%20from,in%20accordance%20with%20their%20duties.",
+      "quote": "They are finally free from “physical impulsion” and “inclinations” and are now free to act in accordance with their duties."
+     }
+    ],
+    "ai_answer": {
+     "annotation_id": 208,
+     "body": "Under Rule 2, I won't tell you what Rousseau means by this phrase. It comes from Du Contrat Social (1762), where Rousseau distinguishes man from citizen and discusses the general will, a concept he was hardly the first to use [1]. The phrase refers to those who refuse to follow that will [1]. Book I also treats the move from the state of nature to the civil state [2]."
+    },
+    "skipped_sources": [
+     {
+      "url": "https://epochemagazine.org/25/forced-to-be-free-rethinking-the-terms-of-rousseaus-social-contract/",
+      "title": "Forced to be Free: Rethinking the Terms of Rousseau’s ‘Social Contract’ | Epoché Magazine",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention online magazine articles"
+     },
+     {
+      "url": "https://www.quora.com/What-did-Rousseau-mean-by-his-forced-to-be-free-quote",
+      "title": "What did Rousseau mean by his 'forced to be free' quote?",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention Q&A forum posts"
+     },
+     {
+      "url": "https://polsci.institute/western-political-thought/rousseaus-social-contract-political-order/",
+      "title": "Rousseau's Social Contract: Foundation of Legitimate Political Order • PolSci Institute",
+      "why": "not_permitted",
+      "reason": "Your charter rules out study-guide sites"
+     },
+     {
+      "url": "https://polsci.institute/modern-political-philosophy/rousseaus-general-will-liberty-authority/",
+      "title": "Understanding Rousseau's General Will: Balancing Liberty and Authority • PolSci Institute",
+      "why": "not_permitted",
+      "reason": "Your charter rules out study-guide sites"
+     },
+     {
+      "url": "https://polsci.institute/western-political-thought/rousseaus-political-thought-individualism-collectivism/",
+      "title": "Critical Appreciation of Rousseau's Political Thought: Balancing Individualism and Collectivism • PolSci Institute",
+      "why": "not_permitted",
+      "reason": "Your charter rules out study-guide sites"
+     },
+     {
+      "url": "https://medium.com/the-berkeley-table/some-complaints-about-rousseaus-forced-to-be-free-notion-e2138bc1c636",
+      "title": "Some Complaints About Rousseau’s “Forced to be Free” Notion | by Jonathan Hofer | The Berkeley Table | Medium",
+      "why": "not_covered",
+      "reason": "Your charter doesn't mention blog posts"
+     },
+     {
+      "url": "https://www.britannica.com/topic/How-did-Rousseau-define-the-general-will",
+      "title": "How did Rousseau define the general will? | Britannica",
+      "why": "unreachable",
+      "reason": "Couldn't open this page"
+     },
+     {
+      "url": "https://wisc.pb.unizin.org/ps160/chapter/rousseau-on-freedom/",
+      "title": "6.1 Rousseau on Freedom – Political Science 160",
+      "why": "unreachable",
+      "reason": "Couldn't open this page"
+     },
+     {
+      "url": "https://arches.union.edu/do/48519/iiif/1d9b286e-8fd7-4bdf-8969-1441721ee09a/full/full/0/Rousseaus%20General%20Will_%20Totalitarian%20Perception%20of%20a%20Virtuous%20Id.pdf",
+      "title": "Rousseau's General Will: Totalitarian Perception of a ...",
+      "why": "unreachable",
+      "reason": "Couldn't open this page"
+     },
+     {
+      "url": "https://iep.utm.edu/soc-cont/",
+      "title": "Social Contract Theory",
+      "why": "no_answer",
+      "reason": "Couldn't find a passage here that answers the question"
+     },
+     {
+      "url": "https://www.jstor.org/stable/27365515",
+      "title": "Three General Wills in Rousseau",
+      "why": "no_answer",
+      "reason": "Couldn't find a passage here that answers the question"
+     }
+    ],
+    "blocked": []
+   },
+   "peers": [
+    {
+     "author": "Kai",
+     "body": "This sounds like a dictatorship slogan.",
+     "parent": null
+    },
+    {
+     "author": "Jasmine",
+     "body": "The most controversial phrase in the book.",
+     "parent": null
+    },
+    {
+     "author": "Devon",
+     "body": "Our TA: compare a law against drunk driving.",
+     "parent": null
+    },
+    {
+     "author": "Prof. Okafor",
+     "body": "Good one for an Ask: look for SEP's entry on Rousseau and the 'forced to be free' debate.",
+     "parent": {
+      "author": "Lena",
+      "body": "Has anyone defended this line convincingly?"
+     }
+    },
+    {
+     "author": "Jalen",
+     "body": "Particular will vs general will inside one person. I want the free ride AND the society.",
+     "parent": null
+    }
+   ],
+   "cited_urls": [
+    "https://scholarship.richmond.edu/polisci-faculty-publications/185/",
+    "https://www.cambridge.org/core/books/general-will/substantive-elements-of-rousseaus-general-will/535BE5EFE08FD4249CE928D9CE06455C"
+   ],
+   "source_urls": [
+    "https://scholarship.richmond.edu/polisci-faculty-publications/185/",
+    "https://www.cambridge.org/core/books/general-will/substantive-elements-of-rousseaus-general-will/535BE5EFE08FD4249CE928D9CE06455C"
+   ]
+  }
+ ],
+ "sources": [
+  {
+   "course": "PHIL 247: The Social Contract (seminar)",
+   "title": "Parliamentary Culture and Indigenous Traditions of Assembly in the Americas and South and East Asia, c.1500–1700: Comparative Perspectives | Transactions of the Royal Historical Society | Cambridge Core",
+   "url": "https://www.cambridge.org/core/journals/transactions-of-the-royal-historical-society/article/parliamentary-culture-and-indigenous-traditions-of-assembly-in-the-americas-and-south-and-east-asia-c15001700-comparative-perspectives/8373433286EA62C9B2C8C06D9ED1AD28",
+   "excerpt": "This special section offers fresh perspectives on political assemblies in the earliest period of European colonial expansion into the Americas, India and East Asia. Exploring the adaptation of European practices and culture of political deliberation and decision-making to new worlds and territories, as well as encounters and interactions with Indigenous traditions of assembly, these essays bring to a colonial context some of the more expansive, at once comparative and interdisciplinary, approaches we have recently proposed in relation to European representative bodies – diets, estates, Cortes and parliaments.1 The essays will, we hope, begin a new conversation about the meaning and development of political institutions within widely differing societies beyond Europe; and not just in a single metropole or colony but in the transcontinental public domain.\nBy 1500 representative assemblies were a common feature of many European polities. As we have argued in earlier articles, modern scholarship has approached these bodies as legal-constitutional structures rather than as cultural phenomena, and has largely studied them within national and linguistic boundaries. Even trans-European approaches are rare, let alone comparisons with other continents. Yet, as we have suggested, despite their formal and institutional diversity, political assemblies shared a common core of customs, ideas and discourses which amounted to a European parliamentary culture.2\nWhen, in the sixteenth and seventeenth centuries, European settlers established colonies in India and Eastern Asia, in North, South and Central America and in the Caribbean, they brought that culture with them. Far distant as they were geographically, the settlers not only retained intimate ties to the ideas and habits of mind of their respective homelands, but they took their political associations, controversies and contests along with them. The links between domestic politics and colonial projects such as the Virginia Company in England in the 1620s or the Suriname Company in the Netherlands in the 1680s have long been recognised.3 Many of those pursuing colonial adventures were well connected; a number were politicians themselves. Colonial exile might also be seen as a refuge for persecuted religious minorities, as it did for the Protestant nonconformists of the Massachusetts Bay Colony in America or Jews in Brazil and Surinam.4 As a result, colonial and domestic affairs were often intensely intertwined.\nPolitical assemblies of one sort or another were introduced into the overseas territories of a number of European powers (though not, to any great extent, in those of France, whose monarchy retained a tight structure of legal and political control over its colonies in America, the Caribbean and India).5 Dutch settlers founded assemblies in their colonies in North America, Brazil and Formosa (Taiwan); the English did the same in Bombay, Jamaica and North America; major towns in the Spanish colonies of New Spain and Peru came together in juntas or congresos; similar bodies emerged in the Portuguese overseas territories. In addition, the Portuguese ultimately granted delegates from Goa and several Brazilian cities seats in the Cortes in Lisbon. The same idea was put forward from time to time by Spain’s South American colonial elites, but never accepted.\nThese assemblies have been relatively little studied as institutions, as opposed to sites of political ambition and contention. The British colonial assemblies of North America and the Caribbean are the most familiar to an anglophone audience, especially because they have attracted so much attention in the context of the eighteenth-century pre-Revolution debates over representation. Even these bodies, however, have hardly ever been scrutinised comparatively, or from a cultural perspective, or considered as a form of transatlantic exchange.6 The sort of research that has recently gone into uncovering political cultures in England for example, incorporating sermons, printed and manuscript polemic, and imaginative writing, is as yet much less deployed by scholars of early America. The lack of comparative study is perhaps particularly surprising, given that, at the time, some European settler communities that lived in close proximity to or competed and fought with their close neighbours, or themselves comprised diverse nationalities, were in an even better position than those at home to recognise in the practices of other colonists modes of debate and collective decision-making equivalent to their own.\nAs well as comparing their own, and their neighbours’, institutions with those back in Europe, settlers were also appraising the Indigenous modes of assembly which they variously sought to exploit or suppress. In conceptualising the latter, however seemingly odd or outlandish, in terms they found intelligible, they reached for parliamentary analogies. When seeking peaceful relations with the Indigenous they created meetings that built on those same cultures of parliamentary assembly. Such meetings were undoubtedly reflective of the fundamentally violent and exploitative nature of colonial rule. But at least some of the native peoples, having mastered the colonists’ language and understood something of their government, endeavoured to acquire – or retain – a modicum of political agency by participating in forms of assembly blending European and Indigenous customs and procedures. Little has been written about the structure and forms of such engagements with Indigenous cultures of assembly in the pre-Revolutionary period. Yet it is an essential element of the unfolding of representative politics across the overseas colonies.\nThe essays in this special section concern a variety of political assemblies. They include traditional gatherings of Indigenous peoples that already existed in these lands; special institutions that colonial powers established to manage their relationship with the Indigenous; and the local and regional consultative bodies that were set up among settler communities. These were not the only forms of political meeting in overseas territories: negotiations and diplomatic exchanges within and between different political societies took place in many different contexts, but our focus here is on those larger and more formal consultative assemblies that made some claim to gather together representatives of the political communities concerned, much as did the parliaments, estates, and Cortes in the European metropoles. Two of the essays, those by Pedro Cardim and Jim van der Meulen, offer comparative overviews of how assembly cultures developed in, respectively, the Iberian and Dutch empires. Cardim provides the first account of its kind of the quest for representation both locally and in the metropole by the Spanish and Portuguese colonial elites. Van der Meulen weighs the long-established landdagen of the Dutch homeland provinces against the similar bodies settlers created in their colonial possessions. Lauren Working and Bruno Miranda, by contrast, each take as their starting point a specific assembly. Working discusses what we can learn about the parliamentary culture of the settler assembly in Virginia through reflections on the material cultures the participants brought with them and the material culture they encountered through their political and economic interactions with Indigenous peoples. Miranda scrutinises the assembly held by the Amerindian Potiguara of Brazil in Tapesserica in 1645, seeking to identify how far it drew on the political traditions of the Potiguara and how far the native peoples, previously colonised and converted by the Catholic Portuguese, assimilated the political practices of their new allies – and colonial masters – the Protestant Dutch, about which some of them had learnt after having mastered the Dutch language.\nCollectively, the essays explore three principal themes. The first of these involves the way in which English, Spanish, Portuguese and Dutch colonists and settlers interpreted Indigenous political gatherings. The second relates to how the encounters between European settlers and Indigenous peoples influenced cultures of political assembly – both directly, through the establishment of new assemblies or adaptation of old ones to manage the relationship between them, and more subtly, as they coloured the way in which both behaved in or thought about forms and traditions of political assembly. A third theme is how the relationship between metropolitan regimes and settlers was mediated through assembly politics: was it practical for them to be given a voice in the national general assembly back in the metropole? How did settlers and governments respectively view the establishment of colonial assemblies and their possible aspirations to autonomous action?\nThe first of these themes chiefly addresses the political and historical perspectives of the settlers. European authors, traders and colonists often filtered what they saw of such Indigenous non-European politics not only through what they knew of their own or other European assemblies, but also through a classical education.7 They already regarded the various assemblies in Europe itself as broadly equivalent. Jean Bodin, the sixteenth century’s finest political philosopher, assessed representative bodies, both general and provincial, in a variety of political systems, ancient and modern, in his République (1576).8 The Spanish–English dictionary of 1623 simply translated ‘Parliament’ as ‘Córtes’, the action of calling a Parliament as ‘hazer Córtes’, and ‘Parliament house’ as ‘la Sála, de las Córtes’.9 By the later seventeenth century, Thomas Rymer tendentiously chronicled the decline and fall of ‘parliaments’, with the salient exception of the Westminster assembly, which he saw as steadily gaining in significance; and William Penn, an English MP and founder of Pennsylvania, with its own colonial assembly, proposed ‘the Establishment of an European Dyet, Parliament, or Estates’.10 In these European comparisons, there was always some common basis in history, classical and biblical tradition, and centuries of contact and exchange through diplomacy, travel, conquest and constitutional transformation. But there is nothing specifically European about political consultation and discussion through some form of assembly. The societies early modern Europeans found overseas had their own well-embedded assembly cultures and traditions. Although there was no common history and culture to help them to interpret such Indigenous gatherings, European observers naturally resorted to familiar vocabularies. The Franciscan friar Claude d’Abbéville wrote in his Histoire (1614) that a chief of the Tupinamba in Brazil, while he ‘was not elected through a public assembly’ (assemblée publique), nevertheless had ‘no authority other than giving advice, especially when [the Tupinamba] are in their assembly, or “carbet”, which they hold every evening in the open space where their houses are’.11 In other contexts European authors simplified wholly autonomous traditions to bring them in line with Old World mythologies and histories, theorising, for instance, that the peoples of the Americas were descended from monotheistic ancestors they shared with the Europeans or early Christians.12 Yet they were also prone to emphasise aspects of non-European assembly cultures that struck them as particularly strange, even unnatural. Patriarchally minded European observers were bewildered by the matrilineal Iroquois’ practice of allowing women a voice in council, and drew attention to it in their accounts.13 In turn, their remarks can distort our own grasp of these Indigenous assembly cultures, the written sources for which are overwhelmingly European in origin. But Bruno Miranda’s contribution demonstrates that historical documents kept for and by the European invaders can be deployed to retrieve hitherto overlooked traces of Indigenous voices and political agency; while Lauren Working discusses how material cultures can offer us some routes into a better understanding of the political cultures of the Indigenous as well as of settlers finding their way in a strange new world.\nOur second theme concerns those ways in which European and Indigenous cultures of assembly affected each other in practice. Sometimes colonisers sought to co-opt existing assembly structures to serve their own purposes. In Dutch-ruled Taiwan officials of the colonial government appointed by the Dutch East India Company sat together in an assembly with Indigenous village elders. Indigenous peoples – such as the Potiguara described by Bruno Miranda, the Mapuche by Pedro Cardim, or the Formosans of Taiwan by Jim van der Meulen – could use such gatherings to challenge the colonisers, strengthen their own voices, and occasionally to secure tangible concessions. But as Cardim points out, there was a great deal of mutual incomprehension as well as opportunism about such meetings. Besides, the ability of the Indigenous (who may not have represented a single political community) to assert their voice within the European colonies was generally limited.\nContacts between settlers and Indigenous had more indirect effects on assemblies and assembly cultures as well. In North America, the settler threat strengthened the intra- and inter-political connections of the Haudenosaunee (or Iroquois) Nations, and resulted in the increasing prominence and frequency of meetings of the Haudenosaunee Great Council.14 They could even be said to have affected the sociable culture of elite meetings: when some Members of the English Parliament took up smoking tobacco during their own sittings they were echoing the practice, known to their contemporaries, of Native American ‘savages’ such as the Algonquians, who used the plant at their religious gatherings.15\nOur third theme is the relationship between colonial aspirations and European parliamentary culture itself. Anglophone historians are of course very familiar with how colonial demands for political representation within the metropole ultimately produced the American Revolution, and in turn fuelled demands for political reform in Europe. But the other European empires saw similar debates, driven on the one hand by the metropole’s need for information, security and control and on the other by the colonial society’s need for material, financial, military and commercial backing. Not simply channels through which the metropolitan government could control the colony, but also structures which could be used by colonial elites to challenge the distant authority of king or republic, these bodies possessed a delicate relationship with the governments of the metropole, a source of both strength and weakness. For the huge competing empires of England/Britain, the Netherlands, France, Portugal and Spain, anxious for the security of their overseas possessions, assemblies could be supportive in the face of predatory powers, or they could be irritatingly disruptive. They could even seem a subversive fifth column – especially where confessional and sectarian differences complicated colonial governance. While settler communities needed metropolitan support, the exercise of metropolitan authority was frequently irksome, and sometimes oppressive. Some continental elites were sufficiently well versed in European political theory and history to worry both about the threat to their own liberty and property from the encroachment of hostile empires and about the creeping interference of their own metropolitan state.16\nThis was of course a conflict about authority. But it was also about the political and social status of local elites: parliamentary culture was also elite culture. Pedro Cardim’s discussion of the call for representation in the Portuguese and Spanish American colonies demonstrates the considerations of status both on the side of the Iberian governments, and on that of the emerging colonial elites, demanding partnership with an often-condescending peninsular establishment while also seeking recognition and acceptance of their own independent authority. Indeed, part of the point of participating in a major assembly lay in emulating the leadership status of those whom the new colonial elites deemed their peers in Europe. The importance of the colonists’ aspirations for political and social status and aristocratic ways of life is a striking undertone to their interest in assembly participation. These colonial aristocracies – whether urban-based merchants or planters – were typically of European ancestry and modelled themselves on the noble and seigneurial lords of the old country, as in the case of the ‘patroons’ of the Dutch North American colony of New Netherland.17 Lauren Working’s piece shows that political membership of colonial assemblies was closely tied with a desire to engage in and display civil and gentlemanly behaviour. This type of elite sociability, based on the consumption of luxury items such as jewellery, tableware and lavish clothing – all absurdly impractical items for the early colonists – connected the political culture in European cities such as London to that of colonial outposts such as Virginia, just as it did their respective social cultures. At the same time, the landscapes they inhabited also presented opportunities for elite self-assertion that were absent from the metropole.18\nAs all these essays demonstrate, political assemblies are complex structures, constructed out of relationships of power which offer possibilities and hazards for all of those involved. They help governing powers to build coherent communities, which can cooperate in the process of ruling. They help those communities to access, for their own purposes, the resources and prestige available from the governing authority. They reflect and consolidate political, economic and social power. But from the point of view of a governing power they threaten to build local centres of power that can confront and defy it; the communities themselves might fret that they offer a government a simple means of reaching into their own economic resources. All colonial regimes grappled to a lesser or greater extent with the question of whether and how to use assemblies to manage their relationship with the new colonies; settler communities thought about what sort of assemblies to construct and how they would employ them. In doing so, they naturally harked back to the assemblies that existed in the metropole, and imported their traditions and ways of thought into their own. In searching for ways to communicate and negotiate with the Indigenous communities the models were less obvious. But often settler experience of councils and assemblies back home would provide them with templates on which they could base structures for regular interaction – and control. Crucially, in other words, they relied on a commonly understood culture of political assembly – a parliamentary culture – in coming to grips with how authority and consultation might work in a new context.\nThis was not a new or unique process. Earlier settler communities, closely linked to their old countries, had established traditions of assembly before: for the English, the conquest and colonisation of Ireland furnished a significant precedent in determining the foundation and management of colonial assemblies. There, a parliament had been created in the thirteenth century as a forum for leading English settler magnates and a means for collectively managing their relationship with the Crown. As the area under their control grew, some Indigenous Irish would come to form part of an Anglo-Irish aristocracy and participate in the sittings and culture of those assemblies (indeed, remarkably it was an Irish cleric, Archbishop Risdéard Ó hÉidigheáin, who is probably responsible for the preparation of an Irish version of the classic fourteenth-century description of parliam",
+   "found_by": "ai"
+  },
+  {
+   "course": "PHIL 247: The Social Contract (seminar)",
+   "title": "Hobbes, Thomas: Moral and Political Philosophy | Internet Encyclopedia of Philosophy",
+   "url": "https://iep.utm.edu/hobmoral/",
+   "excerpt": "Thomas Hobbes: Moral and Political Philosophy\nThe English philosopher Thomas Hobbes (1588-1679) is best known for his political thought, and deservedly so. His vision of the world is strikingly original and still relevant to contemporary politics. His main concern is the problem of social and political order: how human beings can live together in peace and avoid the danger and fear of civil conflict. He poses stark alternatives: we should give our obedience to an unaccountable sovereign (a person or group empowered to decide every social and political issue). Otherwise what awaits us is a state of nature that closely resembles civil war – a situation of universal insecurity, where all have reason to fear violent death and where rewarding human cooperation is all but impossible.\nOne controversy has dominated interpretations of Hobbes. Does he see human beings as purely self-interested or egoistic? Several passages support such a reading, leading some to think that his political conclusions can be avoided if we adopt a more realistic picture of human nature. However, most scholars now accept that Hobbes himself had a much more complex view of human motivation. A major theme below will be why the problems he poses cannot be avoided simply by taking a less selfish view of human nature.\nTable of Contents\n1. Introduction\nHobbes is the founding father of modern political philosophy. Directly or indirectly, he has set the terms of debate about the fundamentals of political life right into our own times. Few have liked his thesis, that the problems of political life mean that a society should accept an unaccountable sovereign as its sole political authority. Nonetheless, we still live in the world that Hobbes addressed head on: a world where human authority is something that requires justification, and is automatically accepted by few; a world where social and political inequality also appears questionable; and a world where religious authority faces significant dispute. We can put the matter in terms of the concern with equality and rights that Hobbes’s thought heralded: we live in a world where all human beings are supposed to have rights, that is, moral claims that protect their basic interests. But what or who determines what those rights are? And who will enforce them? In other words, who will exercise the most important political powers, when the basic assumption is that we all share the same entitlements?\nWe can see Hobbes’s importance if we briefly compare him with the most famous political thinkers before and after him. A century before, Nicolo Machiavelli had emphasized the harsh realities of power, as well as recalling ancient Roman experiences of political freedom. Machiavelli appears as the first modern political thinker, because like Hobbes he was no longer prepared to talk about politics in terms set by religious faith (indeed, he was still more offensive than Hobbes to many orthodox believers), instead, he looked upon politics as a secular discipline divorced from theology. But unlike Hobbes, Machiavelli offers us no comprehensive philosophy: we have to reconstruct his views on the importance and nature of freedom; it remains uncertain which, if any, principles Machiavelli draws on in his apparent praise of amoral power politics.\nWriting a few years after Hobbes, John Locke had definitely accepted the terms of debate Hobbes had laid down: how can human beings live together, when religious or traditional justifications of authority are no longer effective or persuasive? How is political authority justified and how far does it extend? In particular, are our political rulers properly as unlimited in their powers as Hobbes had suggested? And if they are not, what system of politics will ensure that they do not overstep the mark, do not trespass on the rights of their subjects?\nSo, in assessing Hobbes’s political philosophy, our guiding questions can be: What did Hobbes write that was so important? How was he able to set out a way of thinking about politics and power that remains decisive nearly four centuries afterwards? We can get some clues to this second question if we look at Hobbes’s life and times.\n2. Life and Times\nHobbes’s biography is dominated by the political events in England and Scotland during his long life. Born in 1588, the year the Spanish Armada made its ill-fated attempt to invade England, he lived to the exceptional age of 91, dying in 1679. He was not born to power or wealth or influence: the son of a disgraced village vicar, he was lucky that his uncle was wealthy enough to provide for his education and that his intellectual talents were soon recognized and developed (through thorough training in the classics of Latin and Greek). Those intellectual abilities, and his uncle’s support, brought him to university at Oxford. And these in turn—together with a good deal of common sense and personal maturity—won him a place tutoring the son of an important noble family, the Cavendishes. This meant that Hobbes entered circles where the activities of the King, of Members of Parliament, and of other wealthy landowners were known and discussed, and indeed influenced. Thus intellectual and practical ability brought Hobbes to a place close to power—later he would even be math tutor to the future King Charles II. Although this never made Hobbes powerful, it meant he was acquainted with and indeed vulnerable to those who were. As the scene was being set for the Civil Wars of 1642-46 and 1648-51—wars that would lead to the King being executed and a republic being declared—Hobbes felt forced to leave the country for his personal safety, and lived in France from 1640 to 1651. Even after the monarchy had been restored in 1660, Hobbes’s security was not always certain: powerful religious figures, critical of his writings, made moves in Parliament that apparently led Hobbes to burn some of his papers for fear of prosecution.\nThus Hobbes lived in a time of upheaval, sharper than any England has since known. This turmoil had many aspects and causes, political and religious, military and economic. England stood divided against itself in several ways. The rich and powerful were divided in their support for the King, especially concerning the monarch’s powers of taxation. Parliament was similarly divided concerning its own powers vis-à-vis the King. Society was divided religiously, economically, and by region. Inequalities in wealth were huge, and the upheavals of the Civil Wars saw the emergence of astonishingly radical religious and political sects. (For instance, the Levellers called for much greater equality in terms of wealth and political rights; the Diggers, more radical still, fought for the abolition of wage labor.) Civil war meant that the country became militarily divided. And all these divisions cut across one another: for example, the army of the republican challenger, Cromwell, was the main home of the Levellers, yet Cromwell in turn would act to destroy their power within the army’s ranks. In addition, England’s recent union with Scotland was fragile at best, and was almost destroyed by King Charles I’s attempts to impose consistency in religious practices. We shall see that Hobbes’s greatest fear was social and political chaos—and he had ample opportunity both to observe it and to suffer its effects.\nAlthough social and political turmoil affected Hobbes’s life and shaped his thought, it never hampered his intellectual development. His early position as a tutor gave him the scope to read, write and publish (a brilliant translation of the Greek writer Thucydides appeared in 1629), and brought him into contact with notable English intellectuals such as Francis Bacon. His self-imposed exile in France, along with his emerging reputation as a scientist and thinker, brought him into contact with major European intellectual figures of his time, leading to exchange and controversy with figures such as Descartes, Mersenne and Gassendi. Intensely disputatious, Hobbes repeatedly embroiled himself in prolonged arguments with clerics, mathematicians, scientists and philosophers—sometimes to the cost of his intellectual reputation. (For instance, he argued repeatedly that it is possible to square the circle It is no accident that the phrase is now proverbial for a problem that cannot be solved!) His writing was as undaunted by age and ill health as it was by the events of his times. Though his health slowly failed—from about sixty, he began to suffer shaking palsy, probably Parkinson’s disease, which steadily worsened—even in his eighties he continued to dictate his thoughts to a secretary, and to defend his quarter in various controversies.\nHobbes gained a reputation in many fields. He was known as a scientist (especially in optics), as a mathematician (especially in geometry), as a translator of the classics, as a writer on law, as a disputant in metaphysics and epistemology; not least, he became notorious for his writings and disputes on religious questions. But it is for his writings on morality and politics that he has, rightly, been most remembered. Without these, scholars might remember Hobbes as an interesting intellectual of the seventeenth century; but few philosophers would even recognize his name.\nWhat are the writings that earned Hobbes his philosophical fame? The first was entitled The Elements of Law (1640); this was Hobbes’s attempt to provide arguments supporting the King against his challengers. De Cive [On the Citizen] (1642) has much in common with Elements, and offers a clear, concise statement of Hobbes’s moral and political philosophy. His most famous work is Leviathan, a classic of English prose (1651; a slightly altered Latin edition appeared in 1668). Leviathan expands on the argument of De Cive, mostly in terms of its huge second half that deals with questions of religion. Other important works include: De Corpore [On the Body] (1655), which deals with questions of metaphysics; De Homine [On Man] (1657); and Behemoth (published 1682, though written rather earlier), in which Hobbes gives his account of England’s Civil Wars. But to understand the essentials of Hobbes’s ideas and system, one can rely on De Cive and Leviathan. It is also worth noting that, although Leviathan is more famous and more often read, De Cive actually gives a much more straightforward account of Hobbes’s ideas. Readers whose main interest is in those ideas may wish to skip the next section and go straight to ethics and human nature.\n3. Two Intellectual Influences\nAs well as the political background just stressed, two influences are extremely marked in Hobbes’s work. The first is a reaction against religious authority as it had been known, and especially against the scholastic philosophy that accepted and defended such authority. The second is a deep admiration for (and involvement in) the emerging scientific method, alongside an admiration for a much older discipline, geometry. Both influences affected how Hobbes expressed his moral and political ideas. In some areas it is also clear that they significantly affected the ideas themselves.\nHobbes’s contempt for scholastic philosophy is boundless. Leviathan and other works are littered with references to the “frequency of insignificant speech” in the speculations of the scholastics, with their combinations of Christian theology and Aristotelian metaphysics. Hobbes’s reaction, apart from much savage and sparkling sarcasm, is twofold. In the first place, he makes very strong claims about the proper relation between religion and politics. He was not (as many have charged) an atheist, but he was deadly serious in insisting that theological disputes should be kept out of politics. (He also adopts a strongly materialist metaphysics, that—as his critics were quick to charge—makes it difficult to account for God’s existence as a spiritual entity.) For Hobbes, the sovereign should determine the proper forms of religious worship, and citizens never have duties to God that override their duty to obey political authority. Second, this reaction against scholasticism shapes the presentation of Hobbes’s own ideas. He insists that terms be clearly defined and relate to actual concrete experiences—part of his empiricism. (Many early sections of Leviathan read rather like a dictionary.) Commentators debate how seriously to take Hobbes’s stress on the importance of definition, and whether it embodies a definite philosophical doctrine. What is certain, and more important from the point of view of his moral and political thought, is that he tries extremely hard to avoid any metaphysical categories that do not relate to physical realities (especially the mechanical realities of matter and motion). Commentators further disagree whether Hobbes’s often mechanical sounding definitions of human nature and human behavior are actually important in shaping his moral and political ideas—see Materialism versus self-knowledge below.\nHobbes’s determination to avoid the “insignificant” (that is, meaningless) speech of the scholastics also overlaps with his admiration for the emerging physical sciences and for geometry. His admiration is not so much for the emerging method of experimental science, but rather for deductive science—science that deduces the workings of things from basic first principles and from true definitions of the basic elements. Hobbes therefore approves a mechanistic view of science and knowledge, one that models itself very much on the clarity and deductive power exhibited in proofs in geometry. It is fair to say that this a priori account of science has found little favor after Hobbes’s time. It looks rather like a dead-end on the way to the modern idea of science based on patient observation, theory-building and experiment. Nonetheless, it certainly provided Hobbes with a method that he follows in setting out his ideas about human nature and politics. As presented in Leviathan, especially, Hobbes seems to build from first elements of human perception and reasoning, up to a picture of human motivation and action, to a deduction of the possible forms of political relations and their relative desirability. Once more, it can be disputed whether this method is significant in shaping those ideas, or merely provides Hobbes with a distinctive way of presenting them.\n4. Ethics and Human Nature\nHobbes’s moral thought is difficult to disentangle from his politics. On his view, what we ought to do depends greatly on the situation in which we find ourselves. Where political authority is lacking (as in his famous natural condition of mankind), our fundamental right seems to be to save our skins, by whatever means we think fit. Where political authority exists, our duty seems to be quite straightforward: to obey those in power.\nBut we can usefully separate the ethics from the politics if we follow Hobbes’s own division. For him ethics is concerned with human nature, while political philosophy deals with what happens when human beings interact. What, then, is Hobbes’s view of human nature?\na. Materialism Versus Self-Knowledge\nReading the opening chapters of Leviathan is a confusing business, and the reason for this is already apparent in Hobbes’s very short Introduction. He begins by telling us that the human body is like a machine, and that political organization (the commonwealth) is like an artificial human being. He ends by saying that the truth of his ideas can be gauged only by self-examination, by looking into our selves to adjudge our characteristic thoughts and passions, which form the basis of all human action. But what is the relationship between these two very different claims? For obviously when we look into our selves we do not see mechanical pushes and pulls. This mystery is hardly answered by Hobbes’s method in the opening chapters, where he persists in talking about all manner of psychological phenomena—from emotions to thoughts to whole trains of reasoning – as products of mechanical interactions. (As to what he will say about successful political organization, the resemblance between the commonwealth and a functioning human being is slim indeed. Hobbes’s only real point seems to be that there should be a head that decides most of the important things that the body does.)\nMost commentators now agree with an argument made in the 1960’s by the political philosopher Leo Strauss. Hobbes draws on his notion of a mechanistic science, that works deductively from first principles, in setting out his ideas about human nature. Science provides him with a distinctive method and some memorable metaphors and similes. What it does not provide—nor could it, given the rudimentary state of physiology and psychology in Hobbes’s day—are any decisive or substantive ideas about what human nature really is. Those ideas may have come, as Hobbes also claims, from self-examination. In all likelihood, they actually derived from his reflection on contemporary events and his reading of classics of political history such as Thucydides.\nThis is not to say that we should ignore Hobbes’s ideas on human nature—far from it. But it does mean we should not be misled by scientific imagery that stems from an in fact non-existent science (and also, to some extent, from an unproven and uncertain metaphysics). The point is important mainly when it comes to a central interpretative point in Hobbes’s work: whether or not he thinks of human beings as mechanical objects, programmed as it were to pursue their self-interest. Some have suggested that Hobbes’s mechanical world-view leaves no room for the influence of moral ideas, that he thinks the only effective influence on our behavior will be incentives of pleasure and pain. But while it is true that Hobbes sometimes says things like this, we should be clear that the ideas fit together only in a metaphorical way. For example, there is no reason why moral ideas should not “get into” the mechanisms that drive us round (like so many clock-work dolls perhaps?). Likewise, there is no reason why pursuing pleasure and pain should work in our self-interest. (What self-interest is depends on the time-scale we adopt, and how effectively we might achieve this goal also depends on our insight into what harms and benefits us). If we want to know what drives human beings, on Hobbes’s view, we must read carefully all he says about this, as well as what he needs to assume if the rest of his thought is to make sense. The mechanistic metaphor is something of a red herring and, in the end, probably less useful than his other starting point in Leviathan, the Delphic epithet: nosce teipsum (know thyself).\nb. The Poverty of Human Judgment and our Need for Science\nThere are two major aspects to Hobbes’s picture of human nature. As we have seen, and will explore below, what motivates human beings to act is extremely important to Hobbes. The other aspect concerns human powers of judgment and reasoning, about which Hobbes tends to be extremely skeptical. Like many philosophers before him, Hobbes wants to present a more solid and certain account of human morality than is contained in everyday beliefs. Plato had contrasted knowledge with opinion. Hobbes contrasts science with a whole raft of less reliable forms of belief—from probable inference based on experience, right down to “absurdity, to which no living creature is subject but man” (Leviathan, v.7).\nHobbes has several reasons for thinking that human judgment is unreliable, and needs to be guided by science. Our judgments tend to be distorted by self-interest or by the pleasures and pains of the moment. We may share the same basic passions, but the various things of the world affect us all very differently; and we are inclined to use our feelings as measures for others. It becomes dogmatic through vanity and morality, as with “men vehemently in love with their own new opinions…and obstinately bent to maintain them, [who give] their opinions also",
+   "found_by": "ai"
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "title": "Richard Hooker and John Locke : political theory in perspective",
+   "url": "https://scholarship.richmond.edu/honors-theses/598/",
+   "excerpt": "Date of Award\n1-14-1969\nDocument Type\nThesis\nDegree Name\nBachelor of Arts\nDepartment\nHistory\nAbstract\nJohn Locke in his Second Treatise on Civil Government quoted extensively from Richard Hooker's Laws of Ecclesiastical Polity. It has often been taken for granted that Hooker was a precursor of the political theories of the origen of government, the consent of the governed, and sovereignty as developed and perfected by Locke. The historical and philosophical problem to be considered in this thesis is the relationship of Hooker to Locke: the purpose of the two works, the particular development of ideas in each, the concepts borrowed or shared, and the historical realities and philosophical outlooks which contribute to their distinctive worth.\nRecommended Citation\n    Justice, Alice M., \"Richard Hooker and John Locke : political theory in perspective\" (1969). Honors Theses.  598.\n    \nhttps://scholarship.richmond.edu/honors-theses/598",
+   "found_by": "ai"
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "title": "Grotius' Doctrine of the Social Contract | Netherlands International Law Review | Cambridge Core",
+   "url": "https://www.cambridge.org/core/journals/netherlands-international-law-review/article/abs/grotius-doctrine-of-the-social-contract/057AB78695275CEB53A05A4C0724D45F",
+   "excerpt": "Published online by Cambridge University Press: 21 May 2009\nIn George H. Sabine's great work, A History of Political Thought, he makes the following overall judgment on Grotius’ writing:\n“Grotius' importance in the history of jurisprudence rests not upon a theory of the state or upon anything that he had to say about constitutional law, but upon his conception of a law regulating the relations between the sovereign states.”\n1. Dryden Press, Hinsdale, Illinois, 1973, fourth edition, revised by Thomas L. Thorson, p. 391.\n2. “That body of law, however, which is concerned with the mutual relations among states or rulers of states, whether derived from nature, or established by divine ordinances, or having its origin in custom and tacit agreement, few have touched upon. Up to the present time no one has treated it in a comprehensive and systematic manner; yet the welfare of mankind demands that this task be accomplished.” Prolegomena, 1, 9.\n3. Vecchio, Georges Del, Leçons de philosophic du droit, Sirey, Paris 1936, p. 64Google Scholar, in which the author is extremely critical of Grotius' representation of the social contract. He writes, inter alia: “Enfin, il ne faut pas oublier que, dans certains cas, le contenu du prétendu contrat peut être tel qu'il exclut de lui-même la liberté et par suite la validité du consentement. Quand on se trouve en présence d'un contrat stipulant l'aliénation totale, accomplie par l'un des contractants, de tout ce qu'il est et possède, sans aucune compensation correspondante de la part de l'autre partie, nous pouvons affirmer a priori, sans crainte d'erreur, qu'un tel contrat, s'il a été conclu, est nul devant le droit. Mais Grotius, préoccupé seulement d'établir l'obligation de Fobeissance chez les sujets, attribue une valeur absolue au pretendu fait du contrat social qui, comme tel, n'existe pas. L'hypothèse du contrat n'a done, dans son système, aucune valeur rationnelle. Elle représente uniquement un expédient, ou une fiction destinée à valoriser et ratifier le fait établi.”\nIn his Grundlagen und Grundfragen des Rechts (Rechtsphilosophische Abhandlungen) Vandenhoeck & Ruprecht, Gottingen, 1963, pp. 276–277Google Scholar, Del Vecchio's criticism is even more severe: “Unter rein logischem Aspekt ist das, was der Lehre des Grotius Abbruch tut, weniger die Tatsache, dass er ihn auf gleicher Ebene mit jeder anderen Regierungsform zugelassen und gerechtfertigt hat. Das ist, um es kurz zu sagen, ein Bankrott der Philosophie. Vom philosophischen Standpunkt aus ist daher diese Lehre, in der sich ein leerer Vernunftglaube in den oberflachlichsten Empirismus auflöst, auch der Doktrin Hobbes' unterlegen, die trotz des bekannten falschen Ausgangspunktes den Vorzug der grösseren Folgerichtigkeit und eines ungewöhnlichen dialektischen Scharfsinns hat… In Wahrheit hat das Naturrecht, das er im Rahmen klassischer Reminiszensen am Anfang und hier und da im Verfolg seines Werkes bejaht, in der Struktur seines Systems fast gar keine Funktion. Dieses is ganz auf die Idee des jus gentium abgestellt…\nWeit mehr als der rechta ratio vertraut er den historischen Präzedenzfällen, denen er sich ständig beugen zu müssen glaubt. Daraus resultiert die häufige Verwechslung von Faktum und Recht die schon Rousseau… scharf beanstandet hat.” cfr Hegel, , Philosophie der Geschichte, Suhrkamp, 12, p. 522Google Scholar;\n4. Le contrat social, I, 2.Fasso, G. is less critical than Del Vecchio and Rousseau, and writes in his Dizionario deifllosofi, (Sansoni), p. 497Google Scholar: “Poiché il solo mezzo per assicurare tale fondamento appare a Grotius l'attribuire validità assoluta al patto, concependolo come istituto di diritto naturale, egli è portato a giustificare genericamente gli instituti di diritto positivo, nella forma in cui storicamente gli si presentano, come legittimati dal contratto sociale; senza porsi il problema specifico della legittimità di ciascuno di essi in quella sua forma.”\n5. I refer to the philosophy of the social contract as “contract philosophy” and the advocates of this philosophy as “contract philosophers”.\n6. Schweigman, F.A.A., De eigendomsphilosophie van Hugo de Groot, 1929, p. 142Google Scholar : “For a long time Grotius was considered to be the founder of the contract theory: the time has come to assess whether this opinion is justified or not… As regards the contract of the state, Grotius can in no way be considered to be the founder of the contract theory.”\n7. It is clear that Locke considers the absolute power of the sovereign as a state of nature, see for example, The Second Treatise, ed. Laslett, P., The New English Library, London, 1965Google Scholar, p. 405. It is also clear that Beccaria and Rousseau are diametrically opposed.\n8. § 258 Anmerkung. I quote from Knox, T.M., Hegel's Philosophy of Right, Oxford University Press, 1967Google Scholar.\n9. Ibid.\n10. Metaphysik dcr Sitten, AA, VI, p. 313.\n11. Vom Verhaltnis der Theorie zur Praxis im Staatsrecht, AA, VIII, p. 297 (translation Murphy, Jeffrie G., Kant: The Philosophy of Right, p. 111)Google Scholar\n12. For this point see De jure belli ac pacis, I, 1, 10, 38.\n13. In view of the importance of this consideration I should also like to give the original Latin. This reads: “Et haec quidem quae iam diximus, locum aliquem haberent etiamsi daremus, quod sine summo scelere dari nequit, non esse Deum, aut non curari ab eo negotia humana.”\n14. cfr. Welzel, Hans, Die Naturrechtslehre Samuel Pufendorfs, Berlin, De Gruyter, 1958, p. 36Google Scholar : “Auch heute noch wird oft behauptet, dass Grotius mit dieser Erkenntnis das moderne Naturrecht begründet habe. In Wahrheit sind jene Sätze altes scholastischer Gedankengut das Grotius für das Naturrecht lediglich präzise formuliert hat. Selbst der Satz, dass das Naturrecht gelten würde, auch wenn es keinen Gott gäbe, stammt aus der Scholastik. Der damaligen Zeit war die Herkunft dieser Gedanken aus der Scholastik wohl bekannt.”\n15. James St. Leger, M. M., The ‘etiamsi daremus'of Hugo Grotius. A Study of the Origins of International Law, Univ. Grogoriana, Rome, 1961, p. 53Google Scholar. J.J.M. van der Ven, … Etiamsi daremus non esse Deum… Gottesdämmerung. See also: In Grotius Naturrechtslehre in his collected articles the title Jus humanum. Das Menschliche und das Rechtliche, p. 365–373.\n16. Leger, James St., O.c. p. 47–48: “We have already seen something of Pufendorf s lengthy article condemning the “etiamsi daremus” as an absurd hypothesis of the Scholastics. Pufendorf explicitely mentions a number of these Scholastics: Zentgravius, Suarez, Vasquez, Durandus a S. Porciano, and of these he refers especially to the opinion of Vasquez. Although he professes a great respect of Grotius Pufendorf rebutes the Dutchman for this dependence on the despicable Schoolmen. Barbeyrac also links the concept of Grotius to the Scholastics.”Google Scholar\n17. James St. Leger expresses this, argument in the words of Johann Gottlieb Heinecke (1681–1741). It reads as follows in Leger's, St. translation: “Nevertheless this teaching is completely false. There are no rights (ius) without an obligation, no obligation without law (lex), no law without a legislator. If therefore we posit that God does not exist, there would be no legislator, no law, no obligation, and finally no rights (ius).” O.c, p. 49Google Scholar.\n18. In Prolegomena, 11, 13 Grotius continues after his atheistic hypothesis: “The very opposite of this view has been implanted in us partly by reason, partly by unbroken tradition, and confirmed by many proofs as well by miracles attested by all ages. Hence it follows thatwe must without exception render obedience to God as our Creator to Whom we owe all that we are and have; expecially since, in manifold ways, He has shown Himself supremely good and supremely powerful, so that those who obey Him He is able to give supremely great rewards, even rewards that are eternal, since He Himself is eternal. We ought, moreover, to believe that He has willed to give rewards and all the more should we cherish such a belief if He has so promised in plain words that He has done this, we Christians believe, convinced by the indubitable assurance of testimonies.”\n19. The Encyclopedia of Philosophy, ed. Edwards, P., T. 3 en 4, p. 394Google Scholar.\n20. Cfr. Prolegomena, 15, 14: “Again, since it is a rule of the law of nature to abide by pacts (for it was necessary that among men there be some method of obligating themselves one to another, and no other natural method can be imagined), out of his source the bodies of municipal law have arisen. For those who had associated themselves with some group, or had subjected themselves to a man or to men, had either expressly promised, or from the nature of the transaction must be understood impliedly to have promised that they would conform to that which should have been determined, in the one case by the majority, in the other by those upon whom authority had been conferred.” Gr. fasso 15 justified in stating in his Dizionario dei filosofi (ed. Sansoni, ) p. 497Google Scholar: “II principio, di diritto naturale, che i patti debbono essere osservati sembra essere assunto cosi da Grotius come catcgoria fondamentale dell’ ordine giuridico in genre; esso funge da elemento mediatore tra l'assolutezza del diritto naturale e la contingenza dei diritti positivi che vengono grazie ad esso a partecipare del valore assoluto del primo.”\n21. Friedmann, Wolfgang, o.c, p. 334, 394, Cfr.Google ScholarVecchio, Del, Leçons de philosophic du droit, p. 63–64: “Grotius entend combattre l'opinion, mise en valeur dcpuis pcu, p.e. par Althusius, d'après laquelle les peuples auraient toujours le droit de reprendre la souveraineté originellé… L'idée du contrat social est mise en avant par Grotius dans le seul but de démontrer que le peuple a l'obligation perpétuelle d'obéir au souverain. Le contrat social, à cet égard est quasi une praesumptio juris et de jure, par laquelle l'oeuvre des gouvernants est supposée avoir le consentement des sujets…”Google Scholar\n22. Cfr. O.c, p. 65 “II fait état avant tout d'exemples historiques, de sorte que souvent il réussit une exposition dc faits plus que de principes.”\n23. Cf. Schweigman, F.A.A., De eigendomsphilosophie van Hugo de Groot, 1929Google Scholar, § 8, De Groot en de theorie van het oorspronkelijk communisme, pp. 140–145: “We have seen that even before Grotius the theory that the order of private ownership may have been established by means of consensus had been put forward, in particular, by Molina; it seems that Grotius adopted Molina's concept of the contract as the way in which the order of private ownership was created. However, Grotius’ originality consists in the fact that according to this theory, it is not merely possible, but actually the case that private ownership owes its existence to a contract.” p. 141.\n24. Fasso, G. came to the same conclusion in Dizionario del fllosofl (Sansoni) p. 497 … il De jure belli ac pads resta un opera tecnica e, per certi aspetti, politica, i cui presupposti filosofici, in realta marginali, sono assai incerti e di scarsissima a originalità.”Google Scholar",
+   "found_by": "ai"
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "title": "Grotius, Hugo | Internet Encyclopedia of Philosophy",
+   "url": "https://iep.utm.edu/grotius/",
+   "excerpt": "Hugo Grotius (1583–1645)\nHugo Grotius was a Dutch humanist and jurist whose philosophy of natural law had a major impact on the development of seventeenth century political thought and on the moral theories of the Enlightenment. Valorized by contemporary international theorists as the father of international law, his work on sovereignty, international rights of commerce and the norms of just war continue to inform theories of the international legal order. His major work, De Jure Belli ac Pacis (The Rights of War and Peace), is particularly notable in this respect, as well as Mare Liberum, a doctrine in favor of the freedom of the seas, which is considered an antecedent, inspiration and the backbone of the modern law of the sea.\nGrotius was heavily influenced by classical philosophy, most prominently Aristotle and the Stoics, as well as by the contemporary humanist tradition and the late-medieval Scholastics. Caught up in the religious strife of the Reformation, Grotius promoted an irenic vision that would unite and reconcile the Christian Church on the principles of civil religion and toleration. He was well known in his time as much for his poetry and philosophy of religion as for his work on law and politics but is best remembered for his influence on theories of the social contract, natural rights and the laws of war.\nTable of Contents\n1. Life and Works\nHuig de Groot, best known by the Latinized name Hugo Grotius, began his life in the commercial town of Delft while, in 1583, the Dutch Republic persevered through a second decade of war for independence from Hapsburg rule and was already positioning itself for ascendancy as an overseas trading power. Born into a family with standing among the city elite and connections to the recently founded University of Leiden, young Hugo would find many opportunities to develop his considerable talents for scholarly pursuits even as a child. His family tutored him in Greek and Latin at an early age, introduced him to classical letters, and brought him up in the disciplines of Reformed faith. So outstanding were his gifts for intellectual work that he was welcomed to enroll at Leiden University at the mere age of eleven. At the university, the boy de Groot became a favored student of some of the most celebrated scholars of the time, discovering his talents in a whole range of subjects in the liberal arts and new sciences. His reputation as a promising young man of letters would open a number of doors for him in the political life of the time, where humanist expertise was a valued asset. The most auspicious of these opportunities came as he was preparing for life beyond the university. In 1598, no less a figure than Jan van Oldenbarnevelt, the Grand Pensionary and most influential personality in Dutch politics, invited Grotius to accompany his delegation to the French court. The embassy, which ultimately failed in its aim to renew the king’s military support against Spain, nonetheless brought Grotius into the fold of high politics and even staked him a reputation with the French court when Henry IV lauded the learned youth as “the miracle of Holland.” The connections he made in France enabled Grotius to extend his stay and earn a Doctor of Laws degree from the University of Orléans before returning to Holland the following year.\nEntering into practice as a lawyer in The Hague, Grotius took advantage of chances to hone his rhetorical skills and found time to devote to his diverse scholarly interests. His earliest writings to go into print included several imitations of classical verse and translations of significant works in compass navigation and astronomy, the latter being of keen interest to his friends invested in the burgeoning overseas trade. In 1601, he published a tragedy, Adamus Exul (Adam in Exile), that earned him instant acclaim as a poet; it was a work that John Milton would later study in preparing his Paradise Lost. While Grotius prized these pursuits more highly than the mundane work of a lawyer, he always strove to please his patrons and clients. Indeed, his most lasting contributions to political thought took shape in the course of his professional duties during this period.\nIn 1604, Grotius was drawn into the sensational controversy over privateering in the Southeast Asian trade. The United Dutch East India Company had been rising quickly as a major player in European overseas commerce, and Grotius shared the view of many of his associates involved in the trade that the Company not only buoyed up the young republic with wealth but also weakened its adversaries by cutting into Iberian dominance of the East Indian routes. Still, acts of piracy by a private concern did not sit well in the public opinion of many citizens and allies. When asked by a friend with Company connections to write a brief justifying a recent and very lucrative seizure of Spanish cargo, Grotius went on to produce not only an ardent defense of the capture but an investigation into the deep principles of law that connected those separated by nation and culture. The resulting manuscript, provisionally titled De Indis (On the Indies), was never published in full until long after Grotius’ death (appearing in 1868 as Commentary on the Laws of Prize and Booty). It was the young jurist’s first systematic work on the problems of international affairs and was in many ways his most philosophically developed. Many of the arguments worked out in the manuscript—that there is a basic law of nature determined by the need to reconcile self-preservation with social life, that the authority to govern and even to punish derive from the rights of natural persons prior to the founding of civil societies, and that claims to jurisdiction over the open seas are invalid—would give direction to his later works.\nIn fact, the last of these arguments would appear in print in 1609 as the anonymous pamphlet, Mare Liberum (The Free Seas). The pamphlet, which Grotius pulled directly from the text of De Indis, once again served the interests of those in the Dutch political and commercial establishment that were insisting upon the right of access to overseas routes in the ongoing negotiations for a truce with the Spanish. The work argued not only that the Spanish claims to a trading monopoly in the Southeast Asia and elsewhere failed to square with the facts—that these were rights conferred by papal authority or acquired by just conquest—but that there was, in principle, no basis for any monopoly on access to the seas. The freedom of the seas was entailed by the very nature of private property. To privately own a thing requires that one can occupy it, taking it out of the common store, and that one can make full use of it. The sea cannot be contained and is too plentiful for its usefulness to be exhausted by a few; hence, no one can take exclusive ownership of the sea. The seas remain open to all. This question was of great importance in European relations during this period of intense competition between aspiring overseas empires, and Grotius’ work would frame the intense debate to follow. During this time in his early legal career, he penned a number of other manuscripts touching on matters of international relations that, while mostly unpublished, shaped his later work on the subject. The Parellelon Rerumpublicarum (composed 1601-2) explored the concept of ‘good faith’ in dealings with other nations through some flattering comparisons among the customs of the Greek, Roman and Dutch peoples. In his Commentary on Eleven Theses (circa 1602-08), Grotius worked out an understanding of the ruling power of a state—its sovereignty—and its relation to the principles of just war.\nHaving proved the usefulness of his talents to the ruling elite, Grotius’ star continued to rise. He gained recognition from Prince Maurits of Orange, the executive and military leader of the United Provinces, when in 1607, the prince appointed him as attorney general of the provinces of Holland, Zeeland and West Friesland. It was during this time that he became engaged to be married to a young woman from a distinguished family in Zeeland, Maria van Reigersberch. Her partnership and personal courage would carry the family through a tumultuous life that the young couple could not have expected at the time of their wedding in 1608. Soon thereafter, Maria gave birth to the first of seven children. As his focus shifted from legal practice to public service, Grotius began to put a number of his writings into press. His second celebrated tragedy, The Passion of Christ, came out in 1608, followed by the anonymous Mare Liberum in 1609 and a political history of the old Dutch republic, De Antiquitate Reipublicae Batavicae, in 1610. The historical account provided ideological leverage for the position that Holland had persisted in its republican form of government despite the princely claims of the Hapsburgs. The governing States of Holland commissioned Grotius to write a detailed history of the conflict with Spain, which he submitted in 1612. The States declined, likely due to the delicate truce, to publicize the work, leaving the Annales et Historiae de Rebus Belgicus to rest until his sons brought it out posthumously in 1657. Opportunity for higher office came again when, in 1612, the town council of Rotterdam offered Grotius the mayoral position of Pensionary. The title brought with it a seat in the States of Holland where he would collaborate more closely with his mentor, Oldenbarnevelt, and key players in provincial and national politics.\nThe political controversy that would end up defining Grotius’ tenure in office began with small rumblings when, in 1608, the professor of theology at the University of Leiden, Jacob Arminius, put forth a doctrine that challenged key features of the reigning Calvinist orthodoxy concerning predestination (see below: Irenicism and Tolerance). Calvinist church officials and divines came out strongly against the preaching of such a view. Though Arminius died the following year, the conflict escalated in a way that pitted the church establishment against the civil authorities over the question of who could rule on such doctrinal disputes. Grotius shared with many in the government of Holland some sympathies with the Arminian view but a desire above all to prevent such matters from disturbing the peace. He had been composing, during this time, a manuscript on the idea that all faiths shared a set of core doctrines, a viewpoint capable of promoting a certain equanimity towards squabbles over the finer points of theology. This was in any case the political attitude Grotius favored, and while he never published the Meletius manuscript, he developed several writings on the role of the state in managing conflicts over religion. The pamphlet, Ordinum Hollandiae et Westfrisiae pietas (1613), defended the ‘piety’ of the governments of Holland and Westfriesland in imposing a policy of toleration that allowed Arminians to preach their dissenting doctrine. Grotius himself had drafted the policy, which failed in its aim of mollifying the factions and, in fact, heightened the conflict between the civil and ecclesiastical authorities. Convinced that the practice of religion was a concern proper to civil magistrates, Grotius set about justifying his views in a longer treatise. De Imperio Summarum Potestatum circa Sacra argued that, to avoid a conflict of rights, there must be only one final authority within a state on how religion is to be practiced, that because of its mandate to keep civil peace and form responsible citizens this authority ought to come under the civil power, and that civil magistrates would do well to limit their judgments to the core doctrines Grotius had worked out in Meletius. He developed, though never published, the manuscript of De Imperio as the political conflict continued to escalate during 1614-17. His sympathies with the Arminian theology also grew during this period, and in 1617 he took it upon himself to brush back the charges of heresy with the publication of a theological work, Defensio Fidei Catholicae de Satisfactione Christi adversus Faustum Socinum.\nAs Grotius was being drawn further into the controversy, it came to consume national politics. The orthodox Calvinists, who were a majority at the national level and now had the backing of Prince Maurits, were demanding a national synod to settle the matter. This set up a standoff between Maurits, the national executive and commander of the armed forces, and Oldenbarnevelt, the most influential figure in the States assembly. Oldenbarnevelt led the elites of Holland, including Grotius, in blocking the synod and managing the dispute at the provincial level. That policy culminated in a decision, when riots broke out in 1617, to authorize local militias to suppress the disorder. Maurits denounced the act as an offense against his military authority, and he seized the opportunity to turn the tide against his political adversaries. At the end of an extended political and military campaign to push the Arminian supporters out of the establishment, he ordered the arrest of Oldenbarnevelt and his key supporters in August 1618. Grotius, with his mentor, was locked up and set for trial. A national synod, the famous Synod of Dort, was scheduled. Though incensed at the military coup d’etat against the sovereign institutions of Holland, Grotius calmly petitioned Maurits and the national States-General to no effect. The trials commenced the following year, and Grotius saw his mentor condemned to death for high treason. On May 18, 1619, his own sentence came down: confiscation of property and life imprisonment.\nAlthough he would strive for the rest of his life to vindicate himself and lift the disgrace of the charges from himself and his family, Grotius entered at the age of thirty-six into his term of imprisonment in the castle Loevestein. The only solace of his confinement was that his family was allowed to reside with him and that on her regular leaves his wife Maria was able to bring back books and papers. The scholar was able to turn his isolation to some greater purpose. In Loevestein, Grotius renewed a number of neglected projects. He wrote, fully in didactic verse, a more systematic treatment of his view that there are essential elements common to all religions and that the doctrines of Christianity were recognizable through reason as the most consistent and highest expression of the common faith. The work, initially composed in Dutch, would serve as the basis for his renowned De Veritate Religionis Christiane (The Truth of the Christian Religion). Through his work in law and legal history, he had conceived the plan of writing a rigorous guidebook on jurisprudence of Holland in the vernacular of the Dutch language. The later publication, in 1631, of Inleidinge to the Hollandsche Rechts-geleerdheid (Introduction the Jurisprudence of Holland) would eventually give his book a status in Dutch law analogous to Blackstone’s Commentaries in the English system. Grotius was convinced that he could achieve the same kind of ordered treatment of the concepts, principles and precedents governing relations at the international level. Closed within the walls of his cell, he reached out for a global view of human affairs and prepared parts of what would become the massive treatise, De Jure Belli ac Pacis (The Rights of War and Peace). At the same time, Grotius was looking beyond the walls of Loevestein with a mind for a more immediate scheme: escape. He knew that he had support in the court of Louis XIII in France, and his hopes for reestablishing himself pointed towards Paris. Maria and the family’s young maid-servant, Elsje van Houwening, hatched the plan for escape. On March 22, 1621, Maria made arrangements for a chest of books to be shipped to the nearby town of Gorcum, then helped her husband into the cramped chest and watched Elsje accompany the guards as they unwittingly delivered their prisoner into the hands of friends. A month later, Grotius was in Paris, separated from his family, exiled from his beloved country, yet free.\nThe long period Grotius spent in exile saw the publication of his most remembered works. Having secured the support of Louis XIII and being reunited with his family, he prepared several manuscripts that he hoped would restore him to prominence. The Apologeticus, appearing in 1622, was straight to the purpose: it contained a full defense of his conduct as a public official of Holland. Despite his earnest pleas of loyalty and the best efforts of his friends, the States-General spurned his arguments and authorized a bounty on him. He turned his attention to the scholarly projects begun in Loevestein. The treatise on the universal law of nature and nations, divided into three hefty books, grew out of the reflections on the subject he had begun twenty years prior. Its first book developed an account of natural justice, so central to his earlier arguments about the Southeast Asian trade, and laid out a broad framework for judging “controversies of any and every kind, as are likely to arise” (JBP I.I.i)—those among politically sovereign entities, private parties, or rival camps within a state. The lengthy second book provided a grounding for the rights in one’s person, property, and sovereignty (subjects he was revisiting from Mare Liberum and his unpublished commentaries) and a detailed consideration of the ways such rights could be acquired, transferred, lost, and protected by recourse to war. The third book, dramatizing the gap between the prevailing customs of warfare and the demands placed on us by a more humane conscience, considers what responsibilities parties have to all those they impact in wartime and in upholding good faith in efforts to build the peace. Many of the arguments of the work were forged in Grotius’ career as an advocate and public official, though he insists in the Prolegomena to the treatise that his perspective in the work is that of a mathematician, abstracting away from particular facts and controversies of the day. When the first edition of De Jure Belli ac Pacis made its appearance in 1625, its readers would have no shortage of conflicts to which to apply its ideas about war and peace, from the campaigns of conquest and appropriation overseas to the long-raging religious conflicts on the continent that were escalating into what would be the Thirty Years War.\nGrotius continued, while in France, to write and visit scholars. His Latin edition of The Truth of Christian Religion came out in 1627. It would become his most widely read and translated work. Despite the unreliability of his pension from King Louis, he turned down some tempting offers to serve as a diplomat for other nations and instead renewed his efforts to rehabilitate his standing in the Netherlands. Upon the death of Prince Maurits, Grotius returned to Holland in 1631 in hopes of finding favor with the new Prince of Orange, Frederick Henry, but an arrest warrant from the States-General forced him to flee and take up refuge in Hamburg. Grotius and his wife remained for more than two years in the city without any great prospects. He set himself to composing a third major tragedy, Sophompaneas (Joseph), which would appear in 1635. By that time, his work on the laws of war had brought opportunity to his doorstep. In 1634, he was called to meet with the Swedish High Chancellor, Oxenstierna, who informed him that the recently slain King Gustavus Adolphus had been a great admirer of De Jure Belli and expressed a desire to bring Grotius into the service of Sweden. A major power, Sweden had risen up as a champion of the Protestant cause in the bloody war that gripped Europe, and Grotius was asked to provide counsel to the young queen and serve as her ambassador to another key power, France. The position required that he renounce his Dutch citizenship in order to declare his loyalt",
+   "found_by": "ai"
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "title": "\"General Will\" by Richard Dagger - UR Scholarship Repository",
+   "url": "https://scholarship.richmond.edu/polisci-faculty-publications/185/",
+   "excerpt": "General Will\nAbstract\nAlthough he was hardly the first to employ it, the concept of the general will is inextricably linked to Jean-Jacques Rousseau. In Du Contrat Social (The Social Contract, 1762) Rousseau draws a fundamental distinction between man and citizen. That is, we may think of every person as a unique individual with a particular set of interests and as a member of the public who shares a common interest in the welfare of the body politic. As a man, everyone has a private will that aims at his particular good or personal interests; as a citizen, everyone has a general will that aims at the common good or public interest. This general will, Rousseau insists, is different from \"the will of all\"; it is always right; it is to be found on the side of the majority when votes are cast (presuming that \"the characteristics of the general will are still in the majority\"); and those who refuse to follow it must be \"forced to be free\".\nDocument Type\nArticle\nPublication Date\n2001\nPublisher Statement\nCopyright © 2001 From Reader's Guide to the Social Sciences by Jonathan Michie. Reproduced by permission of Taylor and Francis Group, LLC, a divison of Informa plc.\nCopyright © 2001 Fitzroy Dearborn Publishers. This article first appeared in Reader's Guide to the Social Sciences.\nPlease note that downloads of the article are for private/personal use only.\nPurchase online at Fitzroy Dearborn Publishers.\nRecommended Citation\nDagger, Richard. \"General Will.\" In Reader's Guide to the Social Sciences, edited by Jonathan Michie, 647-48. Vol. 1. Chicago: Fitzroy Dearborn Publishers, 2001.",
+   "found_by": "ai"
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "title": "8 - The Substantive Elements of Rousseau's General Will",
+   "url": "https://www.cambridge.org/core/books/general-will/substantive-elements-of-rousseaus-general-will/535BE5EFE08FD4249CE928D9CE06455C",
+   "excerpt": "8 The Substantive Elements of Rousseau’s General Will\nAmong the many potential frustrations confronting readers of the Social Contract is the simple fact that Rousseau never commits to spelling out the meaning of his most important concept, the general will, in anything approaching a straightforward or analytic fashion. As Bertrand Russell remarked, regarding the all-important details of the general will, “Rousseau leaves us in the dark.”1 He introduces the general will several pages into the text, and does so without so much as a hint of definition. As he progresses, the general will becomes increasingly and obviously central to his program – so much so that Judith Shklar commented that “the general will is Rousseau’s most successful metaphor. It conveys everything he most wanted to say.”2 But he never offers the kind of systematic account that such concepts typically demand. It is difficult to say precisely why Rousseau fails to do so. It is presumably not because he was averse to straightforward definitions. In his Second Discourse, he is remarkably and admirably direct in defining his central terms of equality, amour propre, amour de soi, and pitié. He also offers precise definitions of terms like “citizen,” “subject,” “state,” “republic,” “tyranny,” and “despotism” throughout the Social Contract.\nRousseau’s readers have thus been left the task of assembling meaning from the many passages where he treats – though does not typically define – the general will. As commentary has evolved in the twentieth and twenty-first centuries, there have been two broad camps of interpreters: (1) those who treat the general will as a procedure for generating the substantive content of the general will, and (2) those who treat the general will as an expression of a prior commitment to substantive values. Those advocating the procedural or formal reading of Rousseau’s general will point, for example, to passages in the Social Contract and the Geneva Manuscript that emphasize the process of generating a general will, such as his characterization of the general will as taking from the will of all “the plusses and minuses which cancel each other out.”3 Those advocating the substantive reading of the general will point to Rousseau’s assertions such as “What is good and conformable to order is so by the nature of things and independently of human convention.”4\nThis essay argues that while procedures are a part of generating a general will in political practice, they do not determine the actual substantive content of the general will. Rather, the substantive content of the general will is derived from Rousseau’s commitment to metaphysically prior values, especially the ideas of goodness and justice, notions found in earlier generations of political philosophers, such as Plato.5 As such, the substantive values inform the very procedures that some interpreters take to be the core of Rousseau’s constructive political philosophy. In making this case, I sketch what seems to constitute the core elements of his general will: the will itself, its formal elements and its substantive elements (namely, justice and goodness), as well as the secondary substantive elements that support them (equality, liberty, and fraternity). It is only through consideration of all these elements – extending through many of his works, with special attention to elements of Émile – that a more complete picture of Rousseau’s general will emerges.\n1. The Will of the General Will\nRousseau stresses the importance of the will repeatedly throughout his works, including the Social Contract. To be sure, the will for him is expressly a free will.6 He identifies it early in his Second Discourse as one of the defining features of humanity. Whereas an animal is “nothing but an ingenious machine … man contributes to his operations in his capacity as a free agent.”7 It is for Rousseau this unique ability to shun inclination and impulses that separates him from all other species. Furthermore, it is this freedom of the will that imparts to humanity its distinctly moral nature, since virtue itself requires “not only … being just, but … being so by triumphing over one’s passions.”8\nThis freedom takes center stage early in his Social Contract. In Book I he emphasizes that the “transition from the state of nature to the civil state produces a most remarkable change in man by substituting justice for instinct in his conduct, and endowing his actions with the morality they previously lacked.” By bringing about laws and a general sense of order, human beings are afforded the ability to cultivate their freedom and act as moral beings. They are finally free from “physical impulsion” and “inclinations” and are now free to act in accordance with their duties. As such, Rousseau writes of the citizen, “his ideas are enlarged, his sentiments ennobled, [and] his soul is elevated” (SC, 1.8.1, 53 [III: 364]).\nThe institution of free wills amongst citizens, however, is not merely an end in itself, as important as that is. A free will is also necessary for Rousseau in order to maintain and implement legislation, which must itself conform to the general will. People lacking free will are incapable of performing their central task as citizens. This is why he so vigilantly works to protect their freedom. The painful absence of free will is perfectly evident in Part II of the Second Discourse, where individuals hoping that they might be “securing their freedom,” in fact secure only servitude. Rousseau makes it perfectly clear that they lack free will under this regime: “there would … no longer be any question of morals and virtue.”9 They have surrendered the freedom necessary to exercise their moral capacities. This is one reason why there is no mention of the general will in the Second Discourse – its fundamental prerequisite is entirely absent.\nWhile Rousseau’s conception of the free will is crucial, it is also very fragile. Myriad obstacles threaten it from all imaginable angles. Many originate in amour propre, which prompts individuals to seek external approval. In the First Discourse, he describes how the arts prompt citizens to seek public applause rather than attend to their civic duties. They are thus no longer their own masters, lacking freedom insofar as the whims of the audience’s taste guide their every move. In the Second Discourse, he describes how amour propre compels a kind of endless quest for power, where even the most powerful become “slaves” insofar as they “come to hold Domination dearer than independence.” And even though such despots may appear free to the casual observer, they are not. They are entirely beholden to those who would tremble below them. They must constantly be responsive to the whims of the people in order to maintain their positions of power. In the Political Economy, he warns against the corrupting forces of money, where the quest for wealth finds citizens selling their freedom and virtue for cash.10 He sums up many of these concerns when expressing his ambitions for Émile:\nNurtured in the most absolute liberty, he conceives of no ill greater than servitude. He pities these miserable Kings, slaves of all that obey them. He pities these false wise men, chained to their vain reputations. He pities these rich fools, martyrs to their display. He pities these conspicuous voluptuaries, who devote their entire lives to boredom in order to appear to have pleasure. He would pity even the enemy who would do him harm, for he would see his misery in his wickedness. He would say to himself, “In giving himself the need to hurt me, this man has made his fate dependent on mine.”11\nIn conspiring to undermine the free will, all of these factors also threaten to undermine the general will central to the Social Contract. Rousseau expressly warns against the temptations of power (SC, 3.6), the corrupting effects of money (SC, 1.9.8n, 2.11.2n), and excess sophistication (SC, 4.1). The capacity of these menaces to rob citizens of the free exercise of their own will represents a constant threat hovering over Rousseau’s republic and the governance of the general will. So the general will rests on the existence and careful maintenance of the will itself.\n2. Formal Elements: The General of the General Will\nA general will must not merely issue from a free will – it must also be general. As Patrick Riley has observed, “Even if ‘will’ is a central moral, political, and theological notion in Rousseau, this does not mean that he was willing to settle for just any will.”12 Virtually all Rousseau scholars agree on this much. But debate begins precisely on the dimensions and nature of that will. Specifically, there is considerable debate on whether or not the general will is largely a formal or procedural concept on the one hand, or a substantive one on the other. These two terms deserve careful definitions. Substantive political ideas promote specific political principles. They are not value-neutral. They have content and can be inherently controversial because in choosing to privilege some ideas, other ideas are rejected or at least accorded lower priority.\nTo avoid these problems associated with substantive political ideas, some philosophers appeal to formal or procedural norms. To call something “formal” or “procedural” is to say that its content is determined by a procedure. The laws of a democracy, for example, are often determined by the formal procedure of majority vote. In the philosophical realm, the procedure of subjecting a maxim to Kant’s test of the categorical imperative or R. M. Hare’s prescriptivism generates the content of permissible moral actions. The great appeal of formal or procedural accounts in moral and political theory is their apparent impartiality. In the abstract, at least, procedures take no sides. The drawback of employing strictly formal procedures is their lack of content.\nRousseau scholars disagree on whether his constructive political theory is fundamentally formal or substantive. Some are persuaded that his political philosophy consists largely in procedures that generate outcomes but have no content before those procedures are implemented in any given circumstance. Roger D. Masters, for example, argues that “[a]lthough the just and legitimate end of civil society is defined in terms of the general will, the general will itself is not that just end properly speaking; rather it is a formal requirement which must be fulfilled by the laws which constitute any legitimate regime.” John T. Scott is persuaded that “Rousseau abandons all substantive standards of justice and law, whether they be from God or nature. He does speak of all justice coming from God, but he means this first in a purely formal sense pertaining to order and generality, and, second, he reverses the priority of justice and law.” Steven Smith describes Leo Strauss’s Rousseau as employing a “purely formal mechanism of ‘generalization,’” where substance is so absent that even “cannibalism is as just as its opposite.”13Perhaps the most elaborate reading of Rousseau as a strict formalist comes from Gopal Sreenivasan, who argues that the general will results whenever four conditions have been met in deliberation:\n- 1. the subject matter of the deliberation is perfectly general, and\n- 2. the conclusions of the deliberation apply equally to all the members of the community, and\n- 3. all the members of the community participate in the deliberation, and\n- 4. all parties to the deliberation think for themselves.14\nAll of these formalist readings capture an element of truth in the general will. Rousseau was clear that the formation of a general will must satisfy formal criteria. Most notable among these are two distinct formal dimensions of generality, corresponding with Sreenivasan’s conditions (1) and (2) above: generality in derivation and generality in application. A general will must “issue from all in order to apply to all” (SC, 2.4.5, 62 [III: 373]). Of the former, Rousseau is quite explicit: “For a will to be general, it is not always necessary that it be unanimous, but it is necessary that all votes be counted; any formal exclusion destroys generality” (SC, 2.2.3n, 58n [III: 370n]). This is one of the most democratic elements in Rousseau’s political philosophy. This general derivation is necessary in two respects. First, it is a bedrock principle of his republicanism that all citizens possess a dignity and a kind of right to participate in the politics that regulate their own affairs. Second, deriving the general will from all those affected by it makes that will more likely to reflect the substantive values Rousseau associates with the general will. As Charles Hendel observed, “the general will is more likely to emerge if there is the broadest possible basis of suffrage and an absolutely free exercise of their own personal judgment by every individual in the State.”15 The need for a general derivation of the general will becomes apparent in considering its opposite: factious particular wills. It is the nature of a faction that it is not derived from the whole of the people. It almost necessarily, then, aims not to serve the whole people, but rather merely a subset thereof. The insistence on the general derivation of the general will is, therefore, a crucially democratic element of Rousseau’s politics – so crucial, as he says, that any formal exclusion of participation in the derivation of the general will “destroys [its] generality” and hence its sovereignty.\nThe general will must also be general in its application. It cannot apply merely to a segment of the citizens. It must apply to all. To legislate such that laws only apply to some segment of the population and not others amounts to placing some above the laws. In the most obvious respect, those passing and enforcing the laws cannot set themselves above the law. This is the rule of law.16In this spirit, Rousseau in his Second Discourse approvingly cites an Edict from Louis XIV:\nLet it … not be said that the Sovereign is not subject to the Laws of his State, since the contrary proposition is a truth of the Right of Nations, which flattery has sometimes challenged, but which good Princes have always defended as a tutelary divinity of their States. How much more legitimate it is to say with the Wise Plato that the perfect felicity of a Kingdom is that a Prince be obeyed by his Subjects, that the Prince obey the Law, and that the Law be right and always directed at the public good.17\nWhat Rousseau admires in Louis XIV’s words is his complete submission to the rule of law. His reference to Plato certainly resonated with Rousseau, who knew Plato’s dialogues intimately. Plato had insisted in his Laws that rulers must be “servants” to the law.18 Elsewhere in the Second Discourse, Rousseau elaborates that if he had the opportunity to choose the place of his birth, he would have chosen the one in which “no one inside the State could have declared himself to be above the law… . For, regardless of how a government is constituted, if there is a single person in it who is not subject to the law, all the others are necessarily at his discretion.”19 Rousseau continues in his Social Contract to describe those who would place themselves above the laws as the very definition of despots (SC, 3.10.10, 108 [III: 423]).20 One of the central goals of any serious political proposal, then, is to “find a form of Government that might place the law above man.”21 To establish the rule of law in this fashion is necessarily to establish the generality of application.\nThere is another related formal dimension of the generality of application: all laws must be directed to the common good. While “good” itself is a substantive term, “common” in this context is a formal one. In the opening sentence of Book II, he insists: “The first and the most important consequence of the principles established thus far is that the general will alone can direct the forces of the State according to the end of its institution, which is the common good” (SC, 2.1.1, 57 [III: 368]).22 It is in this context that he introduces an essential distinction between particular and general wills. A particular will aims only at the good of some subset of the population. A general will serves the good of the entire community. In a transparent example, a corporation might lobby for relaxing environmental standards so that it can freely pollute a river in order to augment its profits. Yet the citizens rely on that very river for fresh drinking water. This would clearly violate the spirit of the common good Rousseau has in mind. At the very least, even to see such a policy entertained in a legitimate political process, the corporation would have to argue that the jobs and wealth generated for the community represent a greater contribution to the common good than does clean drinking water. To ask for such specific favors in policy is very much akin to Malebranche’s example of the individual asking God for a personal miracle. It is born of a selfish inclination where individual factions value themselves above the community at large. Such inclinations ultimately violate the general will as Rousseau understands it. As he clarifies in his Letters Written from the Mountain, a Law “is a public and solemn declaration of the general will, on an object of common interest. I say, on an object of common interest; because the Law would lose its force and would cease to be legitimate if the object did not matter to all. By its nature Law cannot have a particular and individual object.”23 So any attempt to pass off individual interests as the general will is, in Rousseau’s words, illegitimate.\n3. Substantive Values of the General Will\nWhile the formal criteria of the general will are necessary conditions for generating a general will, Rousseau also associates that will with specific substantive ideas. As Frederick Neuhouser has insisted in his influential reading, “the general will … is more than a set of purely formal criteria for the legitimacy of legislation; the general will, as Rousseau conceives it, also has a content.” Along these lines, Joshua Cohen has recently called the procedural or formal reading of the general will “perverse.” Cohen argues that the procedural reading demands that each vote under the formal constraints constitute a “prediction about what the result of the collective vote will be” – an absurdity as voting is not a prediction but an attempt to promote the common good.24\nBut perhaps the most obvious shortcoming of the formal or procedural reading of the general will is that it neglects to ask why Rousseau chooses the particular formal constraints he does. Namely, why does he insist that laws must be derived from everyone, must apply to everyone, and serve objects of common interest? There is no satisfactory way to answer these questions by appealing to more formal procedures. Gopal Sreenivasan, for example, never suggests why Rousseau chooses his set of formal constraints as opposed to another. Why not choose another set of procedures? Why not choose simple majoritarianism, for example? Or why not choose only to consider the interests of those in the top 10 percent of income? Or, conversely, why not choose only to consider the interests of those at the bottom 10 percent of income? This is the spirit of Hegel’s critique of Kant’s formal test of the categorical imperative. A formal procedure or test “does not get very far… . [O]ne content is just as acceptable to it as its opposite.”25 The most logical reason anyone chooses to implement a set of formal rules is because those rules tend to promote certain substantive values. Requiring unanimity by juries represents a procedural rule. But that rule is chosen because of the underlying substantive value it means to promote – avoiding erroneous convictions. Factual truth, in this instance, is the desired substantive outcome (not that it is the inevitable outcom",
+   "found_by": "ai"
+  }
+ ],
+ "charter_gaps": [
+  {
+   "course": "PHIL 247: The Social Contract (seminar)",
+   "kind": "online book chapters on a personal/advocacy website",
+   "url": "https://ratical.org/many_worlds/6Nations/EoL/chp1.html",
+   "title": "Chp 1: Vox Americana, Colonial characterizations of native liberty, \"Exemplar Of Liberty\""
+  },
+  {
+   "course": "PHIL 247: The Social Contract (seminar)",
+   "kind": "online book chapters on a personal/advocacy website",
+   "url": "https://ratical.org/many_worlds/6Nations/EoL/chp4.html",
+   "title": "Chp 4: Ennobling `Savages', Native America in European natural-rights philosophy, \"Exemplar Of Liberty\""
+  },
+  {
+   "course": "PHIL 247: The Social Contract (seminar)",
+   "kind": "online book chapters on a personal/advocacy website",
+   "url": "https://ratical.org/many_worlds/6Nations/EoL/intro.html",
+   "title": "Introduction: \"Exemplar Of Liberty, Native America and the Evolution of Democracy\""
+  },
+  {
+   "course": "PHIL 247: The Social Contract (seminar)",
+   "kind": "educational test-prep sites",
+   "url": "https://www.khanacademy.org/humanities/ap-us-history/period-1/cultural-interactions-between-europeans-native-americans-and-africans/a/cultural-interactions-between-europeans-native-americans-and-africans-in-early-colonial-america",
+   "title": "Cultural interactions between Europeans, Native ..."
+  },
+  {
+   "course": "PHIL 247: The Social Contract (seminar)",
+   "kind": "book-analysis websites",
+   "url": "https://sumsumsum.com/book/leviathan/context",
+   "title": "Leviathan — Context | Book Analysis | SumSumSum"
+  },
+  {
+   "course": "PHIL 247: The Social Contract (seminar)",
+   "kind": "literary context websites",
+   "url": "https://literarycontext.org/book/historical-context/the-turbulent-era-shaping-hobbess-leviathan/",
+   "title": "The Turbulent Era Shaping Hobbes’s Leviathan - LC"
+  },
+  {
+   "course": "PHIL 247: The Social Contract (seminar)",
+   "kind": "research-starter reference sites",
+   "url": "https://www.ebsco.com/research-starters/political-science/hobbes-publishes-leviathan/",
+   "title": "Hobbes Publishes Leviathan | Political Science | Research Starters | EBSCOhost"
+  },
+  {
+   "course": "PHIL 247: The Social Contract (seminar)",
+   "kind": "legal-tools websites",
+   "url": "https://www.legal-tools.org/doc/5f5837/pdf/",
+   "title": "Historical Context for Leviathan - Legal Tools"
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "kind": "later-edition book scans (1888)",
+   "url": "https://archive.org/details/lawsecclesiasti02hookgoog",
+   "title": "The Laws of Ecclesiastical Polity : Richard Hooker : Free Download ..."
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "kind": "undated Internet Archive book scans",
+   "url": "https://archive.org/details/bwb_P9-BIB-071",
+   "title": "Of The laws of ecclesiastical polity : Richard Hooker : Free Download ..."
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "kind": "modern critical editions on Internet Archive",
+   "url": "https://archive.org/details/oflawsofecclesia00hook",
+   "title": "Of the laws of ecclesiastical polity : Hooker, Richard, 1553 or 4-1600 : Free Download, Borrow, and Streaming : Internet Archive"
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "kind": "modern critical edition full texts",
+   "url": "https://archive.org/stream/oflawsofecclesi01hookuoft/oflawsofecclesi01hookuoft_djvu.txt",
+   "title": "Full text of \"Of the laws of ecclesiastical polity\""
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "kind": "audiobook recordings",
+   "url": "https://archive.org/details/ofthelawsofecclesiasticalpolitybook2_2503_librivox",
+   "title": "Of the Laws of Ecclesiastical Polity, Book 2 : Richard Hooker"
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "kind": "later annotated editions",
+   "url": "https://archive.org/stream/oflawsofeccles00hook/oflawsofeccles00hook_djvu.txt",
+   "title": "Full text of \"Of the laws of Ecclesiastical polity, the fifth book;\""
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "kind": "personal-site PDFs",
+   "url": "https://mammana.org/misc/hooker_laws.pdf",
+   "title": "Of the Laws of Ecclesiastical Polity By Richard Hooker, 1594-1597"
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "kind": "educational-site text excerpts",
+   "url": "https://www.nlnrac.org/classical/late-medieval-transformations/documents/ecclesiastical-polity.html",
+   "title": "Of the Laws of Ecclesiastical Polity (Excerpts)"
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "kind": "educational-project essays",
+   "url": "http://nlnrac.org/classical/richard-hooker.html",
+   "title": "Richard Hooker | Natural Law, Natural Rights, and American Constitutionalism"
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "kind": "church history websites",
+   "url": "https://anglicanhistory.org/hooker/1/",
+   "title": "Hooker's Laws - Anglican History"
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "kind": "law-school lecture notes",
+   "url": "http://www.grkarelawlibrary.yolasite.com/resources/LLM-LT-1-Aleesha.pdf",
+   "title": "A CRITICAL APPRECIATION OF THE SOCIAL CONTRACT THEORY"
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "kind": "Academia.edu uploads",
+   "url": "https://www.academia.edu/8076613/Hugo_Grotius_Natural_Law_and_Social_Contract_Theory",
+   "title": "Hugo Grotius - Natural Law and Social Contract Theory"
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "kind": "Academia.edu uploads",
+   "url": "https://www.academia.edu/9882884/Hugo_Grotius_and_Natural_Law_A_Reinterpretation",
+   "title": "Hugo Grotius and Natural Law: A Reinterpretation - Academia"
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "kind": "blog posts",
+   "url": "https://www.classicalquest.com/blog/odyssey-episode-3-summary-cyclops",
+   "title": "The Cyclops in the Odyssey: Book 9 Summary | Classical Quest Blog"
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "kind": "online forum threads",
+   "url": "https://www.reddit.com/r/AYearOfMythology/comments/10thpuq/books_9_10_reading_discussion/",
+   "title": "Books 9 & 10 Reading Discussion : r/AYearOfMythology"
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "kind": "user-uploaded documents",
+   "url": "https://www.scribd.com/doc/39348481/Book-9-Guided-Reading",
+   "title": "Summary of The Odyssey Book 9 | PDF | Odysseus"
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "kind": "user-uploaded documents",
+   "url": "https://www.scribd.com/document/117467869/The-Odyssey-Book-9-Summary",
+   "title": "Odysseus and Polyphemus: Book 9 Summary | PDF | Odyssey - Scribd"
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "kind": "user-uploaded documents",
+   "url": "https://www.scribd.com/presentation/545934894/Book-9",
+   "title": "Odysseus and Polyphemus: Book 9 Summary | PDF | Odysseus - Scribd"
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "kind": "social media videos",
+   "url": "https://www.tiktok.com/@myclassicsportal/video/7437572049909992737",
+   "title": "The Odyssey Book 9 Summary: Polyphemus & The Cyclops"
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "kind": "modern online translations of primary texts",
+   "url": "https://www.poetryintranslation.com/PITBR/Greek/Odyssey9.php",
+   "title": "Homer (c.750 BC) - The Odyssey: Book IX"
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "kind": "online magazine articles",
+   "url": "https://epochemagazine.org/25/forced-to-be-free-rethinking-the-terms-of-rousseaus-social-contract/",
+   "title": "Forced to be Free: Rethinking the Terms of Rousseau’s ‘Social Contract’ | Epoché Magazine"
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "kind": "Q&A forum posts",
+   "url": "https://www.quora.com/What-did-Rousseau-mean-by-his-forced-to-be-free-quote",
+   "title": "What did Rousseau mean by his 'forced to be free' quote?"
+  },
+  {
+   "course": "PHIL 101: Introduction to Political Philosophy (lecture)",
+   "kind": "blog posts",
+   "url": "https://medium.com/the-berkeley-table/some-complaints-about-rousseaus-forced-to-be-free-notion-e2138bc1c636",
+   "title": "Some Complaints About Rousseau’s “Forced to be Free” Notion | by Jonathan Hofer | The Berkeley Table | Medium"
+  }
+ ]
+}

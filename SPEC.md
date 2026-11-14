@@ -21,20 +21,20 @@ Dialectic is a collaborative reading platform for college courses (e.g. Haverfor
 
 ## 2. The demo path (build exactly this first)
 
-Seed users: **Prof. Rivera** (professor), **Ana** and **Ben** (students), plus **Sam (Spring 2026)**, a past student whose annotations are opted in.
+Seed users: **Prof. Rivera** (professor), **Ana** and **Ben** (students), plus **Sam (Spring 2026)**, a past student whose annotations are opted in. The course is **PHIL 247: The Social Contract (seminar)** (§10, since Sat 11:55; the Du Bois version of this path is in git history and `seed_dubois.py`). It's week 2: Hobbes (week 1) is already well annotated and Wollstonecraft (week 3) is up with no notes.
 
-1. **Professor sets up the course.** Prof. Rivera logs in, uploads `souls-of-black-folk-ch1.pdf` (Ch. 1, "Of Our Spiritual Strivings") and fills in the charter: rules text, a plain-language **permissible sources** description, and toggles, with all AI toggles **on**.
-2. **Ana annotates; Ben has to engage to see it (friction).** Ana highlights the "double-consciousness" passage and writes a note. Ben logs in and opens the reading. Next to that passage the margin shows only **"2 notes near here. Add a note or ask a question to see them."** (Prof. Rivera's note on "the Veil" is visible straight away.) Ben highlights the passage and writes his own note, and Ana's note and Sam's note from last year (marked "Spring 2026") appear. That's the engagement lock (§3.4).
-3. **Ben asks a question.** Ben highlights "double-consciousness" → **Ask** → "Where does this idea come from, and what did it mean in 1903?" The answer panel shows, in order:
+1. **Professor sets up the course.** Prof. Rivera logs in, uploads `rousseau-social-contract.pdf` (Rousseau, *The Social Contract*, Jonathan Bennett's version), titles it "Week 2 · Rousseau, The Social Contract", and fills in the charter: rules text, a plain-language **permissible sources** description, and toggles, with all AI toggles **on**.
+2. **Ana annotates; Ben has to engage to see it (friction).** Ana highlights the general-will sentence on p. 12 ("Each of us puts his person and all his power in common under the supreme direction of the general will") and writes a note. Ben logs in and opens the reading. Next to that passage the margin shows only **"2 notes near here. Add a note or ask a question to see them."** (Prof. Rivera's notes on "Man is born free" and on Grotius are visible straight away.) Ben highlights the passage and writes his own note, and Ana's note and Sam's note from last year (marked "Spring 2026") appear. That's the engagement lock (§3.4).
+3. **Ben asks a question.** Ben highlights the same sentence → **Ask** → "Where does the idea of the general will come from, and what did it mean in 1762?" The answer panel shows, in order:
    1. **From your class:** matching peer, past-student and professor annotations (Ana's, Sam's), each linking to its place in the text.
    2. **Sources:** sources the AI found on the web that fit the charter's permissible-sources description, each linking out to the exact sentence that answers the question. A small note shows what was filtered out ("2 results skipped: study-guide sites aren't permitted"). If every result was skipped, a "No usable sources this time" notice says so and the skipped list opens.
    3. **AI explanation** (if allowed): a short summary citing the sources above, posted as a public annotation by "Dialectic AI" that Ana can reply to.
-   - **Same thing without leaving your text (hotkey):** Ana has the same chapter open in Notability (or Preview), not in Dialectic. She highlights "the Negro is a sort of seventh son, born with a veil, and gifted with second-sight", presses the hotkey and asks for **context**, not interpretation: "Where does the idea of a seventh son born with a veil come from?" A floating panel shows the same three layers: Prof. Rivera's folklore note, encyclopedia sources on the caul and seventh-son beliefs, and a short AI explanation. (Tested 02:45 Sat; a *why*-question such as "Why does he use the image of a veil here?" gets its explanation refused under rule 2, so don't demo that. Ch. 1 never says "the Veil" exactly; it has "a vast veil" and "born with a veil".) Back in the web reader, Ben sees her question and its answer in the margin on that passage: it was noted.
+   - **Same thing without leaving your text (hotkey):** Ana has the same text open in Notability (or Preview), not in Dialectic. She highlights "His usual method of reasoning is to establish right by fact" (p. 7), presses the hotkey and asks for **context**, not interpretation: "Who was Grotius, and what did he write?" A floating panel shows the same three layers: Prof. Rivera's Grotius note, encyclopedia sources, and a short AI explanation. (Gate verdict checked Sat 11:55, one run: fully allowed.) Back in the web reader, Ben sees her question and its answer in the margin on that passage: it was noted.
 4. **The charter changes the answer.** Two versions; pick whichever lands better in rehearsal:
    - **Toggle:** Prof. Rivera turns off "AI may write explanations". Ben asks the same question and gets peer annotations and sources only, plus a notice: *"Your class charter doesn't allow AI explanations (AI may write explanations — off)."*
-   - **Rule text (shows the gate):** the class adds the rule "AI may not interpret the text for us." Ben asks "What does Du Bois *mean* by double-consciousness?" and the gate refuses the **AI explanation**, quoting that rule, but still lets the AI **point him to sources**, because rule 2 allows that: a partial refusal (tested 02:00 Sat, the same verdict three runs out of three). He rephrases to "Where did the term come from?" and the gate allows both. Peer annotations show both times. **With `GATE_CONTEXT_ONLY` on (the default since Sat 11:05)** the first question gets a context-only explanation instead of a refusal: it opens "Under Rule 2, I won't say what Du Bois meant…" and then gives the term's background. For the refusal beat, set `GATE_CONTEXT_ONLY = False` in `ai.py` (verdicts checked both ways, Sat 11:05).
+   - **Rule text (shows the gate):** rule 2 already says AI may not interpret the text. Ben asks "What does Rousseau *mean* by the general will?" With `GATE_CONTEXT_ONLY` on (the default) the gate allows sources and a **context-only** explanation citing rule 2: it opens by saying what it won't answer, then gives only the term's background. He rephrases to "Where did the term 'general will' come from?" and both are fully allowed. Peer annotations show both times. (Verdicts checked on the seminar charter Sat 11:55, one run each; the old "three out of three" checks were on Du Bois.) For the refusal beat, set `GATE_CONTEXT_ONLY = False` in `ai.py` and re-check.
 
-5. **(Optional) At scale: the big lecture.** Log out and in as **Maya** in *AMST 101* (a seeded 70-student lecture on the same chapter, §10). Page 3's margin is one card, **"24 notes near here"**; she adds a note on double-consciousness and two dozen classmates' notes and threads open. Her Ask gets five peer answers before any AI. Shows the lock and peer-first answers are what make a crowded margin readable.
+5. **(Optional) At scale: the big lecture.** Log out and in as **Maya** in *PHIL 101* (a seeded 70-student lecture on the same text, §10). The general-will sentence on p. 12 is one card, **"10 notes near here"**, and almost every other note on every reading is locked too; she adds a note there and the threads open. Her Ask gets five peer answers before any AI. Shows the lock and peer-first answers are what make a crowded margin readable. **Jordan** is the opposite: he writes a lot, so his margins are mostly open.
 
 **Non-goals:** real auth, a course picker (each person is in exactly one course, §3.2), notifications, mobile polish. Also out: offline/service worker, charter version history, editing PDFs, a hand-curated source library UI beyond a simple add form.
 
@@ -216,7 +216,7 @@ Built in `app/backend/ocr.py`. Earlier OCR text often sits inside a Form XObject
 
 **Stretch:** photo uploads (JPG/PNG/HEIC, several at once) turned into one PDF (`img2pdf`), with `--rotate-pages --deskew` for phone photos.
 
-**Seed data:** `seed/souls-of-black-folk-ch1.pdf` is now Chapter I of the **1903 first edition** (A. C. McClurg, Chicago), from Cornell University Library's scan on the Internet Archive (`cu31924024920492`, public domain), OCR'd as above. **Page 4** comes from another first-edition copy (Northwestern University Library, IA `duboissoulsofblackfolk`, leaf 26, Public Domain Mark), cropped and scaled to match: Cornell's image of that page lost the horizontal strokes of every letter (in their original files too), so nobody could read it, OCR included. The seed annotations quote it exactly as its OCR reads.
+**Seed data (the Du Bois seed, now `seed_dubois.py`; the current seed's scans are in §10):** `seed/souls-of-black-folk-ch1.pdf` is Chapter I of the **1903 first edition** (A. C. McClurg, Chicago), from Cornell University Library's scan on the Internet Archive (`cu31924024920492`, public domain), OCR'd as above. **Page 4** comes from another first-edition copy (Northwestern University Library, IA `duboissoulsofblackfolk`, leaf 26, Public Domain Mark), cropped and scaled to match: Cornell's image of that page lost the horizontal strokes of every letter (in their original files too), so nobody could read it, OCR included. The seed annotations quote it exactly as its OCR reads.
 
 ---
 
@@ -243,8 +243,8 @@ app/
     db.py            # connect(), schema SQL, FTS helpers
     ai.py            # charter checks, gate, prompt text as constants, the one LLM call
     search.py        # web search + page fetch/extract, cached in the DB
-    seed.py          # DEMO: users, course, charter, sources, past-student annotations
-    seed/            # DEMO: souls-of-black-folk-ch1.pdf
+    seed.py          # DEMO: the seminar (demo course); seed_large.py the lecture; seed_asks.py answered Asks
+    seed/            # DEMO: the readings' PDFs, asks.json
     uploads/         # gitignored
     pyproject.toml   # uv project; uv.lock pins versions
   frontend/
@@ -666,15 +666,27 @@ Cached answers (`web_cache`) cost nothing. Two layers of protection:
 
 ## 10. Seed data (DEMO)
 
-- **Reading:** Ch. 1 of *The Souls of Black Folk*, a real scan of the **1903 first edition** (Cornell University Library via the Internet Archive, public domain), 12 pages, OCR'd as §3.11 describes. It replaced a PDF generated from Project Gutenberg's text on Sat ~06:40; page numbers moved (the double-consciousness passage is now on page 3), so rehearsed questions and cached answers from before then are stale.
-- **Charter:** the rules in §3.7 plus the permissible-sources text in §3.6.
-- **Source library:** start **empty** for the live demo, so step 3 visibly finds sources and step 4 can show the no-AI path reusing them. Keep a `--with-sources` seed flag that preloads them (SEP "W.E.B. Du Bois", a primary text from the period, …) in case the web search fails on stage. The `web_cache` covers the normal case.
-- **Annotations:** Sam (Spring 2026) on the double-consciousness passage; Prof. Rivera on "the Veil"; two or three others spread across pages so the margin doesn't look empty.
-- **The big lecture (`seed_large.py`, added by every `--reset`):** `AMST 101: Introduction to American Studies (lecture)`, Prof. Okafor, ~65 current students and 8 from Spring 2026, its own charter (rule 4: reply before starting a new thread on the same line). It's mid-semester, so its copy of the same chapter is already there with ~100 notes and questions and ~35 replies, spread over the last week and densest on the double-consciousness passage (one lock card of 24 on page 3). **Maya** has written nothing (all lock cards); **Jordan** has two notes. Because it's seeded before the live upload, **HIST 214's reading is now reading 2**, not 1.
+Two philosophy courses reading Rousseau's *Social Contract* (`app/backend/seed.py`, `seed_large.py`; replaced the Du Bois seed Sat 11:55, which is kept runnable as `seed_dubois.py` / `seed_dubois_large.py`). Several readings each, three weeks of a syllabus, so margins range from empty to crowded:
+
+| Course | Reading | Kind of PDF | Notes |
+| --- | --- | --- | --- |
+| PHIL 247 seminar (course 1, the demo; Prof. Rivera, 8 current + 2 past) | Week 1 · Hobbes, *Leviathan* ch. 13–14 | born-digital (Bennett, earlymoderntexts.com) | 21 + 7 replies, mostly Ana |
+| | Week 2 · Rousseau, *The Social Contract* | born-digital (Bennett) | 6, sparse; **added by the live upload** (step 1) or `--with-reading` |
+| | Week 3 · Wollstonecraft, *Vindication* ch. V (on Rousseau) | clean scan of the 1891 edition (U of Toronto, IA `vindicationofrig00woll`) | none |
+| PHIL 101 lecture (course 2; Prof. Okafor, ~65 current + 8 past) | Week 1 · Locke, *Second Treatise* ch. I–III | rough scan (Digital Library of India, IA `in.ernet.dli.2015.227917`) | 39 + 12 replies |
+| | Week 2 · Rousseau, *The Social Contract* | born-digital (Bennett) | 77 + 33 replies, densest on p. 12 (a lock card of 10) |
+| | Week 3 · Mill, *On Liberty* ch. I | very rough 1859 xerox with a past reader's underlining (U of Toronto, IA `onlibertyxero00milluoft`) | 3; the professor's note points at the garbled harm principle on pp. 17–18 (Select area) |
+
+- **Scans** were cut to the chapters and run through our own OCR (`ocr.ocr_in_place`, ocrmypdf in a container), so their text is exactly what an upload produces. Quotes on them are as the OCR reads them, slips included (Locke p. 11: "Tue natural liberty … an superior power").
+- **Cast:** in each course one student has written nothing (Ben on Rousseau in the seminar; **Maya** everywhere in the lecture), one writes a lot (Ana; **Jordan**), and last year's cohort (Sam, Theo; 8 in the lecture) shows with a "Spring 2026" badge. Professors reply in some threads.
+- **Charters:** the rules in §3.7 plus the permissible-sources text in §3.6, per course; each ends with a rule that came from a student proposal. **Proposals** in every state: open, added, declined (3 in the seminar, 5 in the lecture).
+- **Answered Asks:** six real Asks (2 seminar on Hobbes, 4 lecture on Locke and Rousseau), run once with `seed_asks.py --generate` and replayed offline from `seed/asks.json` on every reset: the question, the AI's reply, the saved answer card, the sources they found (the library) and the results they skipped (charter gaps). Three explanations are context-only under rule 2, and one (the Cyclops) found no permitted sources. If you edit a seeded note one of them quotes, seeding fails loudly: re-run `--generate`.
+- **Source library:** the seminar's has only the two Hobbes Asks' sources, so step 3 still visibly finds new ones. `--with-sources` preloads SEP "Rousseau" and Wikipedia "General will" in case web search fails on stage. The `web_cache` covers the normal case.
+- **Licences:** the scans are public domain (pre-1927 editions). Bennett's PDFs say "Copyright © Jonathan Bennett 2017. All rights reserved"; nobody has checked his terms for a public repo. `TODO`: check before submission, or swap in a public-domain translation (e.g. G. D. H. Cole's 1913).
 
 Write the seed so `seed.py --reset` gives the exact starting state of demo step 1, **minus** the upload. Also add a `--with-reading` flag in case the live upload fails during the demo.
 
-Because the reading is uploaded live, the seeded annotations can't exist before it: **uploading a file named `souls-of-black-folk-ch1.pdf` adds them** (Sam's and the professor's notes, with highlight rects computed from the PDF). The PDF is in `app/backend/seed/`.
+Because the reading is uploaded live, the seeded annotations can't exist before it: **uploading a file named `rousseau-social-contract.pdf` into PHIL 247 adds them** (`main.demo_seed_for`; the Du Bois PDF into HIST 214 still works the same way for `seed_dubois.py`). The PDFs are in `app/backend/seed/`.
 
 ---
 

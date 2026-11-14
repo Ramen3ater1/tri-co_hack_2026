@@ -33,9 +33,12 @@ In production the same process also serves the built React app (`app/frontend/di
 | `search.py` | ~120 | Kagi web search and fetching pages' main text (several at once), all cached in the database. |
 | `semantic.py` | ~120 | Meaning search of readings (SPEC §3.8): cuts each reading into passages of a few sentences, embeds them with `bge-m3` on DO inference the first time a meaning search touches the reading (stored in `reading_passages`), and ranks passages by cosine similarity to the query. Readings only, never annotations. Model, passage size and score cutoff are constants at the top. |
 | `locate.py` | ~85 | For the Mac hotkey: finds which reading and page a copied passage is from, and its highlight boxes in the PDF. |
-| `seed.py` | ~160 | DEMO data: users, course, charter, and the past-student annotations. |
-| `seed_large.py` | ~330 | DEMO: a second course, a big lecture (AMST 101) with ~70 people and ~100 notes on the same chapter. |
-| `seed/souls-of-black-folk-ch1.pdf` | | The demo reading (Gutenberg #408, Ch. 1, printed with Chrome). |
+| `seed.py` | ~260 | DEMO: the PHIL 247 seminar (the demo course): people, charter, proposals, Hobbes with notes, Wollstonecraft with none, and the Rousseau notes added when Rousseau is uploaded live. Calls the two below. |
+| `seed_large.py` | ~420 | DEMO: the PHIL 101 lecture, ~70 people: Locke (rough scan, ~50 notes), Rousseau (~110), Mill (very rough scan, 3). |
+| `seed_notes.py` | ~90 | DEMO: shared seed helpers: add a reading, add notes with replies spread over time, charter proposals. |
+| `seed_asks.py` | ~150 | DEMO: six answered Asks. `--generate` runs them for real once and saves `seed/asks.json`; every reset replays that file offline. |
+| `seed_dubois.py`, `seed_dubois_large.py` | | The previous Du Bois seed (HIST 214 + AMST 101), kept runnable: `uv run seed_dubois.py --reset`. |
+| `seed/` | | The readings' PDFs (born-digital Rousseau and Hobbes; Locke, Mill and Wollstonecraft scans OCR'd by `ocr.py`), `asks.json`, and the Du Bois PDF. |
 | `pyproject.toml`, `uv.lock` | | Dependencies, managed with uv. |
 
 Dependencies: `fastapi` + `uvicorn` (web server), `python-multipart` (PDF upload), `pypdf` (page text and bookmarks), `pikepdf` (strip a scan's old text layer before OCR), `pdfplumber` (character positions, for highlight boxes), `httpx` (HTTP calls), `trafilatura` (extract an article's text from a web page).
@@ -193,9 +196,9 @@ The functions in `ai.py` only take **strings**: charter text, the quote, the que
 
 ## DEMO shortcuts (on purpose)
 
-- **Seed annotations appear on upload.** The demo starts with the professor uploading the reading live, so last year's annotations can't exist beforehand. `POST /readings` checks the file name, and if it's `souls-of-black-folk-ch1.pdf`, the background thread skips OCR (the seed PDF is already OCR'd) and calls `seed.add_demo_annotations()`. The highlight boxes are computed from the real PDF with pdfplumber.
+- **Seed annotations appear on upload.** The demo starts with the professor uploading the reading live, so last year's annotations can't exist beforehand. `POST /readings` asks `main.demo_seed_for(file name, course)`: if it's `rousseau-social-contract.pdf` uploaded into PHIL 247 (or, with the old seed, `souls-of-black-folk-ch1.pdf` into HIST 214), the background thread skips OCR and calls that seed's `add_demo_annotations()`. The highlight boxes are computed from the real PDF with pdfplumber.
 - **`seed.py --reset --with-reading`** sets up the same state without the live upload, in case it fails on stage.
-- **`seed.py --reset --with-sources`** preloads the library with the SEP entry on Du Bois and Wikipedia's "Double consciousness", in case web search fails on stage. Add both flags to get everything.
+- **`seed.py --reset --with-sources`** preloads the library with the SEP entry on Rousseau and Wikipedia's "General will", in case web search fails on stage. Add both flags to get everything.
 - **Anyone can be anyone:** `X-User-Id` is trusted as is.
 
 ## Where to change things
