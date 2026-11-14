@@ -11,6 +11,7 @@ Team hackathon project. Submission deadline: **Saturday 2026-11-14, 16:00**. Thi
 | `spikes/` | Throwaway experiments, one dir each: `spikes/HHMM-what/` | Never imported by `app/`. When a spike works, rebuild the good part properly in `app/`. |
 | `app/` | The thing we demo | Only working code that's meant to ship. |
 | `demo/` | Pitch, demo script, screenshots, submission text | |
+| `explainers/` | Plain-language explanations of how parts of the code work, e.g. `backend.md` | Update one when you change what it describes. |
 
 ## Code style: hackathon mode
 

@@ -21,3 +21,4 @@ Append only, newest at the bottom. Format: `- HH:MM (Day) — what, and why. [wh
 - 01:31 (Sat) — Peer layer searches notes/replies only: in testing it returned the asker's own earlier questions as "answers". SPEC §3.5. [Owen/Claude]
 - 01:31 (Sat) — Gate risk to test with the real model: the demo question "what did it *mean* in 1903?" contains "mean", the word the rule-text demo uses to trigger a denial. [Owen/Claude]
 - 01:31 (Sat) — Search snippets mark hits as [[word]], not <b>, so the frontend never renders user text as HTML. 500s return the real error in "detail". SPEC §6. [Owen/Claude]
+- 01:32 (Sat) — Added explainers/ (plain-language tours of the code; row added to CLAUDE.md layout) with backend.md. [Owen/Claude]
