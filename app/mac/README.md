@@ -1,16 +1,25 @@
 # Dialectic for Mac
 
-Menu-bar app (SPEC §3.9, `design.md`). You read wherever you already read (Preview, Notability, a browser); Dialectic sits on top of the page. Same server and database as the web app; the Mac keeps nothing of its own.
+Menu-bar app (SPEC §3.9, `design.md`). You read wherever you already read (Preview, Notability, a browser); Dialectic sits on top of the page. It also has a **reader window**: the web app itself, so every reader feature is built once, on the web. Same server and database as the web app; the Mac keeps nothing of its own.
 
 | Key | Does |
 | --- | --- |
 | **⌥⇧D** | Ask about the selected text. Panel: From your class → Sources → "Still stuck? Show the AI explanation" (collapsed), then **Open in reader**. |
 | **⌥⇧N** | Write a note on the selected text (`POST /api/note`). Says so when the passage is near a locked cluster: "N notes near here. Your note opens them." |
 
-If ⌥⇧D or ⌥⇧N copies nothing (Notability with scanned or annotated PDFs, images), a crosshair appears: drag a box round the passage. Vision reads it on the Mac, the image is deleted at once, and only the text is sent as the quote. Esc cancels. No text in the box: "Couldn't read any text in that box." Not in a course reading: the server's "This passage isn't in a course reading."
 | **⌥⇧H** | Show / hide classmates' highlights over the reading window: boxes by role (professor green, classmates magenta, you blue), dashed outlines for locked clusters, numbered pins, a status pill, and a margin strip with the threads. Click a card for the thread and reply. |
 
-Code: `Sources/Dialectic/` — `DialecticApp.swift` (constants, menu, hotkeys, copy selection), `Panels.swift` (Ask, Note), `Overlay.swift` (capture, Vision, page fit, overlay windows, margin, thread), `Style.swift` (canvas tokens and shared pieces), `API.swift` (shapes and HTTP), `RenderCheck.swift` (the check below). Tunables are constants at the top of each file; `SERVER_URL` is in `DialecticApp.swift`.
+If ⌥⇧D or ⌥⇧N copies nothing (Notability with scanned or annotated PDFs, images), a crosshair appears: drag a box round the passage. Vision reads it on the Mac, the image is deleted at once, and only the text is sent as the quote. Esc cancels. No text in the box: "Couldn't read any text in that box." Not in a course reading: the server's "This passage isn't in a course reading."
+
+## Reader window
+
+**Open Dialectic** (menu, ⌘O; also shown at launch) opens a 1280×860 window with the web app in a `WKWebView`, loading `READER_URL` (top of `ReaderWindow.swift`, default `SERVER_URL`: in production FastAPI serves the built frontend on the same port). **In development** point it at Vite instead: `npm run dev` in `app/frontend` serves on `http://localhost:5173` and forwards `/api` to `:8000`.
+
+- **Same person in both:** before every page load the window sets the web app's `localStorage` user (`dialectic_user`, the whole user object, plus `dialectic_users`, as `app/frontend/src/api.js` and `colors.js` save them at log-in) to the user picked in the menu, and reloads when that changes (menu or `dialectic://login`).
+- **Open in reader** (Ask and Note panels, thread view) opens `reader_url` in this window and brings it to the front. Links to other sites (sources) open in the default browser.
+- **Server down:** the window says "Can't reach the Dialectic reader at <URL>. Is the server running?" with **Retry**.
+
+Code: `Sources/Dialectic/` — `DialecticApp.swift` (constants, menu, hotkeys, copy selection), `Panels.swift` (Ask, Note), `Overlay.swift` (capture, Vision, page fit, overlay windows, margin, thread), `ReaderWindow.swift` (the web reader window), `Style.swift` (canvas tokens and shared pieces), `API.swift` (shapes and HTTP), `RenderCheck.swift` (the check below). Tunables are constants at the top of each file; `SERVER_URL` is in `DialecticApp.swift`.
 
 ## Build and run
 
@@ -55,3 +64,12 @@ POST /api/locate        X-User-Id: <id>
 
 - Leader lines from margin cards to boxes; clicking a box on the page (the overlay is click-through).
 - `TODO(edge)`: two pages side by side, rotated or scanned PDFs, several displays (uses the reading window's screen).
+
+## Proposed SPEC change (pending Owen)
+
+Not in `SPEC.md` yet: it's Owen's file and needs his OK. Proposed wording:
+
+- **§3.9, new paragraph after "Same server, same person, same data":** *"**Reader window.** The Mac app also has a window (menu → Open Dialectic, ⌘O) that shows the web reader itself in a `WKWebView`, signed in as the Mac menu's user. There is no native reader: reader features are built once, on the web, and the Mac shows them. **Open in reader** in the Mac panels opens the annotation in this window; links to other sites open in the default browser."*
+- **§4, Mac line:** add *"WebKit (`WKWebView`, the reader window)"* to the Apple frameworks it uses.
+- **§4, layout:** `mac/` becomes `Sources/Dialectic/*.swift  # menu bar, hotkeys, panels, overlay (capture + Vision), reader window (WKWebView)` plus `build.sh`.
+

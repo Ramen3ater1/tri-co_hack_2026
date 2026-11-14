@@ -20,6 +20,9 @@ This file reconciles the two design outputs we have and says what the **Mac app*
 
 You read wherever you already read (Preview, Notability, a browser). Dialectic sits on top of that page instead of pulling you into its own reader. Three things, in priority order:
 
+> **Update (Sat 05:25, josue):** the Mac app now *does* have a reader window, but not a native one: it shows the web app in a `WKWebView`, signed in as the Mac menu's user, and **Open in reader** opens there. Reader features are built once, on the web. The overlay and hotkeys below are unchanged. (`app/mac/README.md`, "Reader window".)
+
+
 1. **Ask** about a passage without leaving the page (built: `⌥⇧D`).
 2. **See where classmates highlighted**, drawn straight onto the page on your screen, with their threads in a margin beside it (new, §3).
 3. **Write a note** on a passage, the same as Annotate in the web reader (new, §4).
