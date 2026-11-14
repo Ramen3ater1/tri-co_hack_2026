@@ -7,6 +7,7 @@ Team hackathon project. Submission deadline: **Saturday 2026-11-14, 16:00**. Thi
 | Path | Holds | Rule |
 | --- | --- | --- |
 | `LOG.md` | Timestamped decisions, pivots, dead ends | Append only, newest at the bottom. Never rewrite old entries. |
+| `TODO.md` | Open problems we've decided to come back to, each with an owner and status | Mark items done; don't delete them. |
 | `ideas/` | One file per idea, draft or plan: `NN-short-name.md` | Don't rewrite a superseded idea; write a new numbered file and note in it what it replaces. |
 | `spikes/` | Throwaway experiments, one dir each: `spikes/HHMM-what/` | Never imported by `app/`. When a spike works, rebuild the good part properly in `app/`. |
 | `app/` | The thing we demo | Only working code that's meant to ship. |

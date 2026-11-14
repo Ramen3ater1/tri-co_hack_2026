@@ -1,0 +1,19 @@
+# To do
+
+Open problems we've decided to come back to: things found while building that aren't anyone's current task. Not for planned features (those are in `SPEC.md` §8) or history (that's `LOG.md`).
+
+Each item: a short title, **Owner** (or "anyone"), **Status** (`open`, `in progress`, `done HH:MM`), what's wrong, and what we know. Mark items done instead of deleting them, so the reasoning stays findable; clear out done items only if this file gets long.
+
+---
+
+## Rehearsed hotkey answer is weak (1891 folklore instead of encyclopedia entries)
+
+**Owner:** Owen · **Status:** open · **Found:** 03:19 Sat (`LOG.md`)
+
+The cached answer for the hotkey demo question ("Where does the idea of a seventh son born with a veil come from?") cites only an 1891 Isle of Man folklore collection, and the explanation hedges ("parallel belief, not proof"). An earlier run (02:45) found two Encyclopedia.com entries ("Veil, in African American Culture", "Seventh Son"), which made a much better answer.
+
+**What we know:** the search was fine: its results included both Encyclopedia.com entries (results 9 and 10). The source filter, running at low reasoning effort, marked them `not_covered` ("online encyclopedia entries") although the charter allows scholarly encyclopedias, and that run was cached. On the same 15 results, low effort kept them in 2 of 3 runs (~4 s), full effort in 3 of 3 (~8.5 s).
+
+**Done so far:** the filter is back on full effort (`FILTER_EFFORT` in `app/backend/ai.py`, 03:30 Sat; each call's effort is now a one-word constant at the top of that file). Re-asked on a dev DB at 03:35: both Encyclopedia.com entries are sources again and the explanation covers the caul and seventh-son beliefs (23 s fresh, 8 s replay). That's one run, so not proof.
+
+**Still to decide:** whether this is enough, and how we check rehearsed answers before the demo (each demo question's cached result is what plays on stage; clearing its `llm:` rows in `web_cache` and re-asking gives it a fresh run).

@@ -15,10 +15,16 @@ TEMPERATURE = 0.2
 TIMEOUT_S = 30
 CONTEXT_CHARS = 1500  # the explanation sees this much text either side of each verified sentence
 EXPLAIN_WORD_MARGIN = 20  # ask the model for this many words fewer than the charter's maximum
-# The filter and sentence-picking calls are mechanical, so they skip the model's hidden reasoning:
-# measured 02:55 Sat, the filter takes ~2 s at "low" vs ~7 s at the default (it reasons ~700-1300
-# hidden tokens to write ~200). The gate and the explanation keep the default: judgement and writing.
-MECHANICAL_EFFORT = "low"
+# Reasoning effort per call: None = the model's default (full reasoning), or "low" (DO's
+# reasoning_effort; "none" isn't supported). By default the model reasons in ~700-1,300 hidden
+# tokens before answering, which is most of each call's time. Change one word to switch a call.
+# Measured 03:00 Sat on the source filter: low ~4 s but dropped allowed sources 1 run in 3;
+# full ~8.5 s and consistent. Sentence picking is safe at low: a wrong sentence is caught by
+# the substring check in pick_sentences, and a missed one only drops that source.
+GATE_EFFORT = None
+FILTER_EFFORT = None
+PICK_EFFORT = "low"
+EXPLAIN_EFFORT = None
 
 # Structured output: the API forces the reply into a schema. Without it, at low effort the model
 # sometimes "thinks out loud" after its JSON ("Wait, corrections needed...") and the parse fails.
@@ -228,7 +234,7 @@ def toggle_blocks(charter):
 def gate(conn, charter_text, reading_title, quote, question):
     return chat_json(conn, GATE_PROMPT.format(
         charter=charter_text, reading_title=reading_title, quote=quote, question=question,
-    ))
+    ), effort=GATE_EFFORT)
 
 
 def rule_label(charter_text, rule):
@@ -257,7 +263,7 @@ def filter_sources(conn, permissible_sources, reading_title, question, results):
     )
     reply = chat_json(conn, FILTER_SOURCES_PROMPT.format(
         permissible_sources=permissible_sources, reading_title=reading_title, question=question, results=numbered,
-    ), effort=MECHANICAL_EFFORT, schema=filter_schema(len(results)))
+    ), effort=FILTER_EFFORT, schema=filter_schema(len(results)))
     keep, skipped = [], []
     for item in reply["decisions"]:
         index = item["n"] - 1
@@ -282,7 +288,7 @@ def pick_sentences(conn, question, quote, sources):
         f"[{n}] {s['title']}\n{s['text'][:6000]}" for n, s in enumerate(sources, start=1)
     )
     reply = chat_json(conn, PICK_SENTENCE_PROMPT.format(question=question, quote=quote, sources=numbered),
-                      effort=MECHANICAL_EFFORT, schema=PICK_SCHEMA)
+                      effort=PICK_EFFORT, schema=PICK_SCHEMA)
     picked = {}
     for item in reply["sentences"]:
         index = item["n"] - 1
@@ -316,7 +322,7 @@ def explain(charter_text, reading_title, quote, question, sources, max_words):
     text = chat("You are a careful teaching assistant.", EXPLAIN_PROMPT.format(
         charter=charter_text, reading_title=reading_title, quote=quote, question=question,
         max_words=target, sources=numbered,
-    ))
+    ), effort=EXPLAIN_EFFORT)
     return cut_to_words(text, max_words)
 
 
