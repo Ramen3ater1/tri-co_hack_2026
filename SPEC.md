@@ -44,6 +44,8 @@ Seed users: **Prof. Rivera** (professor), **Ana** and **Ben** (students), plus *
 
 A page listing the seeded users. Clicking one stores their `user_id` in `localStorage` and sends it as an `X-User-Id` header. No passwords. `TODO(edge)`: anyone can be anyone.
 
+Each user row also has a small **Use on Mac** link to `dialectic://login?user=<id>`. Clicking it opens the Mac app (§3.9), which saves that user, so both apps act as the same person without picking twice. If the Mac app isn't installed the link does nothing. `TODO(edge)`.
+
 ### 3.2 Course home
 
 One course, seeded (`HIST 214: Black Intellectual Traditions`, or similar). Shows: readings, a link to the charter, the search box. Professor sees an **Upload reading** form (title + PDF file).
@@ -55,6 +57,7 @@ One course, seeded (`HIST 214: Black Intellectual Traditions`, or similar). Show
 - **Locked annotations** (§3.4) appear in the margin as one placeholder per cluster, at their position: "**N classmates annotated near here.** Add a note or ask a question to see theirs." No author or text. Their highlights aren't drawn.
 - Highlights from all visible annotations are drawn over the page as translucent boxes. Clicking one scrolls the margin to it.
 - Selecting text shows a small popover: **Annotate** | **Ask**.
+- **Live updates.** While the tab is visible, the reader refetches `GET /readings/{id}/annotations` every **5 s** (`POLL_MS`, a constant at the top of the file), and again whenever the window gets focus. That's how a question asked from the Mac hotkey shows up in a classmate's margin without a reload. Polling, not websockets: one server, a handful of users. Server-sent events only if there's time at the end.
 
 **Anchoring (the risky part; see spike S1).** On selection we store:
 - `page` (1-based),
@@ -153,6 +156,13 @@ A small macOS menu-bar app (`app/mac/`). The web reader stays as it is; this is 
 3. **Ask.** A small floating panel shows the captured text and a question box. On Enter it sends `POST /api/ask` (§6) with `{quote, question}` and the `X-User-Id` chosen in the app's menu (same seeded users as the web log-in).
 4. **Locate.** The server matches `quote` against the course readings' text (`pages_fts`, then an exact substring check on that page) to find the **reading, page and section**. It computes the highlight `rects` from the PDF (pdfplumber, as the seed does), so the question shows as a normal highlight in the web reader. `TODO(edge)`: text that isn't from a course reading returns 404, "This passage isn't in a course reading."
 5. **Answer and note it.** It runs the same three-layer `/ask` as §3.5. The panel follows the display rules in §3.5 (peers → sources → AI explanation, empty layers hidden, AI collapsed) and the engagement lock (§3.4), with a link that opens the web reader at that annotation. The question and any AI answer are saved as annotations like any other: public, labelled and open to replies.
+
+**Same server, same person, same data.** The Mac app and the web app are two clients of one server and one database; neither keeps its own copy of anything. Every rule (engagement lock, charter gate, source filter, locate) runs on the server, so the Swift side only captures text and shows JSON.
+
+- **Server URL:** one constant, `SERVER_URL`, at the top of `DialecticApp.swift`, set to the deployed site (§9) for the demo, `http://localhost:8000` while building.
+- **Who you are:** the menu lists users from `GET /api/users` and saves the choice in `UserDefaults`; every request sends it as `X-User-Id`, exactly as the web does. The app registers the `dialectic` URL scheme, so the web's **Use on Mac** link (§3.1, `dialectic://login?user=<id>`) sets the same user.
+- **Open in reader:** the panel's button opens `SERVER_URL + located.reader_url` in the default browser, at that annotation.
+- **Shows up on the web:** the hotkey question and its answer are ordinary annotations (`via: "hotkey"`); the web reader's polling (§3.3) picks them up within a few seconds.
 
 **Permissions:** the app needs **Accessibility** (to copy the selection) and **Screen Recording** (to capture a box) in System Settings. Grant both on the demo Mac beforehand.
 
@@ -358,7 +368,7 @@ All routes are under `/api`; all except `/users` need `X-User-Id`. Professor-onl
 
 `skipped_sources[].why` is `not_permitted` (the charter rules it out: show it, but **don't link it**), `not_covered` (the charter doesn't mention this kind of source: show it, don't link it; the class can amend the charter, see `ideas/01-charter-gaps.md`), `unreachable` (permitted, but we couldn't open or read it) or `no_answer` (permitted and read, but nothing in it answered the question). **Link the last two** so the student can read them themselves.
 
-`POST /ask` (hotkey) returns the same shape plus `"located": {"reading_id": 1, "reading_title": "...", "page": 3, "section": "Of Our Spiritual Strivings", "reader_url": "/readings/1?page=3&annotation=41"}`. Annotations gain `"section"` (title or `null`) and `"via"` (`"web"` | `"hotkey"`).
+`POST /ask` (hotkey) returns the same shape plus `"located": {"reading_id": 1, "reading_title": "...", "page": 3, "section": "Of Our Spiritual Strivings", "reader_url": "/readings/1?page=3&annotation=41"}`. `reader_url` is relative: the Mac app prefixes its `SERVER_URL`. Annotations gain `"section"` (title or `null`) and `"via"` (`"web"` | `"hotkey"`).
 
 Annotation shape (`GET /readings/{id}/annotations` returns a list of these, newest first; `POST` returns one):
 
