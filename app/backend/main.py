@@ -18,8 +18,8 @@ import pypdf
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
-from typing import Literal
+from pydantic import BaseModel, Field
+from typing import Annotated, Literal
 
 import ask
 import db
@@ -35,7 +35,37 @@ import spend
 UPLOADS_DIR = Path(__file__).parent / "uploads"
 FRONTEND_DIST = Path(__file__).parent.parent / "frontend" / "dist"
 
+# Limits for a public copy (explainers/security.md).
+MAX_BODY_BYTES = 1_000_000        # any request body but an upload
+MAX_UPLOAD_BYTES = 50_000_000     # POST /readings (a scanned PDF)
+MAX_TEXT_CHARS = 10_000           # a note, reply, question, quote or comment: they end up in AI prompts
+UPLOADS_ENABLED = os.environ.get("UPLOADS_ENABLED", "1").strip() != "0"  # 0 = POST /readings is a 403
+
+Text = Annotated[str, Field(max_length=MAX_TEXT_CHARS)]
+
 app = FastAPI(title="Dialectic")
+
+
+class LimitBodySize:
+    """Refuse a request body over the limit before anything reads it. Uvicorn makes a body match
+    its Content-Length, so checking that header is enough; a body without one (chunked) is refused."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and scope["method"] in ("POST", "PUT", "PATCH", "DELETE"):
+            limit = MAX_UPLOAD_BYTES if scope["path"] == "/api/readings" else MAX_BODY_BYTES
+            headers = dict(scope["headers"])
+            length = headers.get(b"content-length")
+            if length is None and b"transfer-encoding" in headers:
+                return await JSONResponse({"detail": "Send a Content-Length"}, status_code=411)(scope, receive, send)
+            if length is not None and (not length.isdigit() or int(length) > limit):
+                return await JSONResponse({"detail": f"Request body over {limit} bytes"}, status_code=413)(scope, receive, send)
+        await self.app(scope, receive, send)
+
+
+app.add_middleware(LimitBodySize)
 
 _conn = db.connect()
 db.migrate(_conn)  # add any new columns to an older database
@@ -311,11 +341,14 @@ def course(user=Depends(current_user), conn=Depends(get_conn)):
         # Uploads are saved as "<timestamp>-<name>.pdf": show the name the professor uploaded.
         card["filename"] = re.sub(r"^\d+-", "", Path(card.pop("pdf_path")).name)
         cards.append(card)
-    return {"course": get_course(conn, user["course_id"]), "readings": cards, "user": user}
+    return {"course": get_course(conn, user["course_id"]), "readings": cards, "user": user,
+            "uploads_enabled": UPLOADS_ENABLED}
 
 
 @app.post("/api/readings")
-def upload_reading(title: str = Form(), file: UploadFile = File(), user=Depends(professor), conn=Depends(get_conn)):
+def upload_reading(title: str = Form(max_length=200), file: UploadFile = File(), user=Depends(professor), conn=Depends(get_conn)):
+    if not UPLOADS_ENABLED:
+        raise HTTPException(403, "Uploads are switched off on this copy of Dialectic")
     UPLOADS_DIR.mkdir(exist_ok=True)
     safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", file.filename)
     dest = UPLOADS_DIR / f"{int(time.time())}-{safe_name}"
@@ -398,10 +431,10 @@ def list_annotations(reading_id: int, user=Depends(current_user), conn=Depends(g
 
 
 class NewAnnotation(BaseModel):
-    body: str
+    body: Text
     parent_id: int | None = None   # set for a reply; page/quote/rects then come from the parent
     page: int | None = None
-    quote: str | None = None
+    quote: Text | None = None
     rects: list[dict] | None = None
     share_with_future: bool = True
 
@@ -514,9 +547,9 @@ def update_all_sharing(update: SharingUpdate, user=Depends(current_user), conn=D
 
 class AskRequest(BaseModel):
     page: int
-    quote: str
+    quote: Text
     rects: list[dict]
-    question: str
+    question: Text
 
 
 @app.post("/api/readings/{reading_id}/ask")
@@ -562,8 +595,8 @@ def ask_question_stream(reading_id: int, req: AskRequest, user=Depends(current_u
 
 
 class HotkeyAskRequest(BaseModel):
-    quote: str
-    question: str
+    quote: Text
+    question: Text
     source_app: str | None = None  # the app the text came from, e.g. "Notability" (optional)
 
 
@@ -604,7 +637,7 @@ def hotkey_steps(conn, reading, user, page, rects, req, device_id):
 
 
 class LocateRequest(BaseModel):
-    text: str  # a few lines read off the screen, one per line
+    text: Text  # a few lines read off the screen, one per line
 
 
 @app.post("/api/locate")
@@ -653,8 +686,8 @@ def hotkey_ask_stream(req: HotkeyAskRequest, user=Depends(current_user), conn=De
 
 
 class HotkeyNoteRequest(BaseModel):
-    quote: str
-    body: str
+    quote: Text
+    body: Text
     share_with_future: bool = True
     source_app: str | None = None  # as for HotkeyAskRequest
 
@@ -725,7 +758,7 @@ def update_charter(update: CharterUpdate, user=Depends(professor), conn=Depends(
 
 
 class NewComment(BaseModel):
-    body: str
+    body: Text
 
 
 @app.post("/api/charter/comments")
