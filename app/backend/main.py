@@ -10,6 +10,7 @@ import traceback
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import httpx
 import pypdf
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
@@ -750,7 +751,12 @@ class NewSource(BaseModel):
 
 @app.post("/api/sources")
 def add_source(new: NewSource, user=Depends(professor), conn=Depends(get_conn)):
-    page = search.fetch_page(conn, new.url)
+    try:
+        # Checked here too, not only on download: web_cache could hold a page from before the check.
+        search.public_address(httpx.URL(new.url))
+        page = search.fetch_page(conn, new.url)
+    except (search.UnsafeURL, httpx.InvalidURL) as e:  # not a public web page (explainers/security.md)
+        raise HTTPException(400, str(e))
     if not page["text"]:
         raise HTTPException(422, f"Couldn't extract any text from {new.url}")
     conn.execute(
