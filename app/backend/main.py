@@ -2,7 +2,10 @@
 
     uv run --env-file ../../.env uvicorn main:app --reload
 """
+import hashlib
+import hmac
 import json
+import os
 import re
 import threading
 import time
@@ -56,11 +59,45 @@ def get_conn():
         conn.close()
 
 
-def current_user(x_user_id: int = Header(), conn=Depends(get_conn)):
-    """Every route except /users needs X-User-Id. TODO(edge): anyone can be anyone (SPEC §3.1)."""
+# The professor gate (explainers/security.md). With PROFESSOR_PASSWORD set, acting as a professor
+# (any route) needs X-Professor-Token, which POST /login hands out for the password. Unset (local
+# development) it's "log in as" for everyone, as before. Students never need a password.
+PROFESSOR_TOKEN_DAYS = 7
+WRONG_PASSWORD_DELAY_S = 1  # slows guessing a little; Cloudflare in front does the real limiting
+
+
+def professor_password():
+    return os.environ.get("PROFESSOR_PASSWORD", "")
+
+
+def professor_signature(user_id, expires):
+    """HMAC keyed by the password, so changing PROFESSOR_PASSWORD signs everyone out."""
+    message = f"{user_id}.{expires}".encode()
+    return hmac.new(professor_password().encode(), message, hashlib.sha256).hexdigest()
+
+
+def professor_token(user_id):
+    expires = int(time.time()) + PROFESSOR_TOKEN_DAYS * 86400
+    return f"{user_id}.{expires}.{professor_signature(user_id, expires)}"
+
+
+def valid_professor_token(token, user_id):
+    try:
+        token_user, expires, signature = token.split(".")
+        token_user, expires = int(token_user), int(expires)
+    except (AttributeError, ValueError):
+        return False
+    return (token_user == user_id and expires > time.time()
+            and hmac.compare_digest(signature, professor_signature(user_id, expires)))
+
+
+def current_user(x_user_id: int = Header(), x_professor_token: str | None = Header(None), conn=Depends(get_conn)):
+    """Every route except /users needs X-User-Id. Students: anyone can be any student (SPEC §3.1)."""
     user = conn.execute("SELECT * FROM users WHERE id = ?", (x_user_id,)).fetchone()
-    if user is None:
+    if user is None or user["role"] == "ai":  # the AI writes only through ask.py, never as a visitor
         raise HTTPException(401, f"Unknown user id {x_user_id}")
+    if user["role"] == "professor" and professor_password() and not valid_professor_token(x_professor_token, user["id"]):
+        raise HTTPException(401, "Log in again with the professor password")
     return dict(user)
 
 
@@ -68,6 +105,26 @@ def professor(user=Depends(current_user)):
     if user["role"] != "professor":
         raise HTTPException(403, "Professor only")
     return user
+
+
+class LogIn(BaseModel):
+    user_id: int
+    password: str | None = None
+
+
+@app.post("/api/login")
+def log_in(login: LogIn, conn=Depends(get_conn)):
+    """Log in as someone. Students need nothing; a professor needs PROFESSOR_PASSWORD if it's set,
+    and gets back professor_token to send as X-Professor-Token."""
+    user = conn.execute("SELECT * FROM users WHERE id = ? AND role != 'ai'", (login.user_id,)).fetchone()
+    if user is None:
+        raise HTTPException(404, f"No user {login.user_id}")
+    if user["role"] != "professor" or not professor_password():
+        return {"user": dict(user), "professor_token": None}
+    if not hmac.compare_digest((login.password or "").encode(), professor_password().encode()):
+        time.sleep(WRONG_PASSWORD_DELAY_S)
+        raise HTTPException(403, "Wrong professor password")
+    return {"user": dict(user), "professor_token": professor_token(user["id"])}
 
 
 # ---------- shared helpers ----------
@@ -228,7 +285,8 @@ def list_users(conn=Depends(get_conn)):
         """SELECT u.*, c.title AS course_title, c.current_cohort FROM users u JOIN course c ON c.id = u.course_id
            WHERE u.role != 'ai' ORDER BY u.course_id, u.id"""
     ).fetchall()
-    return [dict(r) for r in rows]
+    # needs_password: the log-in page asks for the professor password before logging in as them.
+    return [{**dict(r), "needs_password": r["role"] == "professor" and bool(professor_password())} for r in rows]
 
 
 @app.get("/api/course")
