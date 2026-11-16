@@ -65,7 +65,43 @@ class LimitBodySize:
         await self.app(scope, receive, send)
 
 
+# Sent with every response. The CSP allows only our own scripts; styles may be inline (React and
+# pdf.js set them) plus Google Fonts; pdf.js's worker is served from /assets. No framing anywhere.
+SECURITY_HEADERS = {
+    "Content-Security-Policy": "; ".join([
+        "default-src 'self'",
+        "script-src 'self'",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com data:",
+        "img-src 'self' data: blob:",
+        "worker-src 'self' blob:",
+        "connect-src 'self'",
+        "object-src 'none'",
+        "base-uri 'self'",
+        "form-action 'self'",
+        "frame-ancestors 'none'",
+    ]),
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+}
+
+
+class AddSecurityHeaders:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        async def send_with_headers(message):
+            if message["type"] == "http.response.start":
+                message["headers"] = list(message.get("headers", [])) + [
+                    (name.lower().encode(), value.encode()) for name, value in SECURITY_HEADERS.items()]
+            await send(message)
+        await self.app(scope, receive, send_with_headers if scope["type"] == "http" else send)
+
+
 app.add_middleware(LimitBodySize)
+app.add_middleware(AddSecurityHeaders)
 
 _conn = db.connect()
 db.migrate(_conn)  # add any new columns to an older database
